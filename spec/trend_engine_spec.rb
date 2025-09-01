@@ -34,7 +34,7 @@ RSpec.describe TrendEngine do
           .with(seg: "IDX_I", sid: "13", interval: "1", symbol: "INDEX_1m")
           .and_return(mock_candle_series)
 
-        # Mock 3-minute data
+        # Mock 3-minute data (aggregated from 1m internally)
         allow(CandleSeries).to receive(:load_from_dhan_intraday)
           .with(seg: "IDX_I", sid: "13", interval: "3", symbol: "INDEX_3m")
           .and_return(mock_candle_series)

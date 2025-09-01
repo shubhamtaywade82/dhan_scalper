@@ -23,15 +23,15 @@ module DhanScalper
     def decide
       # Load candle series for 1-minute and 3-minute intervals
       c1_series = CandleSeries.load_from_dhan_intraday(
-        seg: @seg_idx, 
-        sid: @seg_idx, 
+        seg: @seg_idx,
+        sid: @sid_idx,
         interval: "1", 
         symbol: "INDEX"
       )
       c3_series = CandleSeries.load_from_dhan_intraday(
-        seg: @seg_idx, 
-        sid: @seg_idx, 
-        interval: "3", 
+        seg: @seg_idx,
+        sid: @sid_idx,
+        interval: "3",
         symbol: "INDEX"
       )
       

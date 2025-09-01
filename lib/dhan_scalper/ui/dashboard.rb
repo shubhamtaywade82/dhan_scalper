@@ -54,6 +54,15 @@ module DhanScalper
         print "\e[2J\e[H"
       end
 
+      def move_to_home
+        print "\e[H"
+      end
+
+      def clear_remaining_lines
+        # Clear from cursor to end of screen
+        print "\e[J"
+      end
+
       def read_keys
         @rd.on(:keypress) do |e|
           case e.value
@@ -68,13 +77,16 @@ module DhanScalper
 
       def render_frame
         width = TTY::Screen.width
-        clear_screen
+        # Use cursor positioning instead of clearing entire screen
+        move_to_home
         print header_box(width)
         print balance_box(width) if @balance_provider
         print positions_box(width)
         print closed_box(width)
         print subs_box(width) if @show_subs
         print footer_hint
+        # Clear any remaining lines below
+        clear_remaining_lines
       end
 
       # -------------------- widgets --------------------

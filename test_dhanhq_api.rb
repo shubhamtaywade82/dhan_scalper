@@ -41,16 +41,22 @@ begin
   # Test 4: Historical Data API
   puts "\n4. Testing Historical Data API..."
   begin
-    # Test with a sample security ID
+    # Test with a sample security ID and date range
+    to_date = Date.today.strftime("%Y-%m-%d")
+    from_date = (Date.today - 7).strftime("%Y-%m-%d")
+
     data = DhanHQ::Models::HistoricalData.intraday(
       security_id: "13",
       exchange_segment: "IDX_I",
       instrument: "INDEX",
-      interval: "1"
+      interval: "1",
+      from_date: from_date,
+      to_date: to_date
     )
     puts "✓ Historical Data API successful"
     puts "  Data type: #{data.class}"
     puts "  Data size: #{data.respond_to?(:size) ? data.size : 'N/A'}"
+    puts "  Date range: #{from_date} to #{to_date}"
   rescue => e
     puts "✗ Historical Data API failed: #{e.message}"
   end

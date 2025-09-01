@@ -29,36 +29,47 @@ module DhanScalper
       puts "  dashboard       - Show real-time virtual data dashboard"
       puts "  help            - Show this help message"
       puts
+      puts "Options:"
+      puts "  -q, --quiet     - Run in quiet mode (no TTY dashboard, better for terminals)"
+      puts "  -c, --config    - Path to configuration file"
+      puts "  -m, --mode      - Trading mode (live/paper)"
+      puts
       puts "For detailed help on a command, use: scalper help COMMAND"
     end
 
     desc "start", "Start the scalper (Ctrl+C to stop)"
     option :config, type: :string, aliases: "-c", desc: "Path to scalper.yml"
     option :mode, aliases: "-m", desc: "Trading mode (live/paper)", default: "paper"
+    option :quiet, type: :boolean, aliases: "-q", desc: "Run in quiet mode (no TTY dashboard)", default: false
     def start
       cfg = Config.load(path: options[:config])
       mode = options[:mode].to_sym
+      quiet = options[:quiet]
       DhanHQ.configure_with_env
       DhanHQ.logger.level = (cfg.dig("global", "log_level") || "INFO").upcase == "DEBUG" ? Logger::DEBUG : Logger::INFO
-      App.new(cfg, mode: mode).start
+      App.new(cfg, mode: mode, quiet: quiet).start
     end
 
     desc "dryrun", "Run signals only, no orders"
     option :config, type: :string, aliases: "-c"
+    option :quiet, type: :boolean, aliases: "-q", desc: "Run in quiet mode (no TTY dashboard)", default: false
     def dryrun
       cfg = Config.load(path: options[:config])
+      quiet = options[:quiet]
       DhanHQ.configure_with_env
       DhanHQ.logger.level = Logger::INFO
-      App.new(cfg, dryrun: true).start
+      App.new(cfg, dryrun: true, quiet: quiet).start
     end
 
     desc "paper", "Start paper trading (alias for start -m paper)"
     option :config, type: :string, aliases: "-c"
+    option :quiet, type: :boolean, aliases: "-q", desc: "Run in quiet mode (no TTY dashboard)", default: false
     def paper
       cfg = Config.load(path: options[:config])
+      quiet = options[:quiet]
       DhanHQ.configure_with_env
       DhanHQ.logger.level = (cfg.dig("global", "log_level") || "INFO").upcase == "DEBUG" ? Logger::DEBUG : Logger::INFO
-      App.new(cfg, mode: :paper).start
+      App.new(cfg, mode: :paper, quiet: quiet).start
     end
 
     desc "orders", "View virtual orders"

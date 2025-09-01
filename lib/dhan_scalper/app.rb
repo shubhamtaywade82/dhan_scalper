@@ -4,6 +4,7 @@ require "DhanHQ"
 require "ostruct"
 require_relative "state"
 require_relative "ui/dashboard"
+require_relative "ui/simple_logger"
 require_relative "virtual_data_manager"
 require_relative "quantity_sizer"
 require_relative "balance_providers/paper_wallet"
@@ -12,10 +13,11 @@ require_relative "balance_providers/live_balance"
 module DhanScalper
   class App
     # :live or :paper
-    def initialize(cfg, mode: :live, dryrun: false)
+    def initialize(cfg, mode: :live, dryrun: false, quiet: false)
       @cfg = cfg
       @mode = mode
       @dry = dryrun
+      @quiet = quiet
       @stop = false
       Signal.trap("INT") { @stop = true }
       Signal.trap("TERM") { @stop = true }
@@ -65,14 +67,24 @@ module DhanScalper
       traders, ce_map, pe_map = setup_traders(ws)
       puts "[DEBUG] traders class: #{traders.class}, traders: #{traders.inspect}"
 
-      # UI loop
-      ui = Thread.new { UI::Dashboard.new(@state, balance_provider: @balance_provider).run }
+      # UI loop (only if not in quiet mode)
+      ui = nil
+      simple_logger = nil
+      unless @quiet
+        ui = Thread.new { UI::Dashboard.new(@state, balance_provider: @balance_provider).run }
+      else
+        simple_logger = UI::SimpleLogger.new(@state, balance_provider: @balance_provider)
+      end
 
       puts "[READY] Symbols: #{@cfg["SYMBOLS"]&.keys&.join(", ") || "None"}"
       puts "[MODE] #{@mode.upcase} trading with balance: ₹#{@balance_provider.available_balance.round(0)}"
+      puts "[QUIET] Running in quiet mode - no TTY dashboard" if @quiet
+      puts "[CONTROLS] Press Ctrl+C to stop"
 
       last_decision = Time.at(0)
+      last_status_update = Time.at(0)
       decision_interval = @cfg.dig("global", "decision_interval").to_i
+      status_interval = 30 # Update status every 30 seconds in quiet mode
       max_dd = @cfg.dig("global", "max_day_loss").to_f
       charge = @cfg.dig("global", "charge_per_order").to_f
       tp_pct = (@cfg.dig("global", "tp_pct") || 0.35).to_f
@@ -106,6 +118,12 @@ module DhanScalper
 
           # after each loop, update global PnL into state:
           @state.set_session_pnl(gpn)
+
+          # Periodic status updates in quiet mode
+          if @quiet && Time.now - last_status_update >= status_interval
+            last_status_update = Time.now
+            simple_logger&.update_status(traders)
+          end
 
           if gpn <= -max_dd
             puts "\n[HALT] Max day loss hit (#{gpn.round(0)})."
@@ -238,9 +256,9 @@ module DhanScalper
         sleep 0.2
       end
       CandleSeries.load_from_dhan_intraday(
-        seg: s["seg_idx"], 
-        sid: s["idx_sid"], 
-        interval: "1", 
+        seg: s["seg_idx"],
+        sid: s["idx_sid"],
+        interval: "1",
         symbol: "INDEX"
       ).closes.last.to_f
     end

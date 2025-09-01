@@ -102,8 +102,19 @@ class CandleSeries
 
   # ---------- Loading from DhanHQ ----------
   def self.load_from_dhan_intraday(seg:, sid:, interval:, symbol:)
-    rows = fetch_historical_data(seg, sid, interval)
-    series = new(symbol: symbol, interval: interval)
+    target_interval = interval.to_i
+
+    # If 3-minute is requested, fetch 1-minute and aggregate locally to 3-minute
+    if target_interval == 3
+      puts "[DEBUG] Aggregating 1m candles to 3m for sid=#{sid}"
+      rows_1m = fetch_historical_data(seg, sid, "1")
+      base = new(symbol: "#{symbol}_1m", interval: "1")
+      base.load_from_raw(rows_1m)
+      return base.resample_to_minutes(3, symbol: symbol)
+    end
+
+    rows = fetch_historical_data(seg, sid, target_interval.to_s)
+    series = new(symbol: symbol, interval: target_interval.to_s)
     series.load_from_raw(rows)
     series
   end
@@ -111,60 +122,32 @@ class CandleSeries
   # ---------- Historical Data Fetching ----------
   def self.fetch_historical_data(seg, sid, interval)
     puts "[DEBUG] Attempting to fetch historical data for seg=#{seg}, sid=#{sid}, interval=#{interval}"
-    # Try multiple methods to fetch historical data
-    methods_to_try = [
-      -> { DhanHQ::Models::HistoricalData.intraday(
-        security_id: sid.to_s,
-        exchange_segment: seg,
-        instrument: (seg == "IDX_I" ? "INDEX" : "OPTION"),
-        interval: interval.to_s
-      ) },
-      -> { DhanHQ::HistoricalData.intraday(
-        security_id: sid.to_s,
-        exchange_segment: seg,
-        instrument: (seg == "IDX_I" ? "INDEX" : "OPTION"),
-        interval: interval.to_s
-      ) },
-      -> { DhanHQ::Models::HistoricalData.fetch(
-        security_id: sid.to_s,
-        exchange_segment: seg,
-        instrument: (seg == "IDX_I" ? "INDEX" : "OPTION"),
-        interval: interval.to_s
-      ) },
-      -> { DhanHQ::HistoricalData.fetch(
-        security_id: sid.to_s,
-        exchange_segment: seg,
-        instrument: (seg == "IDX_I" ? "INDEX" : "OPTION"),
-        interval: interval.to_s
-      ) },
-      -> { DhanHQ::Models::Candles.intraday(
-        security_id: sid.to_s,
-        exchange_segment: seg,
-        instrument: (seg == "IDX_I" ? "INDEX" : "OPTION"),
-        interval: interval.to_s
-      ) },
-      -> { DhanHQ::Candles.intraday(
-        security_id: sid.to_s,
-        exchange_segment: seg,
-        instrument: (seg == "IDX_I" ? "INDEX" : "OPTION"),
-        interval: interval.to_s
-      ) }
-    ]
 
-    methods_to_try.each_with_index do |method, index|
-      begin
-        puts "[DEBUG] Trying method #{index + 1} to fetch historical data"
-        result = method.call
-        puts "[DEBUG] Method #{index + 1} result: #{result.inspect}"
-        return result if result && (result.is_a?(Array) || result.is_a?(Hash))
-      rescue StandardError => e
-        puts "Warning: Failed to fetch historical data via method #{index + 1}: #{e.message}"
-        next
-      end
+    # Calculate date range (last 7 days for intraday data)
+    to_date = Date.today.strftime("%Y-%m-%d")
+    from_date = (Date.today - 7).strftime("%Y-%m-%d")
+
+    # Prepare parameters for DhanHQ API
+    params = {
+      security_id: sid.to_s,  # This should be the actual security ID (e.g., "13" for NIFTY)
+      exchange_segment: seg,  # This should be the segment (e.g., "IDX_I")
+      instrument: (seg == "IDX_I" ? "INDEX" : "OPTION"),
+      interval: interval.to_s,
+      from_date: from_date,
+      to_date: to_date
+    }
+
+    begin
+      puts "[DEBUG] Calling DhanHQ::Models::HistoricalData.intraday with params: #{params}"
+      result = DhanHQ::Models::HistoricalData.intraday(params)
+      puts "[DEBUG] Historical data result: #{result.class} - #{result.respond_to?(:size) ? "size: #{result.size}" : "keys: #{result.keys if result.respond_to?(:keys)}"}"
+      return result if result && (result.is_a?(Array) || result.is_a?(Hash))
+    rescue StandardError => e
+      puts "Warning: Failed to fetch historical data: #{e.message}"
     end
 
-    # Return empty array if all methods fail
-    puts "Warning: All historical data fetch methods failed, returning empty data"
+    # Return empty array if method fails
+    puts "Warning: Historical data fetch failed, returning empty data"
     []
   end
 
@@ -233,6 +216,40 @@ class CandleSeries
   def highs  = candles.map(&:high)
   def lows   = candles.map(&:low)
   def volumes = candles.map(&:volume)
+
+  # ---------- Resampling ----------
+  # Build higher timeframe candles from this series (assumes minute-based input)
+  def resample_to_minutes(period, symbol: nil)
+    per = period.to_i
+    raise ArgumentError, "period must be > 1" unless per > 1
+    return self if @interval.to_i == per
+
+    bucket_seconds = per * 60
+    grouped = {}
+
+    # Ensure candles are sorted by timestamp
+    sorted = candles.sort_by { |c| c.timestamp.to_i }
+
+    sorted.each do |c|
+      bucket_start = Time.at((c.timestamp.to_i / bucket_seconds) * bucket_seconds)
+      (grouped[bucket_start] ||= []) << c
+    end
+
+    out = CandleSeries.new(symbol: (symbol || "#{@symbol}_#{per}m"), interval: per.to_s)
+    grouped.keys.sort.each do |ts|
+      cols = grouped[ts]
+      next if cols.nil? || cols.empty?
+
+      o = cols.first.open
+      h = cols.map(&:high).max
+      l = cols.map(&:low).min
+      c = cols.last.close
+      v = cols.map(&:volume).sum
+      out.add_candle(Candle.new(ts: ts, open: o, high: h, low: l, close: c, volume: v))
+    end
+
+    out
+  end
 
   def to_hash
     {

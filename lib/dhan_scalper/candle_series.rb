@@ -140,7 +140,8 @@ class CandleSeries
     begin
       puts "[DEBUG] Calling DhanHQ::Models::HistoricalData.intraday with params: #{params}"
       result = DhanHQ::Models::HistoricalData.intraday(params)
-      puts "[DEBUG] Historical data result: #{result.class} - #{result.respond_to?(:size) ? "size: #{result.size}" : "keys: #{result.keys if result.respond_to?(:keys)}"}"
+
+      puts "[DEBUG] Historical data result: #{result.class} - #{result.respond_to?(:size) ? "size: #{result[:open].size}" : "keys: #{result.keys if result.respond_to?(:keys)}"}"
       return result if result && (result.is_a?(Array) || result.is_a?(Hash))
     rescue StandardError => e
       puts "Warning: Failed to fetch historical data: #{e.message}"

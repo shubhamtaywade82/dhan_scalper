@@ -4,6 +4,7 @@ require "dhan_scalper/version"
 require "dhan_scalper/config"
 require "dhan_scalper/indicators"
 
+require "dhan_scalper/order"
 require "dhan_scalper/option_picker"
 require "dhan_scalper/tick_cache"
 require "dhan_scalper/trader"

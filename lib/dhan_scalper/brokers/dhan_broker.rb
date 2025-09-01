@@ -103,11 +103,15 @@ module DhanScalper
       def create_order_via_models(params)
         # Try DhanHQ::Models::Order.new
         begin
+          puts "[DEBUG] Attempting to create order via DhanHQ::Models::Order.new"
           order = DhanHQ::Models::Order.new(params)
+          puts "[DEBUG] Order object created: #{order.inspect}"
           order.save
+          puts "[DEBUG] Order save result: persisted=#{order.persisted?}, errors=#{order.errors.full_messages}"
           return { order_id: order.order_id, error: nil } if order.persisted?
           return { error: order.errors.full_messages.join(", ") }
         rescue StandardError => e
+          puts "[DEBUG] Error in create_order_via_models: #{e.message}"
           return { error: e.message }
         end
       end
@@ -115,11 +119,15 @@ module DhanScalper
       def create_order_via_direct(params)
         # Try DhanHQ::Order.new
         begin
+          puts "[DEBUG] Attempting to create order via DhanHQ::Order.new"
           order = DhanHQ::Order.new(params)
+          puts "[DEBUG] Order object created: #{order.inspect}"
           order.save
+          puts "[DEBUG] Order save result: persisted=#{order.persisted?}, errors=#{order.errors.full_messages}"
           return { order_id: order.order_id, error: nil } if order.persisted?
           return { error: order.errors.full_messages.join(", ") }
         rescue StandardError => e
+          puts "[DEBUG] Error in create_order_via_direct: #{e.message}"
           return { error: e.message }
         end
       end
@@ -127,15 +135,19 @@ module DhanScalper
       def create_order_via_orders(params)
         # Try DhanHQ::Orders.create
         begin
+          puts "[DEBUG] Attempting to create order via DhanHQ::Orders.create"
           order = DhanHQ::Orders.create(params)
+          puts "[DEBUG] Order object created: #{order.inspect}"
           return { order_id: order.order_id || order.id, error: nil } if order
           return { error: "Failed to create order" }
         rescue StandardError => e
+          puts "[DEBUG] Error in create_order_via_orders: #{e.message}"
           return { error: e.message }
         end
       end
 
       def fetch_trade_price(order_id)
+        puts "[DEBUG] Attempting to fetch trade price for order_id: #{order_id}"
         # Try multiple methods to fetch trade price
         methods_to_try = [
           -> { DhanHQ::Models::Trade.find_by_order_id(order_id)&.avg_price },
@@ -146,15 +158,19 @@ module DhanScalper
           -> { DhanHQ::Trades.find_by_order_id(order_id)&.avg_price }
         ]
 
-        methods_to_try.each do |method|
+        methods_to_try.each_with_index do |method, index|
           begin
+            puts "[DEBUG] Trying method #{index + 1} to fetch trade price"
             result = method.call
+            puts "[DEBUG] Method #{index + 1} result: #{result.inspect}"
             return result.to_f if result
-          rescue StandardError
+          rescue StandardError => e
+            puts "[DEBUG] Method #{index + 1} failed: #{e.message}"
             next
           end
         end
 
+        puts "[DEBUG] All methods failed to fetch trade price"
         nil
       end
     end

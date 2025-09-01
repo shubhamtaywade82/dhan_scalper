@@ -46,7 +46,10 @@ module DhanScalper
       DhanHQ.configure_with_env
       DhanHQ.logger.level = (@cfg.dig("global", "log_level") == "DEBUG" ? Logger::DEBUG : Logger::INFO)
 
-      ws = DhanHQ::WS::Client.new(mode: :quote).start
+      # Try to create WebSocket client with fallback methods
+      ws = create_websocket_client
+      return unless ws
+
       ws.on(:tick) do |t|
         DhanScalper::TickCache.put(t)
         # mirror latest LTPs into subscriptions view
@@ -126,7 +129,7 @@ module DhanScalper
         nil
       end
       begin
-        DhanHQ::WS.disconnect_all_local!
+        disconnect_websocket
       rescue StandardError
         nil
       end
@@ -134,6 +137,48 @@ module DhanScalper
     end
 
     private
+
+    def create_websocket_client
+      # Try multiple methods to create WebSocket client
+      methods_to_try = [
+        -> { DhanHQ::WS::Client.new(mode: :quote).start },
+        -> { DhanHQ::WebSocket::Client.new(mode: :quote).start },
+        -> { DhanHQ::WebSocket.new(mode: :quote).start },
+        -> { DhanHQ::WS.new(mode: :quote).start }
+      ]
+
+      methods_to_try.each do |method|
+        begin
+          result = method.call
+          return result if result && result.respond_to?(:on)
+        rescue StandardError => e
+          puts "Warning: Failed to create WebSocket client via method: #{e.message}"
+          next
+        end
+      end
+
+      puts "Error: Failed to create WebSocket client via all available methods"
+      nil
+    end
+
+    def disconnect_websocket
+      # Try multiple methods to disconnect WebSocket
+      methods_to_try = [
+        -> { DhanHQ::WS.disconnect_all_local! },
+        -> { DhanHQ::WebSocket.disconnect_all_local! },
+        -> { DhanHQ::WS.disconnect_all! },
+        -> { DhanHQ::WebSocket.disconnect_all! }
+      ]
+
+      methods_to_try.each do |method|
+        begin
+          method.call
+          return
+        rescue StandardError
+          next
+        end
+      end
+    end
 
     def total_pnl_preview(_trader, net)
       # Optionally add open traders' session_pnl + the candidate net

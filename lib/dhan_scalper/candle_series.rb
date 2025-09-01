@@ -110,6 +110,7 @@ class CandleSeries
 
   # ---------- Historical Data Fetching ----------
   def self.fetch_historical_data(seg, sid, interval)
+    puts "[DEBUG] Attempting to fetch historical data for seg=#{seg}, sid=#{sid}, interval=#{interval}"
     # Try multiple methods to fetch historical data
     methods_to_try = [
       -> { DhanHQ::Models::HistoricalData.intraday(
@@ -150,12 +151,14 @@ class CandleSeries
       ) }
     ]
 
-    methods_to_try.each do |method|
+    methods_to_try.each_with_index do |method, index|
       begin
+        puts "[DEBUG] Trying method #{index + 1} to fetch historical data"
         result = method.call
+        puts "[DEBUG] Method #{index + 1} result: #{result.inspect}"
         return result if result && (result.is_a?(Array) || result.is_a?(Hash))
       rescue StandardError => e
-        puts "Warning: Failed to fetch historical data via method: #{e.message}"
+        puts "Warning: Failed to fetch historical data via method #{index + 1}: #{e.message}"
         next
       end
     end

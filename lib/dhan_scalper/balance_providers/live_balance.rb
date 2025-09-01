@@ -43,28 +43,20 @@ module DhanScalper
 
       def refresh_cache
         begin
-          # Try multiple methods to fetch funds from DhanHQ API
-          funds = fetch_funds_data
+          # Use the correct DhanHQ::Models::Funds.fetch method
+          puts "[DEBUG] Attempting to fetch funds from DhanHQ API..."
+          funds = DhanHQ::Models::Funds.fetch
+          puts "[DEBUG] Funds object: #{funds.inspect}"
 
           if funds && funds.respond_to?(:available_balance)
+            puts "[DEBUG] Using available_balance method"
             @cache = {
               available: funds.available_balance.to_f,
-              used: funds.used_margin.to_f,
-              total: funds.total_balance.to_f
-            }
-          elsif funds && funds.respond_to?(:available)
-            @cache = {
-              available: funds.available.to_f,
-              used: funds.used.to_f,
-              total: funds.total.to_f
-            }
-          elsif funds && funds.is_a?(Hash)
-            @cache = {
-              available: funds[:available] || funds["available"] || 0.0,
-              used: funds[:used] || funds["used"] || 0.0,
-              total: funds[:total] || funds["total"] || 0.0
+              used: funds.utilized_amount.to_f,
+              total: (funds.available_balance.to_f + funds.utilized_amount.to_f)
             }
           else
+            puts "[DEBUG] Funds object doesn't have expected methods, using fallback"
             # Fallback to basic structure if API response is different
             @cache = {
               available: 100_000.0, # Default fallback
@@ -73,9 +65,11 @@ module DhanScalper
             }
           end
 
+          puts "[DEBUG] Cache updated: #{@cache.inspect}"
           @cache_time = Time.now
         rescue StandardError => e
           puts "Warning: Failed to fetch live balance: #{e.message}"
+          puts "Backtrace: #{e.backtrace.first(3).join("\n")}"
           # Keep existing cache if available, otherwise use defaults
           unless @cache_time
             @cache = {
@@ -85,33 +79,6 @@ module DhanScalper
             }
           end
         end
-      end
-
-      def fetch_funds_data
-        # Try multiple methods to get funds data
-        methods_to_try = [
-          -> { DhanHQ::Models::Funds.fetch },
-          -> { DhanHQ::Models::Funds.all },
-          -> { DhanHQ::Models::Funds.current },
-          -> { DhanHQ::Funds.fetch },
-          -> { DhanHQ::Funds.all },
-          -> { DhanHQ::Funds.current },
-          -> { DhanHQ::Models::Account.funds },
-          -> { DhanHQ::Account.funds },
-          -> { DhanHQ::Models::Account.balance },
-          -> { DhanHQ::Account.balance }
-        ]
-
-        methods_to_try.each do |method|
-          begin
-            result = method.call
-            return result if result && (result.respond_to?(:available_balance) || result.respond_to?(:available) || result.is_a?(Hash))
-          rescue StandardError
-            next
-          end
-        end
-
-        nil
       end
     end
   end

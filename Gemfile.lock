@@ -18,6 +18,18 @@ PATH
   remote: .
   specs:
     dhan_scalper (0.1.0)
+      DhanHQ
+      concurrent-ruby
+      csv
+      dotenv
+      pastel
+      ruby-technical-analysis
+      technical-analysis
+      thor
+      tty-box
+      tty-reader
+      tty-screen
+      tty-table
 
 GEM
   remote: https://rubygems.org/
@@ -47,6 +59,7 @@ GEM
     crack (1.0.0)
       bigdecimal
       rexml
+    csv (3.3.5)
     date (3.4.1)
     diff-lcs (1.6.2)
     dotenv (3.1.8)
@@ -235,8 +248,8 @@ DEPENDENCIES
   dotenv
   irb
   pastel
-  rake (~> 13.0)
-  rspec (~> 3.0)
+  rake (~> 13.0, >= 13.0)
+  rspec (~> 3.0, >= 3.12)
   rubocop (~> 1.21)
   ruby-technical-analysis
   technical-analysis
@@ -245,7 +258,7 @@ DEPENDENCIES
   tty-reader
   tty-screen
   tty-table
-  webmock
+  webmock (>= 3.19, >= 0)
 
 BUNDLED WITH
    2.7.1

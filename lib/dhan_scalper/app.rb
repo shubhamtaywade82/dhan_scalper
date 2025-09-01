@@ -162,7 +162,7 @@ module DhanScalper
         end
         ws.subscribe_one(segment: s["seg_idx"], security_id: s["idx_sid"])
         spot = wait_for_spot(s)
-        picker = (@mode == :paper ? OptionPickerPaper.new(s) : OptionPicker.new(s))
+        picker = OptionPicker.new(s, mode: @mode)
         pick = picker.pick(current_spot: spot)
         ce_map[sym] = pick[:ce_sid]
         pe_map[sym] = pick[:pe_sid]

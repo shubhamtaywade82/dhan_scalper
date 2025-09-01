@@ -43,7 +43,6 @@ Gem::Specification.new do |spec|
   # Core runtime dependencies
   spec.add_dependency "concurrent-ruby"
   spec.add_dependency "csv"
-  spec.add_dependency "DhanHQ"
   spec.add_dependency "dotenv"
   spec.add_dependency "pastel"
   spec.add_dependency "ruby-technical-analysis"    # johnnypaper

@@ -18,7 +18,6 @@ PATH
   remote: .
   specs:
     dhan_scalper (0.1.0)
-      DhanHQ
       concurrent-ruby
       csv
       dotenv

@@ -3,6 +3,11 @@
 module DhanScalper
   module Brokers
     class DhanBroker < Base
+      def initialize(virtual_data_manager: nil, balance_provider: nil)
+        super(virtual_data_manager: virtual_data_manager)
+        @balance_provider = balance_provider
+      end
+
       def buy_market(segment:, security_id:, quantity:)
         o = DhanHQ::Models::Order.new(transaction_type: "BUY", exchange_segment: segment,
                                       product_type: "MARGIN", order_type: "MARKET", validity: "DAY", security_id: security_id, quantity: quantity)

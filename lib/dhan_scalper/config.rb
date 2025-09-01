@@ -3,10 +3,36 @@
 require "yaml"
 module DhanScalper
   class Config
-    DEFAULT = { "symbols" => ["NIFTY"], "global" => { "min_profit_target" => 1000.0, "max_day_loss" => 1500.0,
-                                                      "charge_per_order" => 20.0, "decision_interval" => 10, "log_level" => "INFO", "tp_pct" => 0.35, "sl_pct" => 0.18, "trail_pct" => 0.12 },
-                "SYMBOLS" => { "NIFTY" => { "idx_sid" => ENV.fetch("NIFTY_IDX_SID", "13"), "seg_idx" => "IDX_I", "seg_opt" => "NSE_FNO",
-                                            "strike_step" => 50, "lot_size" => 75, "qty_multiplier" => 1, "expiry_wday" => 4 } } }.freeze
+    DEFAULT = {
+      "symbols" => ["NIFTY"],
+      "global" => {
+        "min_profit_target" => 1000.0,
+        "max_day_loss" => 1500.0,
+        "charge_per_order" => 20.0,
+        "allocation_pct" => 0.30,
+        "slippage_buffer_pct" => 0.01,
+        "max_lots_per_trade" => 10,
+        "decision_interval" => 10,
+        "log_level" => "INFO",
+        "tp_pct" => 0.35,
+        "sl_pct" => 0.18,
+        "trail_pct" => 0.12
+      },
+      "paper" => {
+        "starting_balance" => 200000.0
+      },
+      "SYMBOLS" => {
+        "NIFTY" => {
+          "idx_sid" => ENV.fetch("NIFTY_IDX_SID", "13"),
+          "seg_idx" => "IDX_I",
+          "seg_opt" => "NSE_FNO",
+          "strike_step" => 50,
+          "lot_size" => 75,
+          "qty_multiplier" => 1,
+          "expiry_wday" => 4
+        }
+      }
+    }.freeze
 
     def self.load(path: ENV["SCALPER_CONFIG"])
       cfg = DEFAULT.dup

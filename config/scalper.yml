@@ -1,14 +1,20 @@
-symbols: ["NIFTY"]   # later: ["NIFTY","BANKNIFTY","SENSEX"]
+symbols: ["NIFTY"] # later: ["NIFTY","BANKNIFTY","SENSEX"]
 
 global:
-  min_profit_target: 1000
-  max_day_loss: 1500
-  charge_per_order: 20
-  decision_interval: 10
+  min_profit_target: 1000 # session target (₹)
+  max_day_loss: 1500 # cutoff (₹)
+  charge_per_order: 20 # flat per order (entry & exit both)
+  allocation_pct: 0.30 # 30% of available balance per new position
+  slippage_buffer_pct: 0.01 # cushion for sizing on premium
+  max_lots_per_trade: 10
+  decision_interval: 10 # seconds between signal checks
+  tp_pct: 0.35 # take profit
+  sl_pct: 0.18 # stop loss
+  trail_pct: 0.12 # trailing trigger %
   log_level: "INFO"
-  tp_pct: 0.35
-  sl_pct: 0.18
-  trail_pct: 0.12
+
+paper:
+  starting_balance: 200000 # paper wallet starting cash
 
 SYMBOLS:
   NIFTY:
@@ -16,6 +22,6 @@ SYMBOLS:
     seg_idx: "IDX_I"
     seg_opt: "NSE_FNO"
     strike_step: 50
-    lot_size: 75
-    qty_multiplier: 1
-    expiry_wday: 4   # Thu
+    lot_size: 75 # verify with your master
+    qty_multiplier: 1 # acts as per-symbol cap
+    expiry_wday: 4 # Thu

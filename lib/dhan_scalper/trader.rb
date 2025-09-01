@@ -45,13 +45,14 @@ module DhanScalper
 
     attr_reader :symbol, :session_pnl
 
-    def initialize(ws:, symbol:, cfg:, picker:, gl:, state: nil)
+    def initialize(ws:, symbol:, cfg:, picker:, gl:, state: nil, quantity_sizer: nil)
       @ws = ws
       @symbol = symbol
       @cfg = cfg
       @picker = picker
       @gl = gl
       @state = state
+      @quantity_sizer = quantity_sizer
       @open = nil
       @session_pnl = 0.0
       @killed = false
@@ -87,25 +88,34 @@ module DhanScalper
       ltp = TickCache.ltp(@cfg["seg_opt"], sid)&.to_f
       return unless ltp&.positive?
 
-      qty_lots = @cfg["qty_multiplier"]
-      qty = @cfg["lot_size"] * qty_lots
+      # Use QuantitySizer for allocation-based sizing
+      if @quantity_sizer
+        qty_lots = @quantity_sizer.calculate_lots(@symbol, ltp)
+        return unless qty_lots > 0
+        qty = @cfg["lot_size"] * qty_lots
+      else
+        # Fallback to old fixed sizing
+        qty_lots = @cfg["qty_multiplier"]
+        qty = @cfg["lot_size"] * qty_lots
+      end
 
-      order = DhanHQ::Models::Order.new(
-        transaction_type: "BUY",
-        exchange_segment: @cfg["seg_opt"],
-        product_type: "MARGIN",
-        order_type: "MARKET",
-        validity: "DAY",
+      # Get broker from global context
+      broker = @gl.instance_variable_get(:@broker)
+      return unless broker
+
+      # Place order through broker
+      order = broker.buy_market(
+        segment: @cfg["seg_opt"],
         security_id: sid,
         quantity: qty
       )
-      order.save
-      return puts("[#{@symbol}] ORDER FAIL: #{order.errors.full_messages.join(", ")}") unless order.persisted?
+
+      return puts("[#{@symbol}] ORDER FAIL: Could not place order") unless order
 
       entry = TickCache.ltp(@cfg["seg_opt"], sid)&.to_f || ltp
       side  = (direction == :long_ce ? "BUY_CE" : "BUY_PE")
-      @open = Position.new(side, sid, entry, qty_lots, order.order_id, 0.0, entry)
-      puts "[#{@symbol}] ENTRY #{side} sid=#{sid} entry≈#{entry.round(2)}"
+      @open = Position.new(side, sid, entry, qty_lots, order.id, 0.0, entry)
+      puts "[#{@symbol}] ENTRY #{side} sid=#{sid} entry≈#{entry.round(2)} lots=#{qty_lots}"
       publish_open_snapshot!
     end
 
@@ -135,16 +145,20 @@ module DhanScalper
 
     def close!(reason, ltp, charge_per_order)
       qty = @cfg["lot_size"] * @open.qty_lots
-      sell = DhanHQ::Models::Order.new(
-        transaction_type: "SELL",
-        exchange_segment: @cfg["seg_opt"],
-        product_type: "MARGIN",
-        order_type: "MARKET",
-        validity: "DAY",
+
+      # Get broker from global context
+      broker = @gl.instance_variable_get(:@broker)
+      return puts("[#{@symbol}] EXIT FAIL: No broker available") unless broker
+
+      # Place sell order through broker
+      sell_order = broker.sell_market(
+        segment: @cfg["seg_opt"],
         security_id: @open.sid,
         quantity: qty
       )
-      sell.save
+
+      return puts("[#{@symbol}] EXIT FAIL: Could not place sell order") unless sell_order
+
       net = PnL.net(entry: @open.entry, ltp: ltp, lot_size: @cfg["lot_size"], qty_lots: @open.qty_lots,
                     charge_per_order: charge_per_order)
       @session_pnl += net

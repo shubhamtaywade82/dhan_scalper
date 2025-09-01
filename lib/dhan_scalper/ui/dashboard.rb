@@ -11,8 +11,9 @@ module DhanScalper
     class Dashboard
       REFRESH = 0.5
 
-      def initialize(state)
+      def initialize(state, balance_provider: nil)
         @st   = state
+        @balance_provider = balance_provider
         @pd   = Pastel.new
         @rd   = TTY::Reader.new
         @show_subs = true
@@ -69,6 +70,7 @@ module DhanScalper
         width = TTY::Screen.width
         clear_screen
         puts header_box(width)
+        puts balance_box(width) if @balance_provider
         puts positions_box(width)
         puts closed_box(width)
         puts subs_box(width) if @show_subs
@@ -99,6 +101,24 @@ module DhanScalper
             Status: #{status}   Session PnL: #{pnl_s}   Target: #{tgt}   Max DD: -#{mdd}
             Symbols: #{syms}
             Controls: #{kbd("q")}uit  #{kbd("p")}ause  #{kbd("r")}esume  #{kbd("s")}ubscriptions toggle
+          TEXT
+        end
+      end
+
+      def balance_box(width)
+        return "" unless @balance_provider
+
+        available = @balance_provider.available_balance
+        used = @balance_provider.used_balance
+        total = @balance_provider.total_balance
+
+        TTY::Box.frame(
+          width: width,
+          title: { top_left: " 💰 ACCOUNT BALANCE " },
+          style: { border: { fg: :bright_green } }
+        ) do
+          <<~TEXT
+            Available: #{@pd.green("₹#{available.round(2)}")}   Used: #{@pd.red("₹#{used.round(2)}")}   Total: #{@pd.blue("₹#{total.round(2)}")}
           TEXT
         end
       end

@@ -11,6 +11,27 @@ module DhanScalper
     def self.exit_on_failure?
       false
     end
+
+    desc "help", "Show this help message"
+    def help
+      puts "DhanScalper - Automated Options Scalping Bot"
+      puts "=" * 50
+      puts
+      puts "Available commands:"
+      puts "  start           - Start the scalper (Ctrl+C to stop)"
+      puts "  paper           - Start paper trading (alias for start -m paper)"
+      puts "  dryrun          - Run signals only, no orders"
+      puts "  orders          - View virtual orders"
+      puts "  positions       - View virtual positions"
+      puts "  balance         - View virtual balance"
+      puts "  reset-balance   - Reset virtual balance to initial amount"
+      puts "  clear-data      - Clear all virtual data (orders, positions, balance)"
+      puts "  dashboard       - Show real-time virtual data dashboard"
+      puts "  help            - Show this help message"
+      puts
+      puts "For detailed help on a command, use: scalper help COMMAND"
+    end
+
     desc "start", "Start the scalper (Ctrl+C to stop)"
     option :config, type: :string, aliases: "-c", desc: "Path to scalper.yml"
     option :mode, aliases: "-m", desc: "Trading mode (live/paper)", default: "paper"

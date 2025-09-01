@@ -5,6 +5,9 @@ require "ostruct"
 require_relative "state"
 require_relative "ui/dashboard"
 require_relative "virtual_data_manager"
+require_relative "quantity_sizer"
+require_relative "balance_providers/paper_wallet"
+require_relative "balance_providers/live_balance"
 
 module DhanScalper
   class App
@@ -19,6 +22,24 @@ module DhanScalper
       @state = State.new(symbols: cfg["symbols"], session_target: cfg.dig("global", "min_profit_target").to_f,
                          max_day_loss: cfg.dig("global", "max_day_loss").to_f)
       @virtual_data_manager = VirtualDataManager.new
+
+      # Initialize balance provider
+      @balance_provider = if @mode == :paper
+        starting_balance = cfg.dig("paper", "starting_balance") || 200_000.0
+        BalanceProviders::PaperWallet.new(starting_balance: starting_balance)
+      else
+        BalanceProviders::LiveBalance.new
+      end
+
+      # Initialize quantity sizer
+      @quantity_sizer = QuantitySizer.new(cfg, @balance_provider)
+
+      # Initialize broker
+      @broker = if @mode == :paper
+        Brokers::PaperBroker.new(virtual_data_manager: @virtual_data_manager, balance_provider: @balance_provider)
+      else
+        Brokers::DhanBroker.new(virtual_data_manager: @virtual_data_manager, balance_provider: @balance_provider)
+      end
     end
 
     def start
@@ -37,21 +58,16 @@ module DhanScalper
         end
       end
 
-      # broker
-      (if @mode == :paper
-         DhanScalper::Brokers::PaperBroker.new(virtual_data_manager: @virtual_data_manager)
-       else
-         DhanScalper::Brokers::DhanBroker.new(virtual_data_manager: @virtual_data_manager)
-       end)
-
       # prepare traders
       traders, ce_map, pe_map = setup_traders(ws)
       puts "[DEBUG] traders class: #{traders.class}, traders: #{traders.inspect}"
 
       # UI loop
-      ui = Thread.new { UI::Dashboard.new(@state).run }
+      ui = Thread.new { UI::Dashboard.new(@state, balance_provider: @balance_provider).run }
 
       puts "[READY] Symbols: #{@cfg["symbols"].join(", ")}"
+      puts "[MODE] #{@mode.upcase} trading with balance: ₹#{@balance_provider.available_balance.round(0)}"
+
       last_decision = Time.at(0)
       decision_interval = @cfg.dig("global", "decision_interval").to_i
       max_dd = @cfg.dig("global", "max_day_loss").to_f
@@ -151,7 +167,15 @@ module DhanScalper
         ce_map[sym] = pick[:ce_sid]
         pe_map[sym] = pick[:pe_sid]
 
-        tr = DhanScalper::Trader.new(ws: ws, symbol: sym, cfg: s, picker: picker, gl: self, state: @state)
+        tr = DhanScalper::Trader.new(
+          ws: ws,
+          symbol: sym,
+          cfg: s,
+          picker: picker,
+          gl: self,
+          state: @state,
+          quantity_sizer: @quantity_sizer
+        )
         tr.subscribe_options(ce_map[sym], pe_map[sym])
         puts "[#{sym}] Expiry=#{pick[:expiry]} strikes=#{pick[:strikes].join(", ")}"
         traders[sym] = tr

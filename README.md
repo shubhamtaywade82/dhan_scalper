@@ -203,6 +203,8 @@ bundle exec rake install
 - **QuantitySizer**: Position sizing calculator
 - **BalanceProviders**: Account balance management
 - **Brokers**: Order execution (Paper/Live)
+- **OptionPicker**: Unified option discovery and expiry management
+- **CsvMaster**: DhanHQ master data integration for security ID lookup
 - **UI::Dashboard**: Real-time TTY interface
 
 ### Data Flow
@@ -210,9 +212,21 @@ bundle exec rake install
 1. WebSocket receives market data
 2. TickCache stores latest prices
 3. Trend engine analyzes for signals
-4. QuantitySizer calculates position size
-5. Broker executes orders
-6. Dashboard displays live state
+4. OptionPicker finds ATM strikes using CSV master data
+5. QuantitySizer calculates position size
+6. Broker executes orders
+7. Dashboard displays live state
+
+### CSV Master Data Integration
+
+DhanScalper integrates with the [DhanHQ API scrip master detailed CSV](https://images.dhan.co/api-data/api-scrip-master-detailed.csv) to:
+
+- **Fetch Real Expiry Dates**: Gets actual option expiry dates from the master data
+- **Lookup Security IDs**: Finds correct security IDs for specific options (symbol, expiry, strike, type)
+- **Get Lot Sizes**: Retrieves contract sizes for position calculations
+- **Caching**: Automatically caches the CSV data locally for 24 hours to improve performance
+
+The system supports both `OPTIDX` (index options like NIFTY) and `OPTFUT` (futures options) instrument types.
 
 ## Safety Features
 

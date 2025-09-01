@@ -24,4 +24,4 @@ SYMBOLS:
     strike_step: 50
     lot_size: 75 # verify with your master
     qty_multiplier: 1 # acts as per-symbol cap
-    expiry_wday: 4 # Thu
+    expiry_wday: 4 # Thu (fallback only - API expiry dates are used primarily)

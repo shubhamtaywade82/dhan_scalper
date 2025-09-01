@@ -171,7 +171,7 @@ module DhanScalper
           ws: ws,
           symbol: sym,
           cfg: s,
-          picker: picker,
+          picker: OptionPicker.new(s, mode: @mode),
           gl: self,
           state: @state,
           quantity_sizer: @quantity_sizer

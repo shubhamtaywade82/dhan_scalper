@@ -29,7 +29,7 @@ module DhanScalper
           "strike_step" => 50,
           "lot_size" => 75,
           "qty_multiplier" => 1,
-          "expiry_wday" => 4
+          "expiry_wday" => 4 # Fallback only - API expiry dates are used primarily
         }
       }
     }.freeze

@@ -43,16 +43,20 @@ module DhanScalper
 
       def refresh_cache
         begin
-          # Fetch funds from DhanHQ API
+          # Use the correct DhanHQ::Models::Funds.fetch method
+          puts "[DEBUG] Attempting to fetch funds from DhanHQ API..."
           funds = DhanHQ::Models::Funds.fetch
+          puts "[DEBUG] Funds object: #{funds.inspect}"
 
           if funds && funds.respond_to?(:available_balance)
+            puts "[DEBUG] Using available_balance method"
             @cache = {
               available: funds.available_balance.to_f,
-              used: funds.used_margin.to_f,
-              total: funds.total_balance.to_f
+              used: funds.utilized_amount.to_f,
+              total: (funds.available_balance.to_f + funds.utilized_amount.to_f)
             }
           else
+            puts "[DEBUG] Funds object doesn't have expected methods, using fallback"
             # Fallback to basic structure if API response is different
             @cache = {
               available: 100_000.0, # Default fallback
@@ -61,9 +65,11 @@ module DhanScalper
             }
           end
 
+          puts "[DEBUG] Cache updated: #{@cache.inspect}"
           @cache_time = Time.now
         rescue StandardError => e
           puts "Warning: Failed to fetch live balance: #{e.message}"
+          puts "Backtrace: #{e.backtrace.first(3).join("\n")}"
           # Keep existing cache if available, otherwise use defaults
           unless @cache_time
             @cache = {

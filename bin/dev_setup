@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+set -euo pipefail
+IFS=$'\n\t'
+
+echo "🚀 Setting up DhanScalper Development Environment"
+echo "=================================================="
+
+# Check if we're in the right directory
+if [ ! -f "dhan_scalper.gemspec" ]; then
+    echo "❌ Error: Please run this script from the dhan_scalper root directory"
+    exit 1
+fi
+
+echo "📦 Installing dependencies..."
+bundle install
+
+echo "🔧 Setting up development configuration..."
+if [ ! -f "config/development.yml" ]; then
+    echo "⚠ Warning: config/development.yml not found. Please create it manually."
+else
+    echo "✓ Development config found"
+fi
+
+echo "📁 Creating data directory..."
+mkdir -p data
+
+echo "🔑 Setting up environment variables..."
+if [ ! -f ".env" ]; then
+    echo "⚠ No .env file found. Creating template..."
+    cat > .env << EOF
+# DhanHQ API Credentials (for live trading)
+# Uncomment and fill in your actual credentials
+# export DHAN_CLIENT_ID="your_client_id"
+# export DHAN_CLIENT_SECRET="your_client_secret"
+# export DHAN_USER_ID="your_user_id"
+# export DHAN_PASSWORD="your_password"
+# export DHAN_API_KEY="your_api_key"
+# export DHAN_VENDOR_CODE="your_vendor_code"
+
+# Development settings
+export DHAN_SCALPER_ENV="development"
+export DHAN_SCALPER_LOG_LEVEL="DEBUG"
+EOF
+    echo "✓ Created .env template"
+else
+    echo "✓ .env file found"
+fi
+
+echo "🧪 Running basic tests..."
+if [ -f "bin/dev_test" ]; then
+    echo "Running development tests..."
+    ./bin/dev_test
+else
+    echo "⚠ Development test script not found"
+fi
+
+echo ""
+echo "🎯 Development Environment Setup Complete!"
+echo ""
+echo "Next steps:"
+echo "1. Edit .env file with your DhanHQ credentials (if testing live API)"
+echo "2. Run './bin/console' for interactive development"
+echo "3. Test paper trading: ./exe/dhan_scalper paper -c config/development.yml"
+echo "4. Test dry run: ./exe/dhan_scalper dryrun -c config/development.yml"
+echo "5. View dashboard: ./exe/dhan_scalper dashboard"
+echo ""
+echo "Happy coding! 🚀"

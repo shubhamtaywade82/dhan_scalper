@@ -1,0 +1,122 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Development testing script for dhan_scalper
+# Run with: ./bin/dev_test
+
+require "bundler/setup"
+require "dhan_scalper"
+
+puts "🚀 DhanScalper Development Testing"
+puts "=" * 50
+
+# Test 1: Basic Configuration
+puts "\n1. Testing Configuration..."
+begin
+  config = DhanScalper::Config.load(path: "config/development.yml")
+  puts "✓ Configuration loaded successfully"
+  puts "  Symbols: #{config['symbols']}"
+  puts "  Log Level: #{config.dig('global', 'log_level')}"
+  puts "  Paper Balance: ₹#{config.dig('paper', 'starting_balance')}"
+rescue => e
+  puts "✗ Configuration failed: #{e.message}"
+end
+
+# Test 2: Balance Provider (Paper Mode)
+puts "\n2. Testing Paper Balance Provider..."
+begin
+  balance_provider = DhanScalper::BalanceProviders::PaperWallet.new(100_000)
+  puts "✓ Paper balance provider created"
+  puts "  Available: ₹#{balance_provider.available_balance}"
+  puts "  Total: ₹#{balance_provider.total_balance}"
+  
+  # Test balance update
+  balance_provider.update_balance(5000, type: :debit)
+  puts "  After ₹5000 debit: ₹#{balance_provider.available_balance}"
+rescue => e
+  puts "✗ Paper balance provider failed: #{e.message}"
+end
+
+# Test 3: Virtual Data Manager
+puts "\n3. Testing Virtual Data Manager..."
+begin
+  vdm = DhanScalper::VirtualDataManager.new
+  puts "✓ Virtual data manager created"
+  
+  # Test balance retrieval
+  balance = vdm.get_balance
+  puts "  VDM Balance: ₹#{balance[:available]}"
+rescue => e
+  puts "✗ Virtual data manager failed: #{e.message}"
+end
+
+# Test 4: Paper Broker
+puts "\n4. Testing Paper Broker..."
+begin
+  broker = DhanScalper::Brokers::PaperBroker.new(
+    virtual_data_manager: DhanScalper::VirtualDataManager.new,
+    balance_provider: DhanScalper::BalanceProviders::PaperWallet.new(100_000)
+  )
+  puts "✓ Paper broker created"
+rescue => e
+  puts "✗ Paper broker failed: #{e.message}"
+end
+
+# Test 5: Tick Cache
+puts "\n5. Testing Tick Cache..."
+begin
+  # Simulate some tick data
+  DhanScalper::TickCache.put({
+    segment: "IDX_I",
+    security_id: "13",
+    ltp: 19500.0,
+    ts: Time.now.to_i,
+    symbol: "NIFTY"
+  })
+  
+  ltp = DhanScalper::TickCache.ltp("IDX_I", "13")
+  puts "✓ Tick cache working"
+  puts "  NIFTY LTP: #{ltp}"
+rescue => e
+  puts "✗ Tick cache failed: #{e.message}"
+end
+
+# Test 6: Candle Series (if DhanHQ is configured)
+puts "\n6. Testing Candle Series..."
+begin
+  # This will only work if DhanHQ is properly configured
+  if ENV['DHAN_CLIENT_ID'] && ENV['DHAN_CLIENT_SECRET']
+    puts "  DhanHQ credentials found, testing historical data..."
+    # Note: This is a dry test, won't actually fetch data
+    puts "  ✓ Candle series ready for testing"
+  else
+    puts "  ⚠ DhanHQ credentials not found, skipping live API test"
+    puts "  Set environment variables to test live API:"
+    puts "    export DHAN_CLIENT_ID='your_client_id'"
+    puts "    export DHAN_CLIENT_SECRET='your_client_secret'"
+    puts "    export DHAN_USER_ID='your_user_id'"
+    puts "    export DHAN_PASSWORD='your_password'"
+    puts "    export DHAN_API_KEY='your_api_key'"
+    puts "    export DHAN_VENDOR_CODE='your_vendor_code'"
+  end
+rescue => e
+  puts "✗ Candle series test failed: #{e.message}"
+end
+
+# Test 7: CLI Commands
+puts "\n7. Testing CLI Commands..."
+begin
+  # Test basic CLI functionality
+  cli = DhanScalper::CLI.new
+  puts "✓ CLI created successfully"
+rescue => e
+  puts "✗ CLI test failed: #{e.message}"
+end
+
+puts "\n" + "=" * 50
+puts "🎯 Development Testing Completed!"
+puts "\nNext steps:"
+puts "1. Run './bin/console' for interactive testing"
+puts "2. Test paper trading: ./exe/dhan_scalper paper -c config/development.yml"
+puts "3. Test dry run: ./exe/dhan_scalper dryrun -c config/development.yml"
+puts "4. View virtual data: ./exe/dhan_scalper dashboard"

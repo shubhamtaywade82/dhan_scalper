@@ -25,7 +25,7 @@ module DhanScalper
       c1_series = CandleSeries.load_from_dhan_intraday(
         seg: @seg_idx,
         sid: @sid_idx,
-        interval: "1", 
+        interval: "1",
         symbol: "INDEX"
       )
       c3_series = CandleSeries.load_from_dhan_intraday(
@@ -34,17 +34,45 @@ module DhanScalper
         interval: "3",
         symbol: "INDEX"
       )
-      
+
+      return :none if c1_series.nil? || c3_series.nil?
       return :none if c1_series.candles.size < 50 || c3_series.candles.size < 50
 
-      # Use built-in CandleSeries indicators instead of external Indicators
+      # Primary: Supertrend across 1m and 3m
+      begin
+        st1 = DhanScalper::Indicators::Supertrend.new(series: c1_series).call
+        st3 = DhanScalper::Indicators::Supertrend.new(series: c3_series).call
+        pp st1
+        pp st3
+
+        if st1 && st1.any? && st3 && st3.any?
+          last_close_1 = c1_series.closes.last.to_f
+          last_close_3 = c3_series.closes.last.to_f
+          last_st_1 = st1.compact.last
+          last_st_3 = st3.compact.last
+
+          if last_st_1 && last_st_3
+            puts "[DEBUG] Supertrend 1m: st=#{last_st_1.round(2)} close=#{last_close_1.round(2)}"
+            puts "[DEBUG] Supertrend 3m: st=#{last_st_3.round(2)} close=#{last_close_3.round(2)}"
+
+            up   = (last_close_1 > last_st_1) && (last_close_3 > last_st_3)
+            down = (last_close_1 < last_st_1) && (last_close_3 < last_st_3)
+            return :long_ce if up
+            return :long_pe if down
+          end
+        end
+      rescue StandardError
+        # Fall through to EMA/RSI logic
+      end
+
+      # Fallback: EMA/RSI when supertrend unavailable
       e1f = c1_series.ema(20).last
       e1s = c1_series.ema(50).last
       r1 = c1_series.rsi(14).last
       e3f = c3_series.ema(20).last
       e3s = c3_series.ema(50).last
       r3 = c3_series.rsi(14).last
-      
+
       up   = e1f > e1s && r1 > 55 && e3f > e3s && r3 > 52
       down = e1f < e1s && r1 < 45 && e3f < e3s && r3 < 48
       return :long_ce if up
@@ -59,12 +87,13 @@ module DhanScalper
 
     attr_reader :symbol, :session_pnl
 
-    def initialize(ws:, symbol:, cfg:, picker:, gl:, state: nil, quantity_sizer: nil)
+    def initialize(ws:, symbol:, cfg:, picker:, gl:, state: nil, quantity_sizer: nil, enhanced: true)
       @ws = ws
       @symbol = symbol
       @cfg = cfg
       @picker = picker
       @gl = gl
+      @enhanced = enhanced
       @state = state
       @quantity_sizer = quantity_sizer
       @open = nil
@@ -219,7 +248,8 @@ module DhanScalper
     private
 
     def opposite_signal?
-      dir = Trend.new(seg_idx: @cfg["seg_idx"], sid_idx: @cfg["idx_sid"]).decide
+      trend_class = @enhanced ? DhanScalper::TrendEnhanced : DhanScalper::Trend
+      dir = trend_class.new(seg_idx: @cfg["seg_idx"], sid_idx: @cfg["idx_sid"]).decide
       (@open.side == "BUY_CE" && dir == :long_pe) || (@open.side == "BUY_PE" && dir == :long_ce)
     rescue StandardError; false
     end

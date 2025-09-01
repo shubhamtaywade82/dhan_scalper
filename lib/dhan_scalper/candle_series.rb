@@ -2,6 +2,9 @@
 
 require_relative "support/time_zone"
 require_relative "candle"
+require_relative "indicators/base"
+require_relative "indicators/holy_grail"
+require_relative "indicators/supertrend"
 
 module IndicatorsGate
   module_function
@@ -51,13 +54,64 @@ module IndicatorsGate
     out
   end
 
-  # Optional: simple Supertrend (only if you have a lib; otherwise return [])
-  def supertrend_series(series)
+  # Optional: simple Supertrend; computes fallback if no external lib
+  def supertrend_series(series, period: 10, multiplier: 3.0)
+    # If an external lib is available and compatible, prefer it
     if defined?(Indicators) && Indicators.respond_to?(:Supertrend)
-      return Indicators::Supertrend.new(series: series).call
+      begin
+        return Indicators::Supertrend.new(series: series, period: period, multiplier: multiplier).call
+      rescue StandardError
+        # fall through to pure-Ruby implementation
+      end
     end
 
-    [] # stub until you wire a concrete impl
+    highs  = series.highs
+    lows   = series.lows
+    closes = series.closes
+    n = closes.size
+    return [] if n.zero?
+
+    # Compute ATR with Wilder smoothing (fallback implementation)
+    atr_vals = atr(series.hlc, period: period)
+    return [] if atr_vals.nil? || atr_vals.empty?
+
+    bub = Array.new(n) # basic upper band
+    blb = Array.new(n) # basic lower band
+    ub  = Array.new(n) # final upper band
+    lb  = Array.new(n) # final lower band
+    st  = Array.new(n) # supertrend line
+
+    start = period - 1
+    (start...n).each do |i|
+      mid = (highs[i].to_f + lows[i].to_f) / 2.0
+      atr_i = atr_vals[i].to_f
+      bub[i] = mid + multiplier.to_f * atr_i
+      blb[i] = mid - multiplier.to_f * atr_i
+
+      if i == start
+        ub[i] = bub[i]
+        lb[i] = blb[i]
+      else
+        prev_ub = ub[i - 1]
+        prev_lb = lb[i - 1]
+        prev_c  = closes[i - 1].to_f
+
+        ub[i] = if bub[i] < prev_ub || prev_c > prev_ub
+                  bub[i]
+                else
+                  prev_ub
+                end
+        lb[i] = if blb[i] > prev_lb || prev_c < prev_lb
+                  blb[i]
+                else
+                  prev_lb
+                end
+      end
+
+      st[i] = (closes[i].to_f <= ub[i]) ? ub[i] : lb[i]
+    end
+
+    st
   end
 
   # Donchian (from intrinio gem)
@@ -74,15 +128,42 @@ module IndicatorsGate
 
   def atr(values_hlc, period: 14)
     if defined?(TechnicalAnalysis)
-      # intrinio returns array of hashes with :atr keys (depending on version)
-      res = begin
-        TechnicalAnalysis.atr(values_hlc, period: period)
+      begin
+        res = TechnicalAnalysis.atr(values_hlc, period: period)
+        return res
       rescue StandardError
-        []
+        # fall through to pure-Ruby implementation
       end
-      return res
     end
-    []
+
+    # Pure-Ruby ATR (Wilder) fallback
+    n = values_hlc.size
+    return [] if n.zero?
+
+    highs = values_hlc.map { |x| (x[:high] || x["high"]).to_f }
+    lows  = values_hlc.map { |x| (x[:low]  || x["low"]).to_f }
+    closes= values_hlc.map { |x| (x[:close]|| x["close"]).to_f }
+
+    trs = Array.new(n, 0.0)
+    trs[0] = (highs[0] - lows[0]).abs
+    (1...n).each do |i|
+      h_l = (highs[i] - lows[i]).abs
+      h_pc= (highs[i] - closes[i - 1]).abs
+      l_pc= (lows[i]  - closes[i - 1]).abs
+      trs[i] = [h_l, h_pc, l_pc].max
+    end
+
+    atr = Array.new(n)
+    if n >= period
+      sum = trs[0...period].sum
+      atr_val = sum / period.to_f
+      atr[period - 1] = atr_val
+      (period...n).each do |i|
+        atr_val = ((atr_val * (period - 1)) + trs[i]) / period.to_f
+        atr[i] = atr_val
+      end
+    end
+    atr
   end
 end
 
@@ -263,7 +344,7 @@ class CandleSeries
   # HL/HLCC arrays for some libs (intrinio)
   def hlc
     candles.map do |c|
-      { date_time: TimeZone.at(c.timestamp || 0), high: c.high, low: c.low, close: c.close }
+      { date_time: DhanScalper::TimeZone.at(c.timestamp || 0), high: c.high, low: c.low, close: c.close }
     end
   end
 
@@ -356,18 +437,97 @@ class CandleSeries
 
   # Simple supertrend signal (requires an implementation/library; otherwise nil)
   def supertrend_signal
-    line = IndicatorsGate.supertrend_series(self)
+    line = DhanScalper::Indicators::Supertrend.new(series: self).call
     return nil if line.nil? || line.empty?
 
     latest_close = closes.last
     st = line.last
-    return :long_entry  if latest_close > st
-    return :short_entry if latest_close < st
+    return :bullish if latest_close > st
+    return :bearish if latest_close < st
 
     nil
   end
 
+  # Convenience: compute Holy Grail result for this series
+  def holy_grail
+    DhanScalper::Indicators::HolyGrail.call(candles: to_hash)
+  rescue StandardError
+    nil
+  end
+
+  # ---------- Advanced Indicators ----------
+
+  # Holy Grail indicator for comprehensive market analysis
+  def holy_grail
+    return nil if candles.size < 100 # Need sufficient data
+
+    candle_hash = {
+      'open' => opens,
+      'high' => highs,
+      'low' => lows,
+      'close' => closes,
+      'volume' => volumes,
+      'timestamp' => candles.map(&:timestamp)
+    }
+
+    DhanScalper::Indicators::HolyGrail.new(candles: candle_hash).call
+  end
+
+  # Supertrend indicator using the new class
+  def supertrend_new(period: 10, multiplier: 2.0)
+    return [] if candles.size < period
+
+    DhanScalper::Indicators::Supertrend.new(
+      series: self,
+      period: period,
+      multiplier: multiplier
+    ).call
+  end
+
+  # Get the latest Supertrend value
+  def supertrend_signal(period: 10, multiplier: 2.0)
+    st_values = supertrend_new(period: period, multiplier: multiplier)
+    return :none if st_values.empty? || st_values.last.nil?
+
+    current_price = closes.last
+    current_st = st_values.last
+
+    if current_price > current_st
+      :bullish
+    elsif current_price < current_st
+      :bearish
+    else
+      :neutral
+    end
+  end
+
+  # Combined signal using multiple indicators
+  def combined_signal
+    return :none if candles.size < 100
+
+    # Get Holy Grail analysis
+    hg = holy_grail
+    return :none unless hg&.proceed?
+
+    # Get Supertrend signal
+    st_signal = supertrend_signal
+
+    # Combine signals
+    case [hg.bias, st_signal]
+    when [:bullish, :bullish]
+      :strong_buy
+    when [:bullish, :bearish]
+      :weak_buy
+    when [:bearish, :bearish]
+      :strong_sell
+    when [:bearish, :bullish]
+      :weak_sell
+    else
+      :neutral
+    end
+  end
+
   private
 
-  def to_time(x) = TimeZone.parse(x)
+  def to_time(x) = DhanScalper::TimeZone.parse(x)
 end

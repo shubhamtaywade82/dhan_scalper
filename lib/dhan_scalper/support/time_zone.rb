@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
-module TimeZone
+module DhanScalper
+  module TimeZone
   module_function
 
   def parse(str_or_num)
@@ -15,5 +16,6 @@ module TimeZone
 
   def at(epoch)
     Time.at(epoch.to_i)
+  end
   end
 end

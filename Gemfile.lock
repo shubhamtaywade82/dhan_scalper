@@ -257,9 +257,7 @@ DEPENDENCIES
   rake (~> 13.0, >= 13.0)
   rspec (~> 3.0, >= 3.12)
   rubocop (~> 1.21)
-  ruby-technical-analysis
   simplecov
-  technical-analysis
   thor
   tty-box
   tty-reader

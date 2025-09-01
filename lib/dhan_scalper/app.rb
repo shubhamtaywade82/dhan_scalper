@@ -13,11 +13,12 @@ require_relative "balance_providers/live_balance"
 module DhanScalper
   class App
     # :live or :paper
-    def initialize(cfg, mode: :live, dryrun: false, quiet: false)
+    def initialize(cfg, mode: :live, dryrun: false, quiet: false, enhanced: true)
       @cfg = cfg
       @mode = mode
       @dry = dryrun
       @quiet = quiet
+      @enhanced = enhanced
       @stop = false
       Signal.trap("INT") { @stop = true }
       Signal.trap("TERM") { @stop = true }
@@ -105,7 +106,8 @@ module DhanScalper
               next unless trader
 
               s = sym_cfg(sym)
-              dir = DhanScalper::Trend.new(seg_idx: s["seg_idx"], sid_idx: s["idx_sid"]).decide
+              trend_class = @enhanced ? DhanScalper::TrendEnhanced : DhanScalper::Trend
+              dir = trend_class.new(seg_idx: s["seg_idx"], sid_idx: s["idx_sid"]).decide
               trader.maybe_enter(dir, ce_map[sym], pe_map[sym]) unless @dry
             end
           end
@@ -237,7 +239,8 @@ module DhanScalper
           picker: OptionPicker.new(s, mode: @mode),
           gl: self,
           state: @state,
-          quantity_sizer: @quantity_sizer
+          quantity_sizer: @quantity_sizer,
+          enhanced: @enhanced
         )
         tr.subscribe_options(ce_map[sym], pe_map[sym])
         puts "[#{sym}] Expiry=#{pick[:expiry]} strikes=#{pick[:strikes].join(", ")}"

@@ -17,8 +17,6 @@ gem "DhanHQ", git: "https://github.com/shubhamtaywade82/dhanhq-client.git", bran
 gem "concurrent-ruby"
 gem "dotenv"
 gem "pastel"
-gem "ruby-technical-analysis", require: "ruby-technical-analysis"
-gem "technical-analysis", require: "technical_analysis"
 gem "thor" # CLI
 gem "tty-box"
 gem "tty-reader"

@@ -6,7 +6,12 @@ require "dhan_scalper/indicators"
 
 require "dhan_scalper/candle"
 require "dhan_scalper/candle_series"
+require "dhan_scalper/support/application_service"
+require "dhan_scalper/support/time_zone"
+require "dhan_scalper/indicators/supertrend"
+require "dhan_scalper/indicators/holy_grail"
 require "dhan_scalper/trend_engine"
+require "dhan_scalper/trend_enhanced"
 require "dhan_scalper/order"
 require "dhan_scalper/option_picker"
 require "dhan_scalper/tick_cache"
@@ -28,5 +33,9 @@ require "dhan_scalper/pnl"
 require "dhan_scalper/support/time_zone"
 require "dhan_scalper/ui/dashboard"
 require "dhan_scalper/ui/data_viewer"
+require "dhan_scalper/ui/simple_logger"
+require "ruby-technical-analysis"
+require "technical-analysis"
+
 
 module DhanScalper; end

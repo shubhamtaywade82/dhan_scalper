@@ -25,3 +25,4 @@ gem "tty-reader"
 gem "tty-screen"
 gem "tty-table"
 gem "webmock", group: :test
+gem "simplecov", require: false, group: :test

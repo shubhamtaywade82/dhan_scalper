@@ -21,4 +21,10 @@ RSpec.describe DhanScalper::Position do
   it "stringifies position" do
     expect(position.to_s).to include("BUY 10 ABC @ 100.0")
   end
+
+  it "defaults pnl to zero for unknown side" do
+    pos = described_class.new(security_id: "1", side: "HOLD", entry_price: 100.0, quantity: 10)
+    pos.update_price(120.0)
+    expect(pos.pnl).to eq(0.0)
+  end
 end

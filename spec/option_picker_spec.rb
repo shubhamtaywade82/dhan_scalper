@@ -42,6 +42,26 @@ RSpec.describe DhanScalper::OptionPicker do
       allow(picker).to receive(:fallback_expiry).and_return("2023-09-14")
       expect(picker.fetch_first_expiry).to eq("2023-09-14")
     end
+
+    it "logs error and falls back when csv master raises" do
+      allow(picker).to receive(:get_underlying_symbol).and_return("NIFTY")
+      allow(csv_master).to receive(:get_expiry_dates).and_raise("fail")
+      allow(picker).to receive(:fallback_expiry).and_return("2023-09-14")
+      expect { expect(picker.fetch_first_expiry).to eq("2023-09-14") }
+        .to output(/CSV master method failed/).to_stdout
+    end
+  end
+
+  describe "#fallback_expiry" do
+    it "computes next expiry based on weekday" do
+      allow(Time).to receive(:now).and_return(Time.new(2023, 9, 11, 10)) # Monday
+      expect(picker.fallback_expiry).to eq("2023-09-14")
+    end
+
+    it "rolls to next week after 3pm" do
+      allow(Time).to receive(:now).and_return(Time.new(2023, 9, 14, 15, 0, 0)) # Thursday 3pm
+      expect(picker.fallback_expiry).to eq("2023-09-21")
+    end
   end
 
   describe "#index_by" do
@@ -54,9 +74,15 @@ RSpec.describe DhanScalper::OptionPicker do
   describe "#get_underlying_symbol" do
     it "maps idx_sid to underlying" do
       expect(picker.get_underlying_symbol).to eq("NIFTY")
-      other = described_class.new(cfg.merge("idx_sid" => "23"), mode: :live)
+      bank = described_class.new(cfg.merge("idx_sid" => "23"), mode: :live)
+      bank.instance_variable_set(:@csv_master, csv_master)
+      expect(bank.get_underlying_symbol).to eq("BANKNIFTY")
+      finn = described_class.new(cfg.merge("idx_sid" => "25"), mode: :live)
+      finn.instance_variable_set(:@csv_master, csv_master)
+      expect(finn.get_underlying_symbol).to eq("FINNIFTY")
+      other = described_class.new(cfg.merge("idx_sid" => "999"), mode: :live)
       other.instance_variable_set(:@csv_master, csv_master)
-      expect(other.get_underlying_symbol).to eq("BANKNIFTY")
+      expect(other.get_underlying_symbol).to eq("NIFTY")
     end
   end
 

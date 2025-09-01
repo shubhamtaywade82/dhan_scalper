@@ -19,7 +19,7 @@ module DhanScalper
       @stop = false
       Signal.trap("INT") { @stop = true }
       Signal.trap("TERM") { @stop = true }
-      @state = State.new(symbols: cfg["symbols"], session_target: cfg.dig("global", "min_profit_target").to_f,
+      @state = State.new(symbols: cfg["SYMBOLS"]&.keys || [], session_target: cfg.dig("global", "min_profit_target").to_f,
                          max_day_loss: cfg.dig("global", "max_day_loss").to_f)
       @virtual_data_manager = VirtualDataManager.new
 
@@ -68,7 +68,7 @@ module DhanScalper
       # UI loop
       ui = Thread.new { UI::Dashboard.new(@state, balance_provider: @balance_provider).run }
 
-      puts "[READY] Symbols: #{@cfg["symbols"].join(", ")}"
+      puts "[READY] Symbols: #{@cfg["SYMBOLS"]&.keys&.join(", ") || "None"}"
       puts "[MODE] #{@mode.upcase} trading with balance: ₹#{@balance_provider.available_balance.round(0)}"
 
       last_decision = Time.at(0)
@@ -198,7 +198,7 @@ module DhanScalper
       ce_map = {}
       pe_map = {}
 
-      @cfg["symbols"].each do |sym|
+      @cfg["SYMBOLS"]&.each do |sym, _|
         s = sym_cfg(sym)
         if s["idx_sid"].to_s.empty?
           puts "[SKIP] #{sym}: idx_sid not set."

@@ -21,6 +21,9 @@ end
 require "webmock/rspec"
 require "dhan_scalper"
 
+# Load integration helpers
+require_relative "support/integration_helpers"
+
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure
   config.example_status_persistence_file_path = ".rspec_status"
@@ -30,5 +33,10 @@ RSpec.configure do |config|
 
   config.expect_with :rspec do |c|
     c.syntax = :expect
+  end
+
+  # Configure integration tests
+  config.define_derived_metadata(file_path: %r{spec/integration/}) do |metadata|
+    metadata[:type] = :integration
   end
 end

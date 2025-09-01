@@ -49,11 +49,15 @@ module DhanScalper
           puts "[DEBUG] Funds object: #{funds.inspect}"
 
           if funds && funds.respond_to?(:available_balance)
-            puts "[DEBUG] Using available_balance method"
+            # Calculate used balance as difference between total and available
+            total = funds.total_balance.to_f
+            available = funds.available_balance.to_f
+            used = total - available
+
             @cache = {
-              available: funds.available_balance.to_f,
-              used: funds.utilized_amount.to_f,
-              total: (funds.available_balance.to_f + funds.utilized_amount.to_f)
+              available: available,
+              used: used,
+              total: total
             }
           else
             puts "[DEBUG] Funds object doesn't have expected methods, using fallback"

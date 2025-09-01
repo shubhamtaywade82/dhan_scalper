@@ -42,6 +42,26 @@ RSpec.describe DhanScalper::OptionPicker do
       allow(picker).to receive(:fallback_expiry).and_return("2023-09-14")
       expect(picker.fetch_first_expiry).to eq("2023-09-14")
     end
+
+    it "logs error and falls back when csv master raises" do
+      allow(picker).to receive(:get_underlying_symbol).and_return("NIFTY")
+      allow(csv_master).to receive(:get_expiry_dates).and_raise("fail")
+      allow(picker).to receive(:fallback_expiry).and_return("2023-09-14")
+      expect { expect(picker.fetch_first_expiry).to eq("2023-09-14") }
+        .to output(/CSV master method failed/).to_stdout
+    end
+  end
+
+  describe "#fallback_expiry" do
+    it "computes next expiry based on weekday" do
+      allow(Time).to receive(:now).and_return(Time.new(2023, 9, 11, 10)) # Monday
+      expect(picker.fallback_expiry).to eq("2023-09-14")
+    end
+
+    it "rolls to next week after 3pm" do
+      allow(Time).to receive(:now).and_return(Time.new(2023, 9, 14, 15, 0, 0)) # Thursday 3pm
+      expect(picker.fallback_expiry).to eq("2023-09-21")
+    end
   end
 
   describe "#index_by" do

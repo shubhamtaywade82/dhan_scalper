@@ -50,9 +50,9 @@ module DhanScalper
 
           if funds && funds.respond_to?(:available_balance)
             # Calculate used balance as difference between total and available
-            total = funds.total_balance.to_f
+            total = funds.available_balance.to_f
             available = funds.available_balance.to_f
-            used = total - available
+            used = funds.utilized_amount.to_f
 
             @cache = {
               available: available,

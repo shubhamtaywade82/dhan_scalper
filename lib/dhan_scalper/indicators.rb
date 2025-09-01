@@ -16,6 +16,8 @@ module DhanScalper
         ema.to_f
       end
     rescue StandardError
+      # Handle nil values and other errors gracefully
+      return 0.0 if values.nil? || !values.respond_to?(:last)
       values.last.to_f
     end
 
@@ -45,6 +47,8 @@ module DhanScalper
         100 - (100 / (1 + rs))
       end
     rescue StandardError
+      # Handle nil values and other errors gracefully
+      return 50.0 if values.nil? || !values.respond_to?(:size)
       50.0
     end
   end

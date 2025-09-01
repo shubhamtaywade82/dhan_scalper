@@ -29,7 +29,7 @@ begin
   puts "✓ Paper balance provider created"
   puts "  Available: ₹#{balance_provider.available_balance}"
   puts "  Total: ₹#{balance_provider.total_balance}"
-  
+
   # Test balance update
   balance_provider.update_balance(5000, type: :debit)
   puts "  After ₹5000 debit: ₹#{balance_provider.available_balance}"
@@ -42,7 +42,7 @@ puts "\n3. Testing Virtual Data Manager..."
 begin
   vdm = DhanScalper::VirtualDataManager.new
   puts "✓ Virtual data manager created"
-  
+
   # Test balance retrieval
   balance = vdm.get_balance
   puts "  VDM Balance: ₹#{balance[:available]}"
@@ -73,7 +73,7 @@ begin
     ts: Time.now.to_i,
     symbol: "NIFTY"
   })
-  
+
   ltp = DhanScalper::TickCache.ltp("IDX_I", "13")
   puts "✓ Tick cache working"
   puts "  NIFTY LTP: #{ltp}"
@@ -85,19 +85,19 @@ end
 puts "\n6. Testing Candle Series..."
 begin
   # This will only work if DhanHQ is properly configured
-  if ENV['DHAN_CLIENT_ID'] && ENV['DHAN_CLIENT_SECRET']
+  if ENV['CLIENT_ID'] && ENV['CLIENT_SECRET']
     puts "  DhanHQ credentials found, testing historical data..."
     # Note: This is a dry test, won't actually fetch data
     puts "  ✓ Candle series ready for testing"
   else
     puts "  ⚠ DhanHQ credentials not found, skipping live API test"
     puts "  Set environment variables to test live API:"
-    puts "    export DHAN_CLIENT_ID='your_client_id'"
-    puts "    export DHAN_CLIENT_SECRET='your_client_secret'"
-    puts "    export DHAN_USER_ID='your_user_id'"
-    puts "    export DHAN_PASSWORD='your_password'"
-    puts "    export DHAN_API_KEY='your_api_key'"
-    puts "    export DHAN_VENDOR_CODE='your_vendor_code'"
+    puts "    export CLIENT_ID='your_client_id'"
+    puts "    export CLIENT_SECRET='your_client_secret'"
+    puts "    export USER_ID='your_user_id'"
+    puts "    export PASSWORD='your_password'"
+    puts "    export API_KEY='your_api_key'"
+    puts "    export VENDOR_CODE='your_vendor_code'"
   end
 rescue => e
   puts "✗ Candle series test failed: #{e.message}"

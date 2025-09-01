@@ -21,16 +21,30 @@ module DhanScalper
     end
 
     def decide
-      c1 = Bars.c1(seg: @seg_idx, sid: @sid_idx)
-      c3 = Bars.c3(seg: @seg_idx, sid: @sid_idx)
-      return :none if c1.size < 50 || c3.size < 50
+      # Load candle series for 1-minute and 3-minute intervals
+      c1_series = CandleSeries.load_from_dhan_intraday(
+        seg: @seg_idx, 
+        sid: @seg_idx, 
+        interval: "1", 
+        symbol: "INDEX"
+      )
+      c3_series = CandleSeries.load_from_dhan_intraday(
+        seg: @seg_idx, 
+        sid: @seg_idx, 
+        interval: "3", 
+        symbol: "INDEX"
+      )
+      
+      return :none if c1_series.candles.size < 50 || c3_series.candles.size < 50
 
-      e1f = Indicators.ema_last(c1, 20)
-      e1s = Indicators.ema_last(c1, 50)
-      r1 = Indicators.rsi_last(c1, 14)
-      e3f = Indicators.ema_last(c3, 20)
-      e3s = Indicators.ema_last(c3, 50)
-      r3 = Indicators.rsi_last(c3, 14)
+      # Use built-in CandleSeries indicators instead of external Indicators
+      e1f = c1_series.ema(20).last
+      e1s = c1_series.ema(50).last
+      r1 = c1_series.rsi(14).last
+      e3f = c3_series.ema(20).last
+      e3s = c3_series.ema(50).last
+      r3 = c3_series.rsi(14).last
+      
       up   = e1f > e1s && r1 > 55 && e3f > e3s && r3 > 52
       down = e1f < e1s && r1 < 45 && e3f < e3s && r3 < 48
       return :long_ce if up

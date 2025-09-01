@@ -11,14 +11,14 @@ module DhanScalper
       strikes = [atm - step, atm, atm + step].sort
       oc = DhanHQ::Models::OptionChain.fetch(
         underlying_scrip: @cfg.fetch("idx_sid"),
-        underlying_seg: @cfg.fetch("seg_opt"),
+        underlying_seg: @cfg.fetch("seg_idx"), # Use IDX_I, not NSE_FNO
         expiry: expiry
       )
       by = index_by(oc)
       {
         expiry: expiry, strikes: strikes,
-        ce_sid: { (atm-step)=>by[[atm-step,:CE]], atm=>by[[atm,:CE]], (atm+step)=>by[[atm+step,:CE]] },
-        pe_sid: { (atm-step)=>by[[atm-step,:PE]], atm=>by[[atm,:PE]], (atm+step)=>by[[atm+step,:PE]] }
+        ce_sid: { (atm - step) => by[[atm - step, :CE]], atm => by[[atm, :CE]], (atm + step) => by[[atm + step, :CE]] },
+        pe_sid: { (atm - step) => by[[atm - step, :PE]], atm => by[[atm, :PE]], (atm + step) => by[[atm + step, :PE]] }
       }
     end
 
@@ -27,8 +27,8 @@ module DhanScalper
     def nearest_weekly(wday_target)
       now = Time.now
       d = (wday_target - now.wday) % 7
-      d = 7 if d == 0 && now.hour >= 15
-      (now + d*86_400).strftime("%Y-%m-%d")
+      d = 7 if d.zero? && now.hour >= 15
+      (now + d * 86_400).strftime("%Y-%m-%d")
     end
 
     def index_by(chain)
@@ -37,7 +37,7 @@ module DhanScalper
         strike = (row.respond_to?(:strike) ? row.strike : row[:strike]).to_i
         opt    = (row.respond_to?(:option_type) ? row.option_type : row[:option_type]).to_s.upcase.to_sym
         sid    = (row.respond_to?(:security_id) ? row.security_id : row[:security_id]).to_s
-        h[[strike,opt]] = sid
+        h[[strike, opt]] = sid
       end
       h
     end

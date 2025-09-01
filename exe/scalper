@@ -1,7 +1,11 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require "bundler/setup" rescue nil
+begin
+  require "bundler/setup"
+rescue StandardError
+  nil
+end
 require "dhan_scalper"
 
 DhanScalper::CLI.start(ARGV)

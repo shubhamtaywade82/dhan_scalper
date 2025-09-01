@@ -32,7 +32,8 @@ Gem::Specification.new do |spec|
   spec.files = IO.popen(%w[git ls-files -z], chdir: __dir__, err: IO::NULL) do |ls|
     ls.readlines("\x0", chomp: true).reject do |f|
       (f == gemspec) ||
-        f.start_with?(*%w[bin/ Gemfile .gitignore .rspec spec/ .github/ .rubocop.yml])
+        f.start_with?(*%w[bin/ Gemfile .gitignore .rspec spec/ .github/ .rubocop.yml]) ||
+        f.end_with?(".gem")
     end
   end
   spec.bindir = "exe"
@@ -41,6 +42,7 @@ Gem::Specification.new do |spec|
 
   # Core runtime dependencies
   spec.add_dependency "concurrent-ruby"
+  spec.add_dependency "csv"
   spec.add_dependency "DhanHQ"
   spec.add_dependency "dotenv"
   spec.add_dependency "pastel"
@@ -51,7 +53,6 @@ Gem::Specification.new do |spec|
   spec.add_dependency "tty-reader"
   spec.add_dependency "tty-screen"
   spec.add_dependency "tty-table"
-  spec.add_dependency "csv"
 
   # Development dependencies
   spec.add_development_dependency "rake", ">= 13.0"

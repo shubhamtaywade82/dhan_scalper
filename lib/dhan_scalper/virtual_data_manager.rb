@@ -15,7 +15,7 @@ module DhanScalper
       # In-memory cache
       @orders_cache = []
       @positions_cache = []
-      @balance_cache = { available: 100000.0, used: 0.0, total: 100000.0 }
+      @balance_cache = { available: 100_000.0, used: 0.0, total: 100_000.0 }
 
       ensure_data_directory
       load_existing_data
@@ -133,7 +133,7 @@ module DhanScalper
       CSV.foreach(@orders_file, headers: true, header_converters: :symbol) do |row|
         @orders_cache << row.to_h
       end
-    rescue => e
+    rescue StandardError => e
       puts "Warning: Could not load orders from CSV: #{e.message}"
     end
 
@@ -144,7 +144,7 @@ module DhanScalper
         csv << @orders_cache.first.keys
         @orders_cache.each { |order| csv << order.values }
       end
-    rescue => e
+    rescue StandardError => e
       puts "Warning: Could not save orders to CSV: #{e.message}"
     end
 
@@ -154,7 +154,7 @@ module DhanScalper
       CSV.foreach(@positions_file, headers: true, header_converters: :symbol) do |row|
         @positions_cache << row.to_h
       end
-    rescue => e
+    rescue StandardError => e
       puts "Warning: Could not load positions from CSV: #{e.message}"
     end
 
@@ -165,7 +165,7 @@ module DhanScalper
         csv << @positions_cache.first.keys
         @positions_cache.each { |position| csv << position.values }
       end
-    rescue => e
+    rescue StandardError => e
       puts "Warning: Could not save positions to CSV: #{e.message}"
     end
 
@@ -173,13 +173,13 @@ module DhanScalper
       return unless File.exist?(@balance_file)
 
       @balance_cache = JSON.parse(File.read(@balance_file), symbolize_names: true)
-    rescue => e
+    rescue StandardError => e
       puts "Warning: Could not load balance from JSON: #{e.message}"
     end
 
     def save_balance_to_json
       File.write(@balance_file, JSON.pretty_generate(@balance_cache))
-    rescue => e
+    rescue StandardError => e
       puts "Warning: Could not save balance to JSON: #{e.message}"
     end
   end

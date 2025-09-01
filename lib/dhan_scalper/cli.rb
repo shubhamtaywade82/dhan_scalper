@@ -3,10 +3,14 @@
 require "thor"
 require "yaml"
 require "DhanHQ"
+
 require_relative "virtual_data_manager"
 
 module DhanScalper
   class CLI < Thor
+    def self.exit_on_failure?
+      false
+    end
     desc "start", "Start the scalper (Ctrl+C to stop)"
     option :config, type: :string, aliases: "-c", desc: "Path to scalper.yml"
     option :mode, aliases: "-m", desc: "Trading mode (live/paper)", default: "paper"
@@ -14,7 +18,7 @@ module DhanScalper
       cfg = Config.load(path: options[:config])
       mode = options[:mode].to_sym
       DhanHQ.configure_with_env
-      DhanHQ.logger.level = (cfg.dig("global","log_level") || "INFO").upcase == "DEBUG" ? Logger::DEBUG : Logger::INFO
+      DhanHQ.logger.level = (cfg.dig("global", "log_level") || "INFO").upcase == "DEBUG" ? Logger::DEBUG : Logger::INFO
       App.new(cfg, mode: mode).start
     end
 
@@ -25,6 +29,15 @@ module DhanScalper
       DhanHQ.configure_with_env
       DhanHQ.logger.level = Logger::INFO
       App.new(cfg, dryrun: true).start
+    end
+
+    desc "paper", "Start paper trading (alias for start -m paper)"
+    option :config, type: :string, aliases: "-c"
+    def paper
+      cfg = Config.load(path: options[:config])
+      DhanHQ.configure_with_env
+      DhanHQ.logger.level = (cfg.dig("global", "log_level") || "INFO").upcase == "DEBUG" ? Logger::DEBUG : Logger::INFO
+      App.new(cfg, mode: :paper).start
     end
 
     desc "orders", "View virtual orders"
@@ -75,7 +88,7 @@ module DhanScalper
     end
 
     desc "reset-balance", "Reset virtual balance to initial amount"
-    option :amount, aliases: "-a", desc: "Initial balance amount", type: :numeric, default: 100000
+    option :amount, aliases: "-a", desc: "Initial balance amount", type: :numeric, default: 100_000
     def reset_balance
       vdm = VirtualDataManager.new
       vdm.set_initial_balance(options[:amount])
@@ -84,7 +97,7 @@ module DhanScalper
 
     desc "clear-data", "Clear all virtual data (orders, positions, balance)"
     def clear_data
-      vdm = VirtualDataManager.new
+      VirtualDataManager.new
       # This will clear the data directory
       FileUtils.rm_rf("data") if Dir.exist?("data")
       puts "All virtual data cleared."

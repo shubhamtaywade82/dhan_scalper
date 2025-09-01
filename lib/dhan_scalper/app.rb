@@ -21,15 +21,15 @@ module DhanScalper
       @virtual_data_manager = VirtualDataManager.new
     end
 
-        def start
+    def start
       DhanHQ.configure_with_env
       DhanHQ.logger.level = (@cfg.dig("global", "log_level") == "DEBUG" ? Logger::DEBUG : Logger::INFO)
 
       ws = DhanHQ::WS::Client.new(mode: :quote).start
       ws.on(:tick) do |t|
-        Trader::TickCache.put(t)
+        DhanScalper::TickCache.put(t)
         # mirror latest LTPs into subscriptions view
-        rec = {segment: t[:segment], security_id: t[:security_id], ltp: t[:ltp], ts: t[:ts], symbol: sym_for(t)}
+        rec = { segment: t[:segment], security_id: t[:security_id], ltp: t[:ltp], ts: t[:ts], symbol: sym_for(t) }
         if t[:segment] == "IDX_I"
           @state.upsert_idx_sub(rec)
         else
@@ -38,24 +38,27 @@ module DhanScalper
       end
 
       # broker
-      broker = (@mode == :paper ?
-        DhanScalper::Brokers::PaperBroker.new(virtual_data_manager: @virtual_data_manager) :
-        DhanScalper::Brokers::DhanBroker.new(virtual_data_manager: @virtual_data_manager))
+      (if @mode == :paper
+         DhanScalper::Brokers::PaperBroker.new(virtual_data_manager: @virtual_data_manager)
+       else
+         DhanScalper::Brokers::DhanBroker.new(virtual_data_manager: @virtual_data_manager)
+       end)
 
       # prepare traders
-      ce_map, pe_map, traders = setup_traders(ws)
+      traders, ce_map, pe_map = setup_traders(ws)
+      puts "[DEBUG] traders class: #{traders.class}, traders: #{traders.inspect}"
 
       # UI loop
       ui = Thread.new { UI::Dashboard.new(@state).run }
 
-      puts "[READY] Symbols: #{@cfg['symbols'].join(", ")}"
+      puts "[READY] Symbols: #{@cfg["symbols"].join(", ")}"
       last_decision = Time.at(0)
-      decision_interval = @cfg.dig("global","decision_interval").to_i
-      max_dd = @cfg.dig("global","max_day_loss").to_f
-      charge = @cfg.dig("global","charge_per_order").to_f
-      tp_pct = (@cfg.dig("global","tp_pct") || 0.35).to_f
-      sl_pct = (@cfg.dig("global","sl_pct") || 0.18).to_f
-      tr_pct = (@cfg.dig("global","trail_pct") || 0.12).to_f
+      decision_interval = @cfg.dig("global", "decision_interval").to_i
+      max_dd = @cfg.dig("global", "max_day_loss").to_f
+      charge = @cfg.dig("global", "charge_per_order").to_f
+      tp_pct = (@cfg.dig("global", "tp_pct") || 0.35).to_f
+      sl_pct = (@cfg.dig("global", "sl_pct") || 0.18).to_f
+      tr_pct = (@cfg.dig("global", "trail_pct") || 0.12).to_f
 
       until @stop
         begin
@@ -67,15 +70,19 @@ module DhanScalper
 
           if Time.now - last_decision >= decision_interval
             last_decision = Time.now
-            traders.each do |sym, tr|
-              next unless tr
+            traders.each do |sym, trader|
+              next unless trader
+
               s = sym_cfg(sym)
-              dir = DhanScalper::Trader::Trend.new(seg_idx: s["seg_idx"], sid_idx: s["idx_sid"]).decide
-              tr.maybe_enter(dir, ce_map[sym], pe_map[sym]) unless @dry
+              dir = DhanScalper::Trend.new(seg_idx: s["seg_idx"], sid_idx: s["idx_sid"]).decide
+              trader.maybe_enter(dir, ce_map[sym], pe_map[sym]) unless @dry
             end
           end
 
-          traders.each_value { |t| t&.manage_open(tp_pct: tp_pct, sl_pct: sl_pct, trail_pct: tr_pct, charge_per_order: charge) }
+          traders.each_value do |t|
+            next unless t # Skip nil traders
+            t.manage_open(tp_pct: tp_pct, sl_pct: sl_pct, trail_pct: tr_pct, charge_per_order: charge)
+          end
           gpn = traders.values.compact.sum(&:session_pnl)
 
           # after each loop, update global PnL into state:
@@ -85,11 +92,11 @@ module DhanScalper
             puts "\n[HALT] Max day loss hit (#{gpn.round(0)})."
             break
           end
-          if gpn >= @state.session_target && traders.values.none?{|t| instance_open?(t)}
+          if gpn >= @state.session_target && traders.values.compact.none? { |t| instance_open?(t) }
             puts "\n[DONE] Session target reached: #{gpn.round(0)}"
             break
           end
-        rescue => e
+        rescue StandardError => e
           puts "\n[ERR] #{e.class}: #{e.message}"
         ensure
           sleep 0.5
@@ -127,24 +134,27 @@ module DhanScalper
 
     def setup_traders(ws)
       traders = {}
-      ce_map, pe_map = {}, {}
+      ce_map = {}
+      pe_map = {}
 
       @cfg["symbols"].each do |sym|
         s = sym_cfg(sym)
         if s["idx_sid"].to_s.empty?
           puts "[SKIP] #{sym}: idx_sid not set."
-          traders[sym]=nil; next
+          traders[sym] = nil
+          next
         end
         ws.subscribe_one(segment: s["seg_idx"], security_id: s["idx_sid"])
         spot = wait_for_spot(s)
-        picker = OptionPicker.new(s)
+        picker = (@mode == :paper ? OptionPickerPaper.new(s) : OptionPicker.new(s))
         pick = picker.pick(current_spot: spot)
-        ce_map[sym] = pick[:ce_sid]; pe_map[sym] = pick[:pe_sid]
+        ce_map[sym] = pick[:ce_sid]
+        pe_map[sym] = pick[:pe_sid]
 
-        tr = Trader.new(ws: ws, symbol: sym, cfg: s, picker: picker, gl: self, state: @state)
+        tr = DhanScalper::Trader.new(ws: ws, symbol: sym, cfg: s, picker: picker, gl: self, state: @state)
         tr.subscribe_options(ce_map[sym], pe_map[sym])
         puts "[#{sym}] Expiry=#{pick[:expiry]} strikes=#{pick[:strikes].join(", ")}"
-        traders[sym]=tr
+        traders[sym] = tr
       end
       [traders, ce_map, pe_map]
     end
@@ -152,9 +162,10 @@ module DhanScalper
     def wait_for_spot(s, timeout: 10)
       t0 = Time.now
       loop do
-        l = Trader::TickCache.ltp(s["seg_idx"], s["idx_sid"])&.to_f
-        return l if l && l.positive?
+        l = DhanScalper::TickCache.ltp(s["seg_idx"], s["idx_sid"])&.to_f
+        return l if l&.positive?
         break if Time.now - t0 > timeout
+
         sleep 0.2
       end
       Bars.c1(seg: s["seg_idx"], sid: s["idx_sid"]).last.to_f
@@ -163,6 +174,7 @@ module DhanScalper
     def sym_for(t)
       # simple mapping: return "NIFTY"/"BANKNIFTY" for index subs, else "OPT"
       return @cfg["SYMBOLS"].find { |_, v| v["idx_sid"].to_s == t[:security_id].to_s }&.first if t[:segment] == "IDX_I"
+
       "OPT"
     end
   end

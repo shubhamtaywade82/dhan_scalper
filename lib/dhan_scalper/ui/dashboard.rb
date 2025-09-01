@@ -25,6 +25,7 @@ module DhanScalper
         input_thread = Thread.new { read_keys }
         loop do
           break unless @alive
+
           render_frame
           sleep REFRESH
         end
@@ -36,8 +37,8 @@ module DhanScalper
       private
 
       def trap_signals
-        Signal.trap("INT"){ @alive = false }
-        Signal.trap("TERM"){ @alive = false }
+        Signal.trap("INT") { @alive = false }
+        Signal.trap("TERM") { @alive = false }
       end
 
       def hide_cursor
@@ -65,7 +66,7 @@ module DhanScalper
       end
 
       def render_frame
-        width  = TTY::Screen.width
+        width = TTY::Screen.width
         clear_screen
         puts header_box(width)
         puts positions_box(width)
@@ -91,13 +92,13 @@ module DhanScalper
 
         TTY::Box.frame(
           width: width,
-          title: {top_left: " DhanScalper "},
-          style: {border: {fg: :bright_blue}}
+          title: { top_left: " DhanScalper " },
+          style: { border: { fg: :bright_blue } }
         ) do
           <<~TEXT
-          Status: #{status}   Session PnL: #{pnl_s}   Target: #{tgt}   Max DD: -#{mdd}
-          Symbols: #{syms}
-          Controls: #{kbd('q')}uit  #{kbd('p')}ause  #{kbd('r')}esume  #{kbd('s')}ubscriptions toggle
+            Status: #{status}   Session PnL: #{pnl_s}   Target: #{tgt}   Max DD: -#{mdd}
+            Symbols: #{syms}
+            Controls: #{kbd("q")}uit  #{kbd("p")}ause  #{kbd("r")}esume  #{kbd("s")}ubscriptions toggle
           TEXT
         end
       end
@@ -118,7 +119,7 @@ module DhanScalper
         end
 
         table = TTY::Table.new(
-          header: ["Symbol","Side","SID","Lots","Entry","LTP","Net₹","Best₹"],
+          header: ["Symbol", "Side", "SID", "Lots", "Entry", "LTP", "Net₹", "Best₹"],
           rows: rows
         )
         content = rows.empty? ? @pd.dim("No open positions") : table.render(:unicode, resize: true)
@@ -135,7 +136,7 @@ module DhanScalper
           ]
         end
         table = TTY::Table.new(
-          header: ["Symbol","Side","Reason","Entry","Exit","Net₹"],
+          header: ["Symbol", "Side", "Reason", "Entry", "Exit", "Net₹"],
           rows: rows
         )
         content = rows.empty? ? @pd.dim("No recent closed positions") : table.render(:unicode, resize: true)
@@ -143,33 +144,41 @@ module DhanScalper
       end
 
       def subs_box(width)
-        idx_rows = @st.subs_idx.map { |r| [r[:symbol], "#{r[:segment]}:#{r[:security_id]}", fmt_price(r[:ltp]), ago(r[:ts])] }
-        opt_rows = @st.subs_opt.map { |r| [r[:symbol], "#{r[:segment]}:#{r[:security_id]}", fmt_price(r[:ltp]), ago(r[:ts])] }
+        idx_rows = @st.subs_idx.map do |r|
+          [r[:symbol], "#{r[:segment]}:#{r[:security_id]}", fmt_price(r[:ltp]), ago(r[:ts])]
+        end
+        opt_rows = @st.subs_opt.map do |r|
+          [r[:symbol], "#{r[:segment]}:#{r[:security_id]}", fmt_price(r[:ltp]), ago(r[:ts])]
+        end
 
-        idx_tbl = TTY::Table.new(header: ["Index", "Key", "LTP", "Age"], rows: idx_rows)
-        opt_tbl = TTY::Table.new(header: ["Option", "Key", "LTP", "Age"], rows: opt_rows)
+        idx_tbl = TTY::Table.new(header: %w[Index Key LTP Age], rows: idx_rows)
+        opt_tbl = TTY::Table.new(header: %w[Option Key LTP Age], rows: opt_rows)
 
         content = +""
-        content << boxed(" Index Subscriptions ", idx_rows.empty? ? @pd.dim("None") : idx_tbl.render(:unicode, resize: true), width)
+        content << boxed(" Index Subscriptions ",
+                         idx_rows.empty? ? @pd.dim("None") : idx_tbl.render(:unicode, resize: true), width)
         content << "\n"
-        content << boxed(" Option Subscriptions ", opt_rows.empty? ? @pd.dim("None") : opt_tbl.render(:unicode, resize: true), width)
+        content << boxed(" Option Subscriptions ",
+                         opt_rows.empty? ? @pd.dim("None") : opt_tbl.render(:unicode, resize: true), width)
         content
       end
 
       # -------------------- helpers --------------------
       def boxed(title, content, width)
-        TTY::Box.frame(width: width, title: {top_left: title}, style: {border: {fg: :bright_black}}) { content }
+        TTY::Box.frame(width: width, title: { top_left: title }, style: { border: { fg: :bright_black } }) { content }
       end
 
       def kbd(s) = @pd.bright_white("[#{s}]")
 
       def fmt_price(v)
         return "-" if v.nil?
+
         v.to_f.round(2)
       end
 
       def ago(ts)
         return "-" unless ts
+
         dt = Time.now.to_i - ts.to_i
         dt < 2 ? "1s" : "#{dt}s"
       end

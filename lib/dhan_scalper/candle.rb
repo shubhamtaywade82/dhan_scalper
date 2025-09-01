@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Candle
   attr_reader :timestamp, :open, :high, :low, :close, :volume
 

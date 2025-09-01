@@ -13,7 +13,7 @@ module DhanScalper
       @session_target = session_target
       @max_day_loss   = max_day_loss
       @symbols        = Concurrent::Array.new(symbols)
-      @session_pnl    = Concurrent::AtomicFloat.new(0.0)
+      @session_pnl    = Concurrent::AtomicReference.new(0.0)
 
       @open   = Concurrent::Array.new        # [{symbol:, sid:, side:, entry:, qty_lots:, ltp:, net:, best:}]
       @closed = Concurrent::Array.new        # same hash + {:reason, :exit_price, :net}
@@ -27,7 +27,7 @@ module DhanScalper
 
     def set_session_pnl(v) = @session_pnl.value = v
     def add_session_pnl(d) = @session_pnl.update { |x| x + d }
-    def pnl               = @session_pnl.value
+    def pnl = @session_pnl.value
 
     # -------- subscriptions upsert ----------
     def upsert_sub(sub_list, key_map, rec)
@@ -44,7 +44,8 @@ module DhanScalper
     def upsert_opt_sub(rec)  = upsert_sub(@subs_opt, @subs_key, rec)
 
     # -------- open/closed positions ----------
-    def replace_open!(arr)  # whole replacement from Trader snapshot
+    # whole replacement from Trader snapshot
+    def replace_open!(arr)
       @open.clear
       arr.each { |h| @open << h }
     end

@@ -1,67 +1,71 @@
-module DhanScalper::Brokers
-  class DhanBroker < Base
-    def buy_market(segment:, security_id:, quantity:)
-      o = DhanHQ::Models::Order.new(transaction_type: "BUY", exchange_segment: segment,
-                                    product_type: "MARGIN", order_type: "MARKET", validity: "DAY", security_id: security_id, quantity: quantity)
+# frozen_string_literal: true
 
-      o.save
-      raise o.errors.full_messages.join(", ") unless o.persisted?
+module DhanScalper
+  module Brokers
+    class DhanBroker < Base
+      def buy_market(segment:, security_id:, quantity:)
+        o = DhanHQ::Models::Order.new(transaction_type: "BUY", exchange_segment: segment,
+                                      product_type: "MARGIN", order_type: "MARKET", validity: "DAY", security_id: security_id, quantity: quantity)
 
-      # try best-effort trade price
-      price = begin
-        DhanHQ::Models::Trade.find_by_order_id(o.order_id)&.avg_price
-      rescue StandardError
-        nil
-      end || 0.0
+        o.save
+        raise o.errors.full_messages.join(", ") unless o.persisted?
 
-      order = Order.new(o.order_id, security_id, "BUY", quantity, price)
+        # try best-effort trade price
+        price = begin
+          DhanHQ::Models::Trade.find_by_order_id(o.order_id)&.avg_price
+        rescue StandardError
+          nil
+        end || 0.0
 
-      # Log the order and create a virtual position
-      log_order(order)
+        order = Order.new(o.order_id, security_id, "BUY", quantity, price)
 
-      # Create and log position
-      position = DhanScalper::Position.new(
-        security_id: security_id,
-        side: "BUY",
-        entry_price: price,
-        quantity: quantity,
-        current_price: price
-      )
-      log_position(position)
+        # Log the order and create a virtual position
+        log_order(order)
 
-      order
-    end
+        # Create and log position
+        position = DhanScalper::Position.new(
+          security_id: security_id,
+          side: "BUY",
+          entry_price: price,
+          quantity: quantity,
+          current_price: price
+        )
+        log_position(position)
 
-    def sell_market(segment:, security_id:, quantity:)
-      o = DhanHQ::Models::Order.new(transaction_type: "SELL", exchange_segment: segment,
-                                    product_type: "MARGIN", order_type: "MARKET", validity: "DAY", security_id: security_id, quantity: quantity)
+        order
+      end
 
-      o.save
-      raise o.errors.full_messages.join(", ") unless o.persisted?
+      def sell_market(segment:, security_id:, quantity:)
+        o = DhanHQ::Models::Order.new(transaction_type: "SELL", exchange_segment: segment,
+                                      product_type: "MARGIN", order_type: "MARKET", validity: "DAY", security_id: security_id, quantity: quantity)
 
-      price = begin
-        DhanHQ::Models::Trade.find_by_order_id(o.order_id)&.avg_price
-      rescue StandardError
-        nil
-      end || 0.0
+        o.save
+        raise o.errors.full_messages.join(", ") unless o.persisted?
 
-      order = Order.new(o.order_id, security_id, "SELL", quantity, price)
+        price = begin
+          DhanHQ::Models::Trade.find_by_order_id(o.order_id)&.avg_price
+        rescue StandardError
+          nil
+        end || 0.0
 
-      # Log the order and create a virtual position
-      log_order(order)
+        order = Order.new(o.order_id, security_id, "SELL", quantity, price)
 
-      # Create and log position
-      require_relative "../position"
-      position = DhanScalper::Position.new(
-        security_id: security_id,
-        side: "SELL",
-        entry_price: price,
-        quantity: quantity,
-        current_price: price
-      )
-      log_position(position)
+        # Log the order and create a virtual position
+        log_order(order)
 
-      order
+        # Create and log position
+        require_relative "../position"
+        position = DhanScalper::Position.new(
+          security_id: security_id,
+          side: "SELL",
+          entry_price: price,
+          quantity: quantity,
+          current_price: price
+        )
+        log_position(position)
+
+        order
+      end
     end
   end
 end

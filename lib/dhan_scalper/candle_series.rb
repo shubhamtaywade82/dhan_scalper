@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative "support/time_zone"
 require_relative "candle"
 

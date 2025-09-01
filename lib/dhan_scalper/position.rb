@@ -4,7 +4,7 @@ module DhanScalper
   class Position
     attr_accessor :symbol, :security_id, :side, :entry_price, :quantity, :current_price, :pnl
 
-    def initialize(symbol: nil, security_id:, side:, entry_price:, quantity:, current_price: nil, pnl: 0.0)
+    def initialize(security_id:, side:, entry_price:, quantity:, symbol: nil, current_price: nil, pnl: 0.0)
       @symbol = symbol
       @security_id = security_id
       @side = side
@@ -20,14 +20,14 @@ module DhanScalper
     end
 
     def calculate_pnl
-      case @side.upcase
-      when "BUY"
-        @pnl = (@current_price - @entry_price) * @quantity
-      when "SELL"
-        @pnl = (@entry_price - @current_price) * @quantity
-      else
-        @pnl = 0.0
-      end
+      @pnl = case @side.upcase
+             when "BUY"
+               (@current_price - @entry_price) * @quantity
+             when "SELL"
+               (@entry_price - @current_price) * @quantity
+             else
+               0.0
+             end
       @pnl
     end
 

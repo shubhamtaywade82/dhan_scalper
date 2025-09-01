@@ -15,7 +15,7 @@ module DhanScalper
         values.each { |v| ema = ema.nil? ? v.to_f : (v.to_f * k + ema * (1 - k)) }
         ema.to_f
       end
-    rescue
+    rescue StandardError
       values.last.to_f
     end
 
@@ -27,9 +27,11 @@ module DhanScalper
       else
         # simple fallback
         return 50.0 if values.size < period + 1
-        gains, losses = [], []
+
+        gains = []
+        losses = []
         (1...values.size).each do |i|
-          d = values[i].to_f - values[i-1].to_f
+          d = values[i].to_f - values[i - 1].to_f
           gains << [d, 0].max
           losses << [-d, 0].max
         end
@@ -42,7 +44,7 @@ module DhanScalper
         rs = al.zero? ? 100.0 : ag / al
         100 - (100 / (1 + rs))
       end
-    rescue
+    rescue StandardError
       50.0
     end
   end

@@ -107,10 +107,10 @@ module DhanScalper
           return
         end
 
-        headers = ["ID", "Side", "Qty", "Price", "Time"]
+        headers = %w[ID Side Qty Price Time]
         rows = orders.map do |order|
           [
-            order[:id][0..8] + "...",
+            "#{order[:id][0..8]}...",
             @pastel.send(order[:side] == "BUY" ? :green : :red, order[:side]),
             order[:quantity],
             "₹#{order[:avg_price].round(2)}",

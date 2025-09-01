@@ -192,7 +192,12 @@ module DhanScalper
 
         sleep 0.2
       end
-      Bars.c1(seg: s["seg_idx"], sid: s["idx_sid"]).last.to_f
+      CandleSeries.load_from_dhan_intraday(
+        seg: s["seg_idx"], 
+        sid: s["idx_sid"], 
+        interval: "1", 
+        symbol: "INDEX"
+      ).closes.last.to_f
     end
 
     def sym_for(t)

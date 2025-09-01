@@ -54,9 +54,15 @@ RSpec.describe DhanScalper::OptionPicker do
   describe "#get_underlying_symbol" do
     it "maps idx_sid to underlying" do
       expect(picker.get_underlying_symbol).to eq("NIFTY")
-      other = described_class.new(cfg.merge("idx_sid" => "23"), mode: :live)
+      bank = described_class.new(cfg.merge("idx_sid" => "23"), mode: :live)
+      bank.instance_variable_set(:@csv_master, csv_master)
+      expect(bank.get_underlying_symbol).to eq("BANKNIFTY")
+      finn = described_class.new(cfg.merge("idx_sid" => "25"), mode: :live)
+      finn.instance_variable_set(:@csv_master, csv_master)
+      expect(finn.get_underlying_symbol).to eq("FINNIFTY")
+      other = described_class.new(cfg.merge("idx_sid" => "999"), mode: :live)
       other.instance_variable_set(:@csv_master, csv_master)
-      expect(other.get_underlying_symbol).to eq("BANKNIFTY")
+      expect(other.get_underlying_symbol).to eq("NIFTY")
     end
   end
 

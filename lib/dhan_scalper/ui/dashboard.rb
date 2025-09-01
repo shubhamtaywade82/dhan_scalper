@@ -69,12 +69,12 @@ module DhanScalper
       def render_frame
         width = TTY::Screen.width
         clear_screen
-        puts header_box(width)
-        puts balance_box(width) if @balance_provider
-        puts positions_box(width)
-        puts closed_box(width)
-        puts subs_box(width) if @show_subs
-        puts footer_hint
+        print header_box(width)
+        print balance_box(width) if @balance_provider
+        print positions_box(width)
+        print closed_box(width)
+        print subs_box(width) if @show_subs
+        print footer_hint
       end
 
       # -------------------- widgets --------------------

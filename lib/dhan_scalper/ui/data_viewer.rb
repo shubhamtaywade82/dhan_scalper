@@ -2,42 +2,85 @@
 
 require "tty-table"
 require "tty-box"
+require "tty-cursor"
+require "tty-screen"
 require "pastel"
 require_relative "../virtual_data_manager"
 
 module DhanScalper
   module UI
     class DataViewer
+      REFRESH = 5
+
       def initialize
         @pastel = Pastel.new
         @vdm = VirtualDataManager.new
+        @cursor = TTY::Cursor
+        @alive = true
       end
 
-      def display_dashboard
-        system "clear" or system "cls"
-
-        puts @pastel.blue.bold("=" * 80)
-        puts @pastel.blue.bold("                    DHAN SCALPER - VIRTUAL DATA DASHBOARD")
-        puts @pastel.blue.bold("=" * 80)
-        puts
-
-        display_balance
-        puts
-        display_positions
-        puts
-        display_recent_orders
-        puts
-        puts @pastel.yellow("Press Ctrl+C to exit | Data refreshes every 5 seconds")
+      def run
+        trap_signals
+        hide_cursor
+        loop do
+          break unless @alive
+          render_frame
+          sleep REFRESH
+        end
+      rescue Interrupt
+        puts "\n#{@pastel.yellow("Data viewer stopped.")}"
+      ensure
+        show_cursor
       end
 
-      def display_balance
+      private
+
+      def trap_signals
+        Signal.trap("INT") { @alive = false }
+        Signal.trap("TERM") { @alive = false }
+      end
+
+      def hide_cursor
+        print "\e[?25l"
+      end
+
+      def show_cursor
+        print "\e[?25h"
+      end
+
+      def clear_screen
+        print "\e[2J\e[H"
+      end
+
+      def render_frame
+        width = TTY::Screen.width
+        clear_screen
+        print header_box(width)
+        print balance_box(width)
+        print positions_box(width)
+        print recent_orders_box(width)
+        print footer_hint(width)
+      end
+
+      # -------------------- widgets --------------------
+
+      def header_box(width)
+        TTY::Box.frame(
+          width: width,
+          title: { top_left: " DHAN SCALPER - VIRTUAL DATA DASHBOARD " },
+          style: { border: { fg: :bright_blue } }
+        ) do
+          "Press Ctrl+C to exit | Data refreshes every #{REFRESH} seconds"
+        end
+      end
+
+      def balance_box(width)
         balance = @vdm.get_balance
 
-        balance_box = TTY::Box.frame(
-          width: 80,
-          height: 6,
+        TTY::Box.frame(
+          width: width,
           title: { top_left: " 💰 ACCOUNT BALANCE " },
-          border: :thick
+          style: { border: { fg: :bright_green } }
         ) do
           [
             "Available: #{@pastel.green("₹#{balance[:available].round(2)}")}",
@@ -45,24 +88,19 @@ module DhanScalper
             "Total: #{@pastel.blue("₹#{balance[:total].round(2)}")}"
           ].join("\n")
         end
-
-        puts balance_box
       end
 
-      def display_positions
+      def positions_box(width)
         positions = @vdm.get_positions
 
         if positions.empty?
-          positions_box = TTY::Box.frame(
-            width: 80,
-            height: 4,
+          return TTY::Box.frame(
+            width: width,
             title: { top_left: " 📊 POSITIONS " },
-            border: :thick
+            style: { border: { fg: :bright_black } }
           ) do
             @pastel.yellow("No open positions")
           end
-          puts positions_box
-          return
         end
 
         headers = ["Symbol", "Side", "Qty", "Entry", "Current", "P&L"]
@@ -79,32 +117,26 @@ module DhanScalper
         end
 
         table = TTY::Table.new(headers, rows)
-        positions_box = TTY::Box.frame(
-          width: 80,
-          height: positions.length + 3,
+        content = table.render(:ascii, resize: true)
+        
+        TTY::Box.frame(
+          width: width,
           title: { top_left: " 📊 POSITIONS " },
-          border: :thick
-        ) do
-          table.render(:ascii)
-        end
-
-        puts positions_box
+          style: { border: { fg: :bright_black } }
+        ) { content }
       end
 
-      def display_recent_orders
+      def recent_orders_box(width)
         orders = @vdm.get_orders(limit: 5)
 
         if orders.empty?
-          orders_box = TTY::Box.frame(
-            width: 80,
-            height: 4,
+          return TTY::Box.frame(
+            width: width,
             title: { top_left: " 📋 RECENT ORDERS " },
-            border: :thick
+            style: { border: { fg: :bright_black } }
           ) do
             @pastel.yellow("No orders found")
           end
-          puts orders_box
-          return
         end
 
         headers = %w[ID Side Qty Price Time]
@@ -119,25 +151,17 @@ module DhanScalper
         end
 
         table = TTY::Table.new(headers, rows)
-        orders_box = TTY::Box.frame(
-          width: 80,
-          height: orders.length + 3,
+        content = table.render(:ascii, resize: true)
+        
+        TTY::Box.frame(
+          width: width,
           title: { top_left: " 📋 RECENT ORDERS " },
-          border: :thick
-        ) do
-          table.render(:ascii)
-        end
-
-        puts orders_box
+          style: { border: { fg: :bright_black } }
+        ) { content }
       end
 
-      def run
-        loop do
-          display_dashboard
-          sleep 5
-        end
-      rescue Interrupt
-        puts "\n#{@pastel.yellow("Data viewer stopped.")}"
+      def footer_hint(width)
+        @pastel.dim("Press Ctrl+C to exit | Data refreshes every #{REFRESH} seconds")
       end
     end
   end

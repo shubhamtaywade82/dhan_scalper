@@ -12,6 +12,8 @@ global:
   sl_pct: 0.18 # stop loss
   trail_pct: 0.12 # trailing trigger %
   log_level: "INFO"
+  use_multi_timeframe: false # true for 1m+3m/5m, false for 1m only
+  secondary_timeframe: 5 # 3 or 5 minutes for secondary timeframe
 
 paper:
   starting_balance: 200000 # paper wallet starting cash

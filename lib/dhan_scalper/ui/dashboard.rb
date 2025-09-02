@@ -110,6 +110,7 @@ module DhanScalper
           style: { border: { fg: :bright_blue } }
         ) do
           <<~TEXT
+            -------------------------------------------------------------------------------------------
             Status: #{status}   Session PnL: #{pnl_s}   Target: #{tgt}   Max DD: -#{mdd}
             Symbols: #{syms}
             Controls: #{kbd("q")}uit  #{kbd("p")}ause  #{kbd("r")}esume  #{kbd("s")}ubscriptions toggle

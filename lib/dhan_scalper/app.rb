@@ -106,8 +106,18 @@ module DhanScalper
               next unless trader
 
               s = sym_cfg(sym)
-              trend_class = @enhanced ? DhanScalper::TrendEnhanced : DhanScalper::Trend
-              dir = trend_class.new(seg_idx: s["seg_idx"], sid_idx: s["idx_sid"]).decide
+              if @enhanced
+                use_multi_timeframe = @cfg.dig("global", "use_multi_timeframe") != false
+                secondary_timeframe = @cfg.dig("global", "secondary_timeframe") || 3
+                dir = DhanScalper::TrendEnhanced.new(
+                  seg_idx: s["seg_idx"],
+                  sid_idx: s["idx_sid"],
+                  use_multi_timeframe: use_multi_timeframe,
+                  secondary_timeframe: secondary_timeframe
+                ).decide
+              else
+                dir = DhanScalper::Trend.new(seg_idx: s["seg_idx"], sid_idx: s["idx_sid"]).decide
+              end
               trader.maybe_enter(dir, ce_map[sym], pe_map[sym]) unless @dry
             end
           end
@@ -156,6 +166,12 @@ module DhanScalper
       ui&.join(0.2)
     end
 
+    # Preview the global session PnL if a trader were to close with `net` profit/loss.
+    # Adds the candidate net to the currently realised session PnL tracked in state.
+    def session_pnl_preview(_trader, net)
+      @state.pnl + net
+    end
+
     private
 
     def create_websocket_client
@@ -198,12 +214,6 @@ module DhanScalper
           next
         end
       end
-    end
-
-    # Preview the global session PnL if a trader were to close with `net` profit/loss.
-    # Adds the candidate net to the currently realised session PnL tracked in state.
-    def session_pnl_preview(_trader, net)
-      @state.pnl + net
     end
 
     def sym_cfg(sym) = @cfg.fetch("SYMBOLS").fetch(sym)

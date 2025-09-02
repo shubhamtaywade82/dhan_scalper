@@ -2,20 +2,20 @@
 
 module DhanScalper
   module TimeZone
-  module_function
+    module_function
 
-  def parse(str_or_num)
-    return Time.at(str_or_num.to_i) if str_or_num.is_a?(Numeric)
+    def parse(str_or_num)
+      return Time.at(str_or_num.to_i) if str_or_num.is_a?(Numeric)
 
-    begin
-      Time.parse(str_or_num.to_s)
-    rescue StandardError
-      Time.now
+      begin
+        Time.parse(str_or_num.to_s)
+      rescue StandardError
+        Time.now
+      end
     end
-  end
 
-  def at(epoch)
-    Time.at(epoch.to_i)
-  end
+    def at(epoch)
+      Time.at(epoch.to_i)
+    end
   end
 end

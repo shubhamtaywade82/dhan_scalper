@@ -59,11 +59,11 @@ RSpec.describe DhanScalper do
 
   describe "constants" do
     it "defines expected constants" do
-      expect(DhanScalper.constants).to include(:VERSION)
-      expect(DhanScalper.constants).to include(:App)
-      expect(DhanScalper.constants).to include(:Trader)
-      expect(DhanScalper.constants).to include(:Config)
-      expect(DhanScalper.constants).to include(:State)
+      expect(described_class.constants).to include(:VERSION)
+      expect(described_class.constants).to include(:App)
+      expect(described_class.constants).to include(:Trader)
+      expect(described_class.constants).to include(:Config)
+      expect(described_class.constants).to include(:State)
     end
   end
 
@@ -301,8 +301,8 @@ RSpec.describe DhanScalper do
     end
 
     it "has proper module structure" do
-      expect(DhanScalper.name).to eq("DhanScalper")
-      expect(DhanScalper).to be_a(Module)
+      expect(described_class.name).to eq("DhanScalper")
+      expect(described_class).to be_a(Module)
     end
   end
 

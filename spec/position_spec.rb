@@ -11,7 +11,7 @@ RSpec.describe DhanScalper::Position do
 
   describe "#initialize" do
     it "creates a position with all attributes" do
-      position = DhanScalper::Position.new(
+      position = described_class.new(
         security_id: security_id,
         side: side,
         entry_price: entry_price,
@@ -29,7 +29,7 @@ RSpec.describe DhanScalper::Position do
     end
 
     it "sets current_price to entry_price by default" do
-      position = DhanScalper::Position.new(
+      position = described_class.new(
         security_id: security_id,
         side: side,
         entry_price: entry_price,
@@ -40,7 +40,7 @@ RSpec.describe DhanScalper::Position do
     end
 
     it "allows custom current_price" do
-      position = DhanScalper::Position.new(
+      position = described_class.new(
         security_id: security_id,
         side: side,
         entry_price: entry_price,
@@ -52,7 +52,7 @@ RSpec.describe DhanScalper::Position do
     end
 
     it "allows custom pnl" do
-      position = DhanScalper::Position.new(
+      position = described_class.new(
         security_id: security_id,
         side: side,
         entry_price: entry_price,
@@ -66,7 +66,7 @@ RSpec.describe DhanScalper::Position do
 
   describe "#update_price" do
     let(:position) do
-      DhanScalper::Position.new(
+      described_class.new(
         security_id: security_id,
         side: side,
         entry_price: entry_price,
@@ -92,14 +92,14 @@ RSpec.describe DhanScalper::Position do
       position.update_price(0.0)
 
       expect(position.current_price).to eq(0.0)
-      expect(position.pnl).to eq(-15000.0) # (0 - 150) * 100
+      expect(position.pnl).to eq(-15_000.0) # (0 - 150) * 100
     end
   end
 
   describe "#calculate_pnl" do
     context "for BUY positions" do
       let(:position) do
-        DhanScalper::Position.new(
+        described_class.new(
           security_id: security_id,
           side: "BUY",
           entry_price: 150.0,
@@ -125,7 +125,7 @@ RSpec.describe DhanScalper::Position do
 
     context "for SELL positions" do
       let(:position) do
-        DhanScalper::Position.new(
+        described_class.new(
           security_id: security_id,
           side: "SELL",
           entry_price: 150.0,
@@ -150,7 +150,7 @@ RSpec.describe DhanScalper::Position do
     end
 
     it "handles unknown side" do
-      position = DhanScalper::Position.new(
+      position = described_class.new(
         security_id: security_id,
         side: "UNKNOWN",
         entry_price: 150.0,
@@ -161,7 +161,7 @@ RSpec.describe DhanScalper::Position do
     end
 
     it "handles case insensitive side" do
-      position = DhanScalper::Position.new(
+      position = described_class.new(
         security_id: security_id,
         side: "buy",
         entry_price: 150.0,
@@ -175,7 +175,7 @@ RSpec.describe DhanScalper::Position do
 
   describe "#to_h" do
     it "returns a hash representation" do
-      position = DhanScalper::Position.new(
+      position = described_class.new(
         security_id: security_id,
         side: side,
         entry_price: entry_price,
@@ -199,7 +199,7 @@ RSpec.describe DhanScalper::Position do
 
   describe "#to_s" do
     it "returns a string representation" do
-      position = DhanScalper::Position.new(
+      position = described_class.new(
         security_id: security_id,
         side: side,
         entry_price: entry_price,
@@ -213,7 +213,7 @@ RSpec.describe DhanScalper::Position do
     end
 
     it "uses security_id when symbol is nil" do
-      position = DhanScalper::Position.new(
+      position = described_class.new(
         security_id: security_id,
         side: side,
         entry_price: entry_price,
@@ -227,7 +227,7 @@ RSpec.describe DhanScalper::Position do
 
   describe "edge cases" do
     it "handles zero quantity" do
-      position = DhanScalper::Position.new(
+      position = described_class.new(
         security_id: security_id,
         side: side,
         entry_price: entry_price,
@@ -238,7 +238,7 @@ RSpec.describe DhanScalper::Position do
     end
 
     it "handles negative quantity" do
-      position = DhanScalper::Position.new(
+      position = described_class.new(
         security_id: security_id,
         side: side,
         entry_price: entry_price,
@@ -249,7 +249,7 @@ RSpec.describe DhanScalper::Position do
     end
 
     it "handles very large numbers" do
-      position = DhanScalper::Position.new(
+      position = described_class.new(
         security_id: security_id,
         side: side,
         entry_price: 1_000_000.0,
@@ -261,7 +261,7 @@ RSpec.describe DhanScalper::Position do
     end
 
     it "handles fractional prices" do
-      position = DhanScalper::Position.new(
+      position = described_class.new(
         security_id: security_id,
         side: side,
         entry_price: 150.123,

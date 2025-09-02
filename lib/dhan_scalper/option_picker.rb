@@ -41,26 +41,25 @@ module DhanScalper
           pe_sid: pe_sid
         }
       rescue StandardError => e
-        if @mode == :paper
-          puts "Warning: CSV master lookup failed (#{e.message}), using mock data for paper trading"
-          # Generate mock option chain data for paper trading
-          {
-            expiry: expiry, strikes: strikes,
-            ce_sid: {
-              (atm - step) => "PAPER_CE_#{atm - step}",
-              atm => "PAPER_CE_#{atm}",
-              (atm + step) => "PAPER_CE_#{atm + step}"
-            },
-            pe_sid: {
-              (atm - step) => "PAPER_PE_#{atm - step}",
-              atm => "PAPER_PE_#{atm}",
-              (atm + step) => "PAPER_PE_#{atm + step}"
-            }
+        raise "Failed to fetch option chain for live trading: #{e.message}" unless @mode == :paper
+
+        puts "Warning: CSV master lookup failed (#{e.message}), using mock data for paper trading"
+        # Generate mock option chain data for paper trading
+        {
+          expiry: expiry, strikes: strikes,
+          ce_sid: {
+            (atm - step) => "PAPER_CE_#{atm - step}",
+            atm => "PAPER_CE_#{atm}",
+            (atm + step) => "PAPER_CE_#{atm + step}"
+          },
+          pe_sid: {
+            (atm - step) => "PAPER_PE_#{atm - step}",
+            atm => "PAPER_PE_#{atm}",
+            (atm + step) => "PAPER_PE_#{atm + step}"
           }
-        else
-          # For live trading, re-raise the error
-          raise "Failed to fetch option chain for live trading: #{e.message}"
-        end
+        }
+
+        # For live trading, re-raise the error
       end
     end
 
@@ -70,7 +69,7 @@ module DhanScalper
       now = Time.now
       d = (wday_target - now.wday) % 7
       d = 7 if d.zero? && now.hour >= 15
-      (now + d * 86_400).strftime("%Y-%m-%d")
+      (now + (d * 86_400)).strftime("%Y-%m-%d")
     end
 
     def fetch_first_expiry
@@ -79,18 +78,18 @@ module DhanScalper
         underlying_symbol = get_underlying_symbol
         expiries = @csv_master.get_expiry_dates(underlying_symbol)
 
-        if expiries && expiries.any?
+        if expiries&.any?
           first_expiry = expiries.first
           puts "[EXPIRY] Using first expiry from CSV master: #{first_expiry}"
           return first_expiry
         end
-      rescue => e
+      rescue StandardError => e
         puts "[DEBUG] CSV master method failed: #{e.message}"
       end
 
       # Fallback to calculated expiry if CSV master fails
       puts "[WARNING] No expiry dates found from CSV master, using fallback calculation"
-      return fallback_expiry
+      fallback_expiry
     end
 
     def fallback_expiry
@@ -99,7 +98,7 @@ module DhanScalper
       now = Time.now
       d = (wday_target - now.wday) % 7
       d = 7 if d.zero? && now.hour >= 15
-      (now + d * 86_400).strftime("%Y-%m-%d")
+      (now + (d * 86_400)).strftime("%Y-%m-%d")
     end
 
     def index_by(chain)

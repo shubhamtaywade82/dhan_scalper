@@ -49,7 +49,7 @@ RSpec.describe DhanScalper::Indicators do
         # Manual calculation verification
         k = 2.0 / (3 + 1) # 0.5
         expected_ema = sample_values.inject(nil) do |ema, value|
-          ema.nil? ? value.to_f : (value.to_f * k + ema * (1 - k))
+          ema.nil? ? value.to_f : ((value.to_f * k) + (ema * (1 - k)))
         end
 
         expect(result).to be_within(0.01).of(expected_ema)

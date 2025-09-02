@@ -8,22 +8,22 @@ RSpec.describe DhanScalper::TickCache do
       tick_data = {
         segment: "IDX_I",
         security_id: "13",
-        ltp: 19500.0,
+        ltp: 19_500.0,
         ts: Time.now.to_i,
         symbol: "NIFTY"
       }
 
-      DhanScalper::TickCache.put(tick_data)
+      described_class.put(tick_data)
 
       # Verify data is stored
-      expect(DhanScalper::TickCache.ltp("IDX_I", "13")).to eq(19500.0)
+      expect(described_class.ltp("IDX_I", "13")).to eq(19_500.0)
     end
 
     it "overwrites existing data for same key" do
       tick_data1 = {
         segment: "IDX_I",
         security_id: "13",
-        ltp: 19500.0,
+        ltp: 19_500.0,
         ts: Time.now.to_i,
         symbol: "NIFTY"
       }
@@ -31,22 +31,22 @@ RSpec.describe DhanScalper::TickCache do
       tick_data2 = {
         segment: "IDX_I",
         security_id: "13",
-        ltp: 19600.0,
+        ltp: 19_600.0,
         ts: Time.now.to_i,
         symbol: "NIFTY"
       }
 
-      DhanScalper::TickCache.put(tick_data1)
-      DhanScalper::TickCache.put(tick_data2)
+      described_class.put(tick_data1)
+      described_class.put(tick_data2)
 
-      expect(DhanScalper::TickCache.ltp("IDX_I", "13")).to eq(19600.0)
+      expect(described_class.ltp("IDX_I", "13")).to eq(19_600.0)
     end
 
     it "handles different segments and security IDs" do
       tick_data1 = {
         segment: "IDX_I",
         security_id: "13",
-        ltp: 19500.0,
+        ltp: 19_500.0,
         ts: Time.now.to_i,
         symbol: "NIFTY"
       }
@@ -59,11 +59,11 @@ RSpec.describe DhanScalper::TickCache do
         symbol: "OPTION"
       }
 
-      DhanScalper::TickCache.put(tick_data1)
-      DhanScalper::TickCache.put(tick_data2)
+      described_class.put(tick_data1)
+      described_class.put(tick_data2)
 
-      expect(DhanScalper::TickCache.ltp("IDX_I", "13")).to eq(19500.0)
-      expect(DhanScalper::TickCache.ltp("NSE_FNO", "12345")).to eq(150.0)
+      expect(described_class.ltp("IDX_I", "13")).to eq(19_500.0)
+      expect(described_class.ltp("NSE_FNO", "12345")).to eq(150.0)
     end
 
     it "handles nil values" do
@@ -75,9 +75,9 @@ RSpec.describe DhanScalper::TickCache do
         symbol: "NIFTY"
       }
 
-      DhanScalper::TickCache.put(tick_data)
+      described_class.put(tick_data)
 
-      expect(DhanScalper::TickCache.ltp("IDX_I", "13")).to be_nil
+      expect(described_class.ltp("IDX_I", "13")).to be_nil
     end
 
     it "handles zero values" do
@@ -89,9 +89,9 @@ RSpec.describe DhanScalper::TickCache do
         symbol: "NIFTY"
       }
 
-      DhanScalper::TickCache.put(tick_data)
+      described_class.put(tick_data)
 
-      expect(DhanScalper::TickCache.ltp("IDX_I", "13")).to eq(0.0)
+      expect(described_class.ltp("IDX_I", "13")).to eq(0.0)
     end
 
     it "handles negative values" do
@@ -103,9 +103,9 @@ RSpec.describe DhanScalper::TickCache do
         symbol: "NIFTY"
       }
 
-      DhanScalper::TickCache.put(tick_data)
+      described_class.put(tick_data)
 
-      expect(DhanScalper::TickCache.ltp("IDX_I", "13")).to eq(-100.0)
+      expect(described_class.ltp("IDX_I", "13")).to eq(-100.0)
     end
 
     it "handles string values" do
@@ -117,63 +117,63 @@ RSpec.describe DhanScalper::TickCache do
         symbol: "NIFTY"
       }
 
-      DhanScalper::TickCache.put(tick_data)
+      described_class.put(tick_data)
 
-      expect(DhanScalper::TickCache.ltp("IDX_I", "13")).to eq("19500.50")
+      expect(described_class.ltp("IDX_I", "13")).to eq("19500.50")
     end
   end
 
   describe ".ltp" do
     it "returns nil for non-existent key" do
-      expect(DhanScalper::TickCache.ltp("NONEXISTENT", "999")).to be_nil
+      expect(described_class.ltp("NONEXISTENT", "999")).to be_nil
     end
 
     it "returns nil for empty cache" do
-      expect(DhanScalper::TickCache.ltp("IDX_I", "13")).to be_nil
+      expect(described_class.ltp("IDX_I", "13")).to be_nil
     end
 
     it "returns correct LTP for existing key" do
       tick_data = {
         segment: "IDX_I",
         security_id: "13",
-        ltp: 19500.0,
+        ltp: 19_500.0,
         ts: Time.now.to_i,
         symbol: "NIFTY"
       }
 
-      DhanScalper::TickCache.put(tick_data)
+      described_class.put(tick_data)
 
-      expect(DhanScalper::TickCache.ltp("IDX_I", "13")).to eq(19500.0)
+      expect(described_class.ltp("IDX_I", "13")).to eq(19_500.0)
     end
 
     it "handles different data types" do
       tick_data = {
         segment: "IDX_I",
         security_id: "13",
-        ltp: 19500,
+        ltp: 19_500,
         ts: Time.now.to_i,
         symbol: "NIFTY"
       }
 
-      DhanScalper::TickCache.put(tick_data)
+      described_class.put(tick_data)
 
-      expect(DhanScalper::TickCache.ltp("IDX_I", "13")).to eq(19500)
+      expect(described_class.ltp("IDX_I", "13")).to eq(19_500)
     end
 
     it "handles case sensitivity" do
       tick_data = {
         segment: "idx_i",
         security_id: "13",
-        ltp: 19500.0,
+        ltp: 19_500.0,
         ts: Time.now.to_i,
         symbol: "NIFTY"
       }
 
-      DhanScalper::TickCache.put(tick_data)
+      described_class.put(tick_data)
 
       # Should not find with different case
-      expect(DhanScalper::TickCache.ltp("IDX_I", "13")).to be_nil
-      expect(DhanScalper::TickCache.ltp("idx_i", "13")).to eq(19500.0)
+      expect(described_class.ltp("IDX_I", "13")).to be_nil
+      expect(described_class.ltp("idx_i", "13")).to eq(19_500.0)
     end
   end
 
@@ -186,30 +186,30 @@ RSpec.describe DhanScalper::TickCache do
           tick_data = {
             segment: "IDX_I",
             security_id: "13",
-            ltp: 19500.0 + i,
+            ltp: 19_500.0 + i,
             ts: Time.now.to_i,
             symbol: "NIFTY"
           }
-          DhanScalper::TickCache.put(tick_data)
+          described_class.put(tick_data)
         end
       end
 
       threads.each(&:join)
 
       # Should have the last value
-      expect(DhanScalper::TickCache.ltp("IDX_I", "13")).to be >= 19500.0
+      expect(described_class.ltp("IDX_I", "13")).to be >= 19_500.0
     end
 
     it "handles concurrent reads and writes" do
       tick_data = {
         segment: "IDX_I",
         security_id: "13",
-        ltp: 19500.0,
+        ltp: 19_500.0,
         ts: Time.now.to_i,
         symbol: "NIFTY"
       }
 
-      DhanScalper::TickCache.put(tick_data)
+      described_class.put(tick_data)
 
       threads = []
 
@@ -217,7 +217,7 @@ RSpec.describe DhanScalper::TickCache do
       5.times do
         threads << Thread.new do
           100.times do
-            expect(DhanScalper::TickCache.ltp("IDX_I", "13")).to eq(19500.0)
+            expect(described_class.ltp("IDX_I", "13")).to eq(19_500.0)
           end
         end
       end
@@ -229,11 +229,11 @@ RSpec.describe DhanScalper::TickCache do
             new_tick_data = {
               segment: "IDX_I",
               security_id: "13",
-              ltp: 19500.0 + i + j,
+              ltp: 19_500.0 + i + j,
               ts: Time.now.to_i,
               symbol: "NIFTY"
             }
-            DhanScalper::TickCache.put(new_tick_data)
+            described_class.put(new_tick_data)
           end
         end
       end
@@ -241,7 +241,7 @@ RSpec.describe DhanScalper::TickCache do
       threads.each(&:join)
 
       # Should still be able to read
-      expect(DhanScalper::TickCache.ltp("IDX_I", "13")).to be >= 19500.0
+      expect(described_class.ltp("IDX_I", "13")).to be >= 19_500.0
     end
   end
 
@@ -250,28 +250,28 @@ RSpec.describe DhanScalper::TickCache do
       tick_data = {
         segment: "",
         security_id: "13",
-        ltp: 19500.0,
+        ltp: 19_500.0,
         ts: Time.now.to_i,
         symbol: "NIFTY"
       }
 
-      DhanScalper::TickCache.put(tick_data)
+      described_class.put(tick_data)
 
-      expect(DhanScalper::TickCache.ltp("", "13")).to eq(19500.0)
+      expect(described_class.ltp("", "13")).to eq(19_500.0)
     end
 
     it "handles empty security_id" do
       tick_data = {
         segment: "IDX_I",
         security_id: "",
-        ltp: 19500.0,
+        ltp: 19_500.0,
         ts: Time.now.to_i,
         symbol: "NIFTY"
       }
 
-      DhanScalper::TickCache.put(tick_data)
+      described_class.put(tick_data)
 
-      expect(DhanScalper::TickCache.ltp("IDX_I", "")).to eq(19500.0)
+      expect(described_class.ltp("IDX_I", "")).to eq(19_500.0)
     end
 
     it "handles very large numbers" do
@@ -283,9 +283,9 @@ RSpec.describe DhanScalper::TickCache do
         symbol: "NIFTY"
       }
 
-      DhanScalper::TickCache.put(tick_data)
+      described_class.put(tick_data)
 
-      expect(DhanScalper::TickCache.ltp("IDX_I", "13")).to eq(999_999_999.99)
+      expect(described_class.ltp("IDX_I", "13")).to eq(999_999_999.99)
     end
 
     it "handles very small numbers" do
@@ -297,23 +297,23 @@ RSpec.describe DhanScalper::TickCache do
         symbol: "NIFTY"
       }
 
-      DhanScalper::TickCache.put(tick_data)
+      described_class.put(tick_data)
 
-      expect(DhanScalper::TickCache.ltp("IDX_I", "13")).to eq(0.0001)
+      expect(described_class.ltp("IDX_I", "13")).to eq(0.0001)
     end
 
     it "handles special characters in segment and security_id" do
       tick_data = {
         segment: "IDX_I_SPECIAL",
         security_id: "13_SPECIAL",
-        ltp: 19500.0,
+        ltp: 19_500.0,
         ts: Time.now.to_i,
         symbol: "NIFTY"
       }
 
-      DhanScalper::TickCache.put(tick_data)
+      described_class.put(tick_data)
 
-      expect(DhanScalper::TickCache.ltp("IDX_I_SPECIAL", "13_SPECIAL")).to eq(19500.0)
+      expect(described_class.ltp("IDX_I_SPECIAL", "13_SPECIAL")).to eq(19_500.0)
     end
   end
 end

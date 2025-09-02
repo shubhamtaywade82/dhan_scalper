@@ -8,17 +8,17 @@ RSpec.describe DhanScalper::TimeZone do
   describe ".parse" do
     context "with numeric input" do
       it "parses Unix timestamp correctly" do
-        timestamp = 1706171415
+        timestamp = 1_706_171_415
         result = time_zone.parse(timestamp)
         expect(result).to be_a(Time)
-        expect(result.to_i).to eq(1706171415)
+        expect(result.to_i).to eq(1_706_171_415)
       end
 
       it "parses Unix timestamp as float" do
-        timestamp = 1706171415.123
+        timestamp = 1_706_171_415.123
         result = time_zone.parse(timestamp)
         expect(result).to be_a(Time)
-        expect(result.to_i).to eq(1706171415)
+        expect(result.to_i).to eq(1_706_171_415)
       end
 
       it "handles zero timestamp" do
@@ -34,7 +34,7 @@ RSpec.describe DhanScalper::TimeZone do
       end
 
       it "handles very large timestamp" do
-        timestamp = 9999999999
+        timestamp = 9_999_999_999
         result = time_zone.parse(timestamp)
         expect(result).to be_a(Time)
         expect(result.to_i).to eq(timestamp)
@@ -178,24 +178,24 @@ RSpec.describe DhanScalper::TimeZone do
   describe ".at" do
     context "with Unix timestamp" do
       it "creates Time from Unix timestamp" do
-        timestamp = 1706171415
+        timestamp = 1_706_171_415
         result = time_zone.at(timestamp)
         expect(result).to be_a(Time)
-        expect(result.to_i).to eq(1706171415)
+        expect(result.to_i).to eq(1_706_171_415)
       end
 
       it "creates Time from Unix timestamp string" do
         timestamp = "1706171415"
         result = time_zone.at(timestamp)
         expect(result).to be_a(Time)
-        expect(result.to_i).to eq(1706171415)
+        expect(result.to_i).to eq(1_706_171_415)
       end
 
       it "creates Time from float timestamp" do
-        timestamp = 1706171415.123
+        timestamp = 1_706_171_415.123
         result = time_zone.at(timestamp)
         expect(result).to be_a(Time)
-        expect(result.to_i).to eq(1706171415)
+        expect(result.to_i).to eq(1_706_171_415)
       end
 
       it "handles zero timestamp" do
@@ -211,7 +211,7 @@ RSpec.describe DhanScalper::TimeZone do
       end
 
       it "handles very large timestamp" do
-        timestamp = 9999999999
+        timestamp = 9_999_999_999
         result = time_zone.at(timestamp)
         expect(result).to be_a(Time)
         expect(result.to_i).to eq(timestamp)
@@ -288,14 +288,14 @@ RSpec.describe DhanScalper::TimeZone do
     end
 
     it "delegates at to Time.at for numbers" do
-      timestamp = 1706171415
-      expect(Time).to receive(:at).with(1706171415)
+      timestamp = 1_706_171_415
+      expect(Time).to receive(:at).with(1_706_171_415)
       time_zone.at(timestamp)
     end
 
     it "delegates at to Time.at for numeric strings in at method" do
       timestamp = "1706171415"
-      expect(Time).to receive(:at).with(1706171415)
+      expect(Time).to receive(:at).with(1_706_171_415)
       time_zone.at(timestamp)
     end
   end
@@ -345,11 +345,11 @@ RSpec.describe DhanScalper::TimeZone do
   describe "type checking behavior" do
     it "uses is_a?(Numeric) for type checking" do
       # Test with actual numeric and string types
-      numeric_value = 1706171415
+      numeric_value = 1_706_171_415
       string_value = "1706171415"
 
       # Numeric values should use Time.at
-      expect(Time).to receive(:at).with(1706171415)
+      expect(Time).to receive(:at).with(1_706_171_415)
       time_zone.parse(numeric_value)
 
       # String values should use Time.parse

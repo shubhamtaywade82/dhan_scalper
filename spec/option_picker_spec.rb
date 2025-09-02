@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "spec_helper"
 
 RSpec.describe DhanScalper::OptionPicker do
@@ -18,7 +20,7 @@ RSpec.describe DhanScalper::OptionPicker do
 
   describe "#nearest_strike" do
     it "rounds spot to nearest step" do
-      expect(picker.nearest_strike(19768, 50)).to eq(19750)
+      expect(picker.nearest_strike(19_768, 50)).to eq(19_750)
     end
   end
 
@@ -32,21 +34,19 @@ RSpec.describe DhanScalper::OptionPicker do
   describe "#fetch_first_expiry" do
     it "uses csv master expiries when available" do
       allow(picker).to receive(:get_underlying_symbol).and_return("NIFTY")
-      allow(csv_master).to receive(:get_expiry_dates).with("NIFTY").and_return(["2023-09-14", "2023-09-21"])
+      allow(csv_master).to receive(:get_expiry_dates).with("NIFTY").and_return(%w[2023-09-14 2023-09-21])
       expect(picker.fetch_first_expiry).to eq("2023-09-14")
     end
 
     it "falls back when csv master returns none" do
-      allow(picker).to receive(:get_underlying_symbol).and_return("NIFTY")
       allow(csv_master).to receive(:get_expiry_dates).and_return([])
-      allow(picker).to receive(:fallback_expiry).and_return("2023-09-14")
+      allow(picker).to receive_messages(get_underlying_symbol: "NIFTY", fallback_expiry: "2023-09-14")
       expect(picker.fetch_first_expiry).to eq("2023-09-14")
     end
 
     it "logs error and falls back when csv master raises" do
-      allow(picker).to receive(:get_underlying_symbol).and_return("NIFTY")
       allow(csv_master).to receive(:get_expiry_dates).and_raise("fail")
-      allow(picker).to receive(:fallback_expiry).and_return("2023-09-14")
+      allow(picker).to receive_messages(get_underlying_symbol: "NIFTY", fallback_expiry: "2023-09-14")
       expect { expect(picker.fetch_first_expiry).to eq("2023-09-14") }
         .to output(/CSV master method failed/).to_stdout
     end
@@ -88,17 +88,16 @@ RSpec.describe DhanScalper::OptionPicker do
 
   describe "#pick" do
     before do
-      allow(picker).to receive(:fetch_first_expiry).and_return("2023-09-14")
-      allow(picker).to receive(:get_underlying_symbol).and_return("NIFTY")
+      allow(picker).to receive_messages(fetch_first_expiry: "2023-09-14", get_underlying_symbol: "NIFTY")
     end
 
     it "builds option chain with security ids" do
       allow(csv_master).to receive(:get_security_id) do |_, _, strike, type|
         "#{type}_#{strike}"
       end
-      res = picker.pick(current_spot: 19768)
-      expect(res[:ce_sid][19750]).to eq("CE_19750")
-      expect(res[:pe_sid][19750]).to eq("PE_19750")
+      res = picker.pick(current_spot: 19_768)
+      expect(res[:ce_sid][19_750]).to eq("CE_19750")
+      expect(res[:pe_sid][19_750]).to eq("PE_19750")
     end
 
     context "when csv master fails" do
@@ -110,14 +109,14 @@ RSpec.describe DhanScalper::OptionPicker do
         let(:mode) { :paper }
 
         it "returns mock data" do
-          res = picker.pick(current_spot: 19768)
-          expect(res[:ce_sid][19750]).to eq("PAPER_CE_19750")
+          res = picker.pick(current_spot: 19_768)
+          expect(res[:ce_sid][19_750]).to eq("PAPER_CE_19750")
         end
       end
 
       context "in live mode" do
         it "raises error" do
-          expect { picker.pick(current_spot: 19768) }.to raise_error(/Failed to fetch option chain/)
+          expect { picker.pick(current_spot: 19_768) }.to raise_error(/Failed to fetch option chain/)
         end
       end
     end

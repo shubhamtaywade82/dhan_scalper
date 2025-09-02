@@ -24,6 +24,7 @@ module DhanScalper
         hide_cursor
         loop do
           break unless @alive
+
           render_frame
           sleep REFRESH
         end
@@ -118,7 +119,7 @@ module DhanScalper
 
         table = TTY::Table.new(headers, rows)
         content = table.render(:ascii, resize: true)
-        
+
         TTY::Box.frame(
           width: width,
           title: { top_left: " 📊 POSITIONS " },
@@ -152,7 +153,7 @@ module DhanScalper
 
         table = TTY::Table.new(headers, rows)
         content = table.render(:ascii, resize: true)
-        
+
         TTY::Box.frame(
           width: width,
           title: { top_left: " 📋 RECENT ORDERS " },
@@ -160,7 +161,7 @@ module DhanScalper
         ) { content }
       end
 
-      def footer_hint(width)
+      def footer_hint(_width)
         @pastel.dim("Press Ctrl+C to exit | Data refreshes every #{REFRESH} seconds")
       end
     end

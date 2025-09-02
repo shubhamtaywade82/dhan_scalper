@@ -118,7 +118,7 @@ module DhanScalper
     private
 
     def ensure_data_directory
-      FileUtils.mkdir_p(@data_dir) unless Dir.exist?(@data_dir)
+      FileUtils.mkdir_p(@data_dir)
     end
 
     def load_existing_data

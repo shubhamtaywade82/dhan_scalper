@@ -20,7 +20,7 @@ module IndicatorsGate
     # fallback
     k = 2.0 / (period + 1)
     e = nil
-    values.map { |v| e = e.nil? ? v.to_f : (v.to_f * k + e * (1 - k)) }
+    values.map { |v| e = e.nil? ? v.to_f : ((v.to_f * k) + (e * (1 - k))) }
   end
 
   def rsi_series(values, period = 14)
@@ -45,8 +45,8 @@ module IndicatorsGate
     # pad initial
     period.times { out << 50.0 }
     (period...gains.size).each do |i|
-      ag = (ag * (period - 1) + gains[i]) / period
-      al = (al * (period - 1) + losses[i]) / period
+      ag = ((ag * (period - 1)) + gains[i]) / period
+      al = ((al * (period - 1)) + losses[i]) / period
       rs = al.zero? ? 100.0 : ag / al
       out << (100 - (100 / (1 + rs)))
     end
@@ -85,8 +85,8 @@ module IndicatorsGate
     (start...n).each do |i|
       mid = (highs[i].to_f + lows[i].to_f) / 2.0
       atr_i = atr_vals[i].to_f
-      bub[i] = mid + multiplier.to_f * atr_i
-      blb[i] = mid - multiplier.to_f * atr_i
+      bub[i] = mid + (multiplier.to_f * atr_i)
+      blb[i] = mid - (multiplier.to_f * atr_i)
 
       if i == start
         ub[i] = bub[i]
@@ -108,7 +108,7 @@ module IndicatorsGate
                 end
       end
 
-      st[i] = (closes[i].to_f <= ub[i]) ? ub[i] : lb[i]
+      st[i] = closes[i].to_f <= ub[i] ? ub[i] : lb[i]
     end
 
     st
@@ -142,14 +142,14 @@ module IndicatorsGate
 
     highs = values_hlc.map { |x| (x[:high] || x["high"]).to_f }
     lows  = values_hlc.map { |x| (x[:low]  || x["low"]).to_f }
-    closes= values_hlc.map { |x| (x[:close]|| x["close"]).to_f }
+    closes = values_hlc.map { |x| (x[:close] || x["close"]).to_f }
 
     trs = Array.new(n, 0.0)
     trs[0] = (highs[0] - lows[0]).abs
     (1...n).each do |i|
       h_l = (highs[i] - lows[i]).abs
-      h_pc= (highs[i] - closes[i - 1]).abs
-      l_pc= (lows[i]  - closes[i - 1]).abs
+      h_pc = (highs[i] - closes[i - 1]).abs
+      l_pc = (lows[i]  - closes[i - 1]).abs
       trs[i] = [h_l, h_pc, l_pc].max
     end
 
@@ -178,7 +178,7 @@ class CandleSeries
     @candles  = []
   end
 
-  def each(&blk) = candles.each(&blk)
+  def each(&) = candles.each(&)
   def add_candle(candle) = candles << candle
 
   # ---------- Loading from DhanHQ ----------
@@ -223,7 +223,11 @@ class CandleSeries
       puts "[DEBUG] Calling DhanHQ::Models::HistoricalData.intraday with params: #{params}"
       result = DhanHQ::Models::HistoricalData.intraday(params)
 
-      puts "[DEBUG] Historical data result: #{result.class} - #{result.respond_to?(:size) ? "size: #{result[:open].size}" : "keys: #{result.keys if result.respond_to?(:keys)}"}"
+      puts "[DEBUG] Historical data result: #{result.class} - #{if result.respond_to?(:size)
+                                                                  "size: #{result[:open].size}"
+                                                                else
+                                                                  "keys: #{result.keys if result.respond_to?(:keys)}"
+                                                                end}"
       return result if result && (result.is_a?(Array) || result.is_a?(Hash))
     rescue StandardError => e
       puts "Warning: Failed to fetch historical data: #{e.message}"
@@ -323,7 +327,7 @@ class CandleSeries
       (grouped[bucket_start] ||= []) << c
     end
 
-    out = CandleSeries.new(symbol: (symbol || "#{@symbol}_#{per}m"), interval: per.to_s)
+    out = CandleSeries.new(symbol: symbol || "#{@symbol}_#{per}m", interval: per.to_s)
     grouped.keys.sort.each do |ts|
       cols = grouped[ts]
       next if cols.nil? || cols.empty?
@@ -332,7 +336,7 @@ class CandleSeries
       h = cols.map(&:high).max
       l = cols.map(&:low).min
       c = cols.last.close
-      v = cols.map(&:volume).sum
+      v = cols.sum(&:volume)
       out.add_candle(Candle.new(ts: ts, open: o, high: h, low: l, close: c, volume: v))
     end
 
@@ -468,12 +472,12 @@ class CandleSeries
     return nil if candles.size < 100 # Need sufficient data
 
     candle_hash = {
-      'open' => opens,
-      'high' => highs,
-      'low' => lows,
-      'close' => closes,
-      'volume' => volumes,
-      'timestamp' => candles.map(&:timestamp)
+      "open" => opens,
+      "high" => highs,
+      "low" => lows,
+      "close" => closes,
+      "volume" => volumes,
+      "timestamp" => candles.map(&:timestamp)
     }
 
     DhanScalper::Indicators::HolyGrail.new(candles: candle_hash).call
@@ -520,13 +524,13 @@ class CandleSeries
 
     # Combine signals
     case [hg.bias, st_signal]
-    when [:bullish, :bullish]
+    when %i[bullish bullish]
       :strong_buy
-    when [:bullish, :bearish]
+    when %i[bullish bearish]
       :weak_buy
-    when [:bearish, :bearish]
+    when %i[bearish bearish]
       :strong_sell
-    when [:bearish, :bullish]
+    when %i[bearish bullish]
       :weak_sell
     else
       :neutral

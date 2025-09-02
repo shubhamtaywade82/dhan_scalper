@@ -26,7 +26,7 @@ module DhanScalper
         @cache[:used] || 0.0
       end
 
-      def update_balance(amount, type: :debit)
+      def update_balance(_amount, type: :debit)
         # For live trading, we don't manually update balance
         # It gets updated via API calls
         refresh_cache
@@ -42,46 +42,44 @@ module DhanScalper
       end
 
       def refresh_cache
-        begin
-          # Use the correct DhanHQ::Models::Funds.fetch method
-          puts "[DEBUG] Attempting to fetch funds from DhanHQ API..."
-          funds = DhanHQ::Models::Funds.fetch
-          puts "[DEBUG] Funds object: #{funds.inspect}"
+        # Use the correct DhanHQ::Models::Funds.fetch method
+        puts "[DEBUG] Attempting to fetch funds from DhanHQ API..."
+        funds = DhanHQ::Models::Funds.fetch
+        puts "[DEBUG] Funds object: #{funds.inspect}"
 
-          if funds && funds.respond_to?(:available_balance)
-            # Calculate used balance as difference between total and available
-            total = funds.available_balance.to_f
-            available = funds.available_balance.to_f
-            used = funds.utilized_amount.to_f
+        if funds.respond_to?(:available_balance)
+          # Calculate used balance as difference between total and available
+          total = funds.available_balance.to_f
+          available = funds.available_balance.to_f
+          used = funds.utilized_amount.to_f
 
-            @cache = {
-              available: available,
-              used: used,
-              total: total
-            }
-          else
-            puts "[DEBUG] Funds object doesn't have expected methods, using fallback"
-            # Fallback to basic structure if API response is different
-            @cache = {
-              available: 100_000.0, # Default fallback
-              used: 0.0,
-              total: 100_000.0
-            }
-          end
+          @cache = {
+            available: available,
+            used: used,
+            total: total
+          }
+        else
+          puts "[DEBUG] Funds object doesn't have expected methods, using fallback"
+          # Fallback to basic structure if API response is different
+          @cache = {
+            available: 100_000.0, # Default fallback
+            used: 0.0,
+            total: 100_000.0
+          }
+        end
 
-          puts "[DEBUG] Cache updated: #{@cache.inspect}"
-          @cache_time = Time.now
-        rescue StandardError => e
-          puts "Warning: Failed to fetch live balance: #{e.message}"
-          puts "Backtrace: #{e.backtrace.first(3).join("\n")}"
-          # Keep existing cache if available, otherwise use defaults
-          unless @cache_time
-            @cache = {
-              available: 100_000.0,
-              used: 0.0,
-              total: 100_000.0
-            }
-          end
+        puts "[DEBUG] Cache updated: #{@cache.inspect}"
+        @cache_time = Time.now
+      rescue StandardError => e
+        puts "Warning: Failed to fetch live balance: #{e.message}"
+        puts "Backtrace: #{e.backtrace.first(3).join("\n")}"
+        # Keep existing cache if available, otherwise use defaults
+        unless @cache_time
+          @cache = {
+            available: 100_000.0,
+            used: 0.0,
+            total: 100_000.0
+          }
         end
       end
     end

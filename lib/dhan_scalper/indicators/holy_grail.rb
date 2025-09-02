@@ -43,7 +43,9 @@ module DhanScalper
 
         bias = if sma50 > ema200 then :bullish
                elsif sma50 < ema200 then :bearish
-               else :neutral end
+               else
+                 :neutral
+               end
 
         momentum = if macd_h[:macd].to_f > macd_h[:signal].to_f && rsi14 > 50
                      :up
@@ -57,14 +59,16 @@ module DhanScalper
         adx_threshold = get_adx_threshold
 
         proceed = case bias
-                  when :bullish then (adx14.to_f >= adx_threshold && momentum == :up)
-                  when :bearish then (adx14.to_f >= adx_threshold && momentum == :down)
+                  when :bullish then adx14.to_f >= adx_threshold && momentum == :up
+                  when :bearish then adx14.to_f >= adx_threshold && momentum == :down
                   else false
                   end
 
         trend = if ema200 < closes_last && sma50 > ema200 then :up
                 elsif ema200 > closes_last && sma50 < ema200 then :down
-                else :side end
+                else
+                  :side
+                end
 
         Result.new(
           bias: bias, adx: adx14, momentum: momentum, proceed?: proceed,
@@ -90,24 +94,22 @@ module DhanScalper
       def sma(len)
         arr = closes.last(len)
         return 0.0 if arr.empty?
+
         arr.sum / len.to_f
       end
 
       def ema(len)
-        if RTA
-          return RTA::MovingAverages.new(series: closes, period: len).ema
-        end
+        return RTA::MovingAverages.new(series: closes, period: len).ema if RTA
+
         # fallback simple EMA
         k = 2.0 / (len + 1)
         e = nil
-        closes.each { |v| e = e.nil? ? v.to_f : (v.to_f * k + e * (1 - k)) }
+        closes.each { |v| e = e.nil? ? v.to_f : ((v.to_f * k) + (e * (1 - k))) }
         e.to_f
       end
 
       def rsi(len)
-        if RTA
-          return RTA::RelativeStrengthIndex.new(series: closes, period: len).call
-        end
+        return RTA::RelativeStrengthIndex.new(series: closes, period: len).call if RTA
         # fallback: calculate RSI manually
         return 50.0 if closes.size < len + 1
 
@@ -115,8 +117,8 @@ module DhanScalper
         losses = []
 
         (1...closes.size).each do |i|
-          change = closes[i] - closes[i-1]
-          if change > 0
+          change = closes[i] - closes[i - 1]
+          if change.positive?
             gains << change
             losses << 0
           else
@@ -130,16 +132,16 @@ module DhanScalper
         avg_gain = gains.last(len).sum / len.to_f
         avg_loss = losses.last(len).sum / len.to_f
 
-        return 50.0 if avg_loss == 0
+        return 50.0 if avg_loss.zero?
 
         rs = avg_gain / avg_loss
-        rsi = 100 - (100 / (1 + rs))
-        rsi
+        100 - (100 / (1 + rs))
       end
 
       def macd_hash
         if RTA
-          m, s, h = RTA::Macd.new(series: closes, fast_period: MACD_F, slow_period: MACD_S, signal_period: MACD_SIG).call
+          m, s, h = RTA::Macd.new(series: closes, fast_period: MACD_F, slow_period: MACD_S,
+                                  signal_period: MACD_SIG).call
           return { macd: m, signal: s, hist: h }
         end
         # fallback: calculate MACD manually
@@ -153,7 +155,7 @@ module DhanScalper
 
         # For signal line, we need to calculate EMA of MACD line
         # This is a simplified version - in practice you'd need to track MACD values over time
-        signal_line = macd_line * 0.9  # Simplified signal line
+        signal_line = macd_line * 0.9 # Simplified signal line
         histogram = macd_line - signal_line
 
         { macd: macd_line, signal: signal_line, hist: histogram }
@@ -173,8 +175,8 @@ module DhanScalper
         true_ranges = []
         (1...highs.size).each do |i|
           tr1 = highs[i] - lows[i]
-          tr2 = (highs[i] - closes[i-1]).abs
-          tr3 = (lows[i] - closes[i-1]).abs
+          tr2 = (highs[i] - closes[i - 1]).abs
+          tr3 = (lows[i] - closes[i - 1]).abs
           true_ranges << [tr1, tr2, tr3].max
         end
 
@@ -182,11 +184,11 @@ module DhanScalper
 
         # Calculate ATR using Wilder's smoothing
         atr_values = []
-        atr_values << true_ranges[0...len].sum / len.to_f
+        atr_values << (true_ranges[0...len].sum / len.to_f)
 
         (len...true_ranges.size).each do |i|
           prev_atr = atr_values.last
-          atr_values << ((prev_atr * (len - 1)) + true_ranges[i]) / len.to_f
+          atr_values << (((prev_atr * (len - 1)) + true_ranges[i]) / len.to_f)
         end
 
         atr_values.last || 0.0
@@ -208,13 +210,13 @@ module DhanScalper
         minus_dm = []
 
         (1...highs.size).each do |i|
-          high_diff = highs[i] - highs[i-1]
-          low_diff = lows[i-1] - lows[i]
+          high_diff = highs[i] - highs[i - 1]
+          low_diff = lows[i - 1] - lows[i]
 
-          if high_diff > low_diff && high_diff > 0
+          if high_diff > low_diff && high_diff.positive?
             plus_dm << high_diff
             minus_dm << 0
-          elsif low_diff > high_diff && low_diff > 0
+          elsif low_diff > high_diff && low_diff.positive?
             plus_dm << 0
             minus_dm << low_diff
           else
@@ -233,13 +235,13 @@ module DhanScalper
         tr_sum = 0.0
         (1...highs.size).each do |i|
           tr1 = highs[i] - lows[i]
-          tr2 = (highs[i] - closes[i-1]).abs
-          tr3 = (lows[i] - closes[i-1]).abs
+          tr2 = (highs[i] - closes[i - 1]).abs
+          tr3 = (lows[i] - closes[i - 1]).abs
           tr_sum += [tr1, tr2, tr3].max
         end
         tr_avg = tr_sum / (highs.size - 1)
 
-        return 20.0 if tr_avg == 0
+        return 20.0 if tr_avg.zero?
 
         # Calculate +DI and -DI
         plus_di = 100 * (plus_dm_smooth / tr_avg)
@@ -247,12 +249,11 @@ module DhanScalper
 
         # Calculate DX
         di_sum = plus_di + minus_di
-        return 20.0 if di_sum == 0
+        return 20.0 if di_sum.zero?
 
-        dx = 100 * ((plus_di - minus_di).abs / di_sum)
+        100 * ((plus_di - minus_di).abs / di_sum)
 
         # ADX is typically smoothed DX, but for simplicity return DX
-        dx
       end
 
       # Determine ADX threshold based on timeframe
@@ -282,4 +283,3 @@ module DhanScalper
     end
   end
 end
-

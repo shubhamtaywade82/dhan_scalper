@@ -12,12 +12,12 @@ module DhanScalper
       # Convert CandleSeries to hash format expected by indicators
       def to_candle_hash
         {
-          'open' => series.opens,
-          'high' => series.highs,
-          'low' => series.lows,
-          'close' => series.closes,
-          'volume' => series.volumes,
-          'timestamp' => series.candles.map(&:timestamp)
+          "open" => series.opens,
+          "high" => series.highs,
+          "low" => series.lows,
+          "close" => series.closes,
+          "volume" => series.volumes,
+          "timestamp" => series.candles.map(&:timestamp)
         }
       end
 

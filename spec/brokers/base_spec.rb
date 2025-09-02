@@ -53,22 +53,22 @@ RSpec.describe DhanScalper::Brokers::Base do
   describe "method signatures" do
     it "allows buy to accept symbol, quantity, and price parameters" do
       method = described_class.instance_method(:buy)
-      expect(method.parameters).to include([:req, :symbol])
-      expect(method.parameters).to include([:req, :quantity])
-      expect(method.parameters).to include([:req, :price])
+      expect(method.parameters).to include(%i[req symbol])
+      expect(method.parameters).to include(%i[req quantity])
+      expect(method.parameters).to include(%i[req price])
     end
 
     it "allows sell to accept symbol, quantity, and price parameters" do
       method = described_class.instance_method(:sell)
-      expect(method.parameters).to include([:req, :symbol])
-      expect(method.parameters).to include([:req, :quantity])
-      expect(method.parameters).to include([:req, :price])
+      expect(method.parameters).to include(%i[req symbol])
+      expect(method.parameters).to include(%i[req quantity])
+      expect(method.parameters).to include(%i[req price])
     end
 
     it "allows square_off to accept symbol and quantity parameters" do
       method = described_class.instance_method(:square_off)
-      expect(method.parameters).to include([:req, :symbol])
-      expect(method.parameters).to include([:req, :quantity])
+      expect(method.parameters).to include(%i[req symbol])
+      expect(method.parameters).to include(%i[req quantity])
     end
 
     it "allows get_positions to accept no parameters" do
@@ -89,7 +89,7 @@ RSpec.describe DhanScalper::Brokers::Base do
 
     it "maintains abstract method requirements" do
       child_class = Class.new(described_class) do
-        def buy(symbol, quantity, price)
+        def buy(_symbol, _quantity, _price)
           "Buy order placed"
         end
       end

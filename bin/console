@@ -29,40 +29,39 @@ begin
   else
     puts "⚠ No development config found. Create config/development.yml for testing"
   end
-rescue => e
+rescue StandardError => e
   puts "⚠ Config loading failed: #{e.message}"
 end
 
 # Set up some common objects for testing
 begin
   puts "🔧 Setting up test objects..."
-  
+
   # Paper wallet for testing
   @paper_wallet = DhanScalper::BalanceProviders::PaperWallet.new(100_000)
   puts "✓ Paper wallet created with ₹100,000"
-  
+
   # Virtual data manager
   @vdm = DhanScalper::VirtualDataManager.new
   puts "✓ Virtual data manager created"
-  
+
   # Paper broker
   @paper_broker = DhanScalper::Brokers::PaperBroker.new(
     virtual_data_manager: @vdm,
     balance_provider: @paper_wallet
   )
   puts "✓ Paper broker created"
-  
+
   # Sample tick data
   DhanScalper::TickCache.put({
-    segment: "IDX_I",
-    security_id: "13",
-    ltp: 19500.0,
-    ts: Time.now.to_i,
-    symbol: "NIFTY"
-  })
+                               segment: "IDX_I",
+                               security_id: "13",
+                               ltp: 19_500.0,
+                               ts: Time.now.to_i,
+                               symbol: "NIFTY"
+                             })
   puts "✓ Sample tick data added"
-  
-rescue => e
+rescue StandardError => e
   puts "⚠ Setup failed: #{e.message}"
 end
 

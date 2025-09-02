@@ -12,7 +12,7 @@ module DhanScalper
       REFRESH = 0.5
 
       def initialize(state, balance_provider: nil)
-        @st   = state
+        @st = state
         @balance_provider = balance_provider
         @pd   = Pastel.new
         @rd   = TTY::Reader.new

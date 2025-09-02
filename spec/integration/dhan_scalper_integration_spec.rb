@@ -78,7 +78,7 @@ RSpec.describe "DhanScalper Integration" do
       first_expiry = expiries.first
 
       # Test with a reasonable strike price
-      security_id = @csv_master.get_security_id("NIFTY", first_expiry, 25000, "CE")
+      security_id = @csv_master.get_security_id("NIFTY", first_expiry, 25_000, "CE")
       expect(security_id).not_to be_nil
       expect(security_id).to be_a(String)
 
@@ -94,9 +94,7 @@ RSpec.describe "DhanScalper Integration" do
 
       # Some commodities might use OPTFUT
       gold_expiries = @csv_master.get_expiry_dates("GOLD")
-      if gold_expiries.any?
-        expect(gold_expiries).not_to be_empty
-      end
+      expect(gold_expiries).not_to be_empty if gold_expiries.any?
     end
   end
 
@@ -110,16 +108,16 @@ RSpec.describe "DhanScalper Integration" do
     end
 
     it "picks options with real security IDs" do
-      current_spot = 25000
+      current_spot = 25_000
       options = picker.pick(current_spot: current_spot)
 
       expect(options).not_to be_nil
       expect(options[:expiry]).to match(/\d{4}-\d{2}-\d{2}/)
-      expect(options[:strikes]).to eq([24950, 25000, 25050])
+      expect(options[:strikes]).to eq([24_950, 25_000, 25_050])
 
       # Should have real security IDs, not paper ones
-      expect(options[:ce_sid][25000]).not_to start_with("PAPER_")
-      expect(options[:pe_sid][25000]).not_to start_with("PAPER_")
+      expect(options[:ce_sid][25_000]).not_to start_with("PAPER_")
+      expect(options[:pe_sid][25_000]).not_to start_with("PAPER_")
     end
 
     it "falls back to paper mode when CSV lookup fails" do
@@ -224,11 +222,13 @@ RSpec.describe "DhanScalper Integration" do
     before do
       # Mock the option picker to return test data
       allow_any_instance_of(DhanScalper::OptionPicker).to receive(:pick).and_return({
-        expiry: "2025-09-02",
-        strikes: [24950, 25000, 25050],
-        ce_sid: { 24950 => "TEST_CE_1", 25000 => "TEST_CE_2", 25050 => "TEST_CE_3" },
-        pe_sid: { 24950 => "TEST_PE_1", 25000 => "TEST_PE_2", 25050 => "TEST_PE_3" }
-      })
+                                                                                      expiry: "2025-09-02",
+                                                                                      strikes: [24_950, 25_000, 25_050],
+                                                                                      ce_sid: { 24_950 => "TEST_CE_1",
+                                                                                                25_000 => "TEST_CE_2", 25_050 => "TEST_CE_3" },
+                                                                                      pe_sid: { 24_950 => "TEST_PE_1",
+                                                                                                25_000 => "TEST_PE_2", 25_050 => "TEST_PE_3" }
+                                                                                    })
     end
 
     it "initializes with correct configuration" do
@@ -286,7 +286,8 @@ RSpec.describe "DhanScalper Integration" do
   describe "Error Handling and Resilience" do
     it "continues operation when CSV master fails" do
       # Mock CSV master failure
-      allow_any_instance_of(DhanScalper::CsvMaster).to receive(:get_expiry_dates).and_raise(StandardError, "Network Error")
+      allow_any_instance_of(DhanScalper::CsvMaster).to receive(:get_expiry_dates).and_raise(StandardError,
+                                                                                            "Network Error")
 
       picker = DhanScalper::OptionPicker.new(config["SYMBOLS"]["NIFTY"], mode: :paper)
       expiry = picker.fetch_first_expiry
@@ -297,12 +298,13 @@ RSpec.describe "DhanScalper Integration" do
 
     it "handles broker errors gracefully" do
       # Mock broker failure
-      allow_any_instance_of(DhanScalper::Brokers::PaperBroker).to receive(:buy_market).and_raise(StandardError, "Order Failed")
+      allow_any_instance_of(DhanScalper::Brokers::PaperBroker).to receive(:buy_market).and_raise(StandardError,
+                                                                                                 "Order Failed")
 
       trader = app.traders["NIFTY"]
 
       # Should not crash the system
-      expect { trader.maybe_enter(25000) }.not_to raise_error
+      expect { trader.maybe_enter(25_000) }.not_to raise_error
     end
   end
 

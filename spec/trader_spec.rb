@@ -40,7 +40,7 @@ RSpec.describe DhanScalper::Trader do
     stub_const("DhanScalper::PnL", double)
 
     # Mock TickCache
-    allow(DhanScalper::TickCache).to receive(:ltp).and_return(19500.0)
+    allow(DhanScalper::TickCache).to receive(:ltp).and_return(19_500.0)
 
     # Mock Trend
     allow(DhanScalper::Trend).to receive(:new).and_return(double(decide: :none))
@@ -52,12 +52,11 @@ RSpec.describe DhanScalper::Trader do
     allow(mock_websocket).to receive(:subscribe_one)
 
     # Mock OptionPicker
-    allow(mock_picker).to receive(:nearest_strike).and_return(19500)
+    allow(mock_picker).to receive(:nearest_strike).and_return(19_500)
 
     # Mock Global (App)
-    allow(mock_gl).to receive(:instance_variable_get).and_return(mock_broker)
-    allow(mock_gl).to receive(:session_pnl_preview).and_return(0.0)
-    allow(mock_gl).to receive(:session_target).and_return(1000.0)
+    allow(mock_gl).to receive_messages(instance_variable_get: mock_broker, session_pnl_preview: 0.0,
+                                       session_target: 1000.0)
 
     # Mock State
     allow(mock_state).to receive(:replace_open!)
@@ -67,11 +66,11 @@ RSpec.describe DhanScalper::Trader do
     allow(mock_quantity_sizer).to receive(:calculate_lots).and_return(2)
 
     # Mock Broker
-    allow(mock_broker).to receive(:buy_market).and_return(double(id: "ORDER123"))
-    allow(mock_broker).to receive(:sell_market).and_return(double(id: "SELL123"))
+    allow(mock_broker).to receive_messages(buy_market: double(id: "ORDER123"), sell_market: double(id: "SELL123"))
 
     # Mock Position struct
-    stub_const("DhanScalper::Trader::Position", Struct.new(:side, :sid, :entry, :qty_lots, :order_id, :best, :trail_anchor))
+    stub_const("DhanScalper::Trader::Position",
+               Struct.new(:side, :sid, :entry, :qty_lots, :order_id, :best, :trail_anchor))
   end
 
   describe "#initialize" do
@@ -110,8 +109,8 @@ RSpec.describe DhanScalper::Trader do
   end
 
   describe "#subscribe_options" do
-    let(:ce_map) { { 19500 => "CE123" } }
-    let(:pe_map) { { 19500 => "PE123" } }
+    let(:ce_map) { { 19_500 => "CE123" } }
+    let(:pe_map) { { 19_500 => "PE123" } }
 
     it "subscribes to all option security IDs" do
       trader.subscribe_options(ce_map, pe_map)
@@ -126,7 +125,7 @@ RSpec.describe DhanScalper::Trader do
     end
 
     it "handles nil values gracefully" do
-      trader.subscribe_options({ 19500 => nil }, { 19500 => "PE123" })
+      trader.subscribe_options({ 19_500 => nil }, { 19_500 => "PE123" })
       expect(mock_websocket).to have_received(:subscribe_one).with(
         segment: "NSE_FNO",
         security_id: "PE123"
@@ -163,8 +162,8 @@ RSpec.describe DhanScalper::Trader do
   end
 
   describe "#maybe_enter" do
-    let(:ce_map) { { 19500 => "CE123" } }
-    let(:pe_map) { { 19500 => "PE123" } }
+    let(:ce_map) { { 19_500 => "CE123" } }
+    let(:pe_map) { { 19_500 => "PE123" } }
 
     context "when trader cannot trade" do
       before do
@@ -190,7 +189,7 @@ RSpec.describe DhanScalper::Trader do
 
     context "when no strike mapping available" do
       before do
-        allow(mock_picker).to receive(:nearest_strike).and_return(19500)
+        allow(mock_picker).to receive(:nearest_strike).and_return(19_500)
         allow(ce_map).to receive(:[]).and_return(nil)
       end
 
@@ -202,7 +201,7 @@ RSpec.describe DhanScalper::Trader do
 
     context "when no option LTP available" do
       before do
-        allow(DhanScalper::TickCache).to receive(:ltp).and_return(19500.0, nil)
+        allow(DhanScalper::TickCache).to receive(:ltp).and_return(19_500.0, nil)
       end
 
       it "does not enter position" do
@@ -224,7 +223,7 @@ RSpec.describe DhanScalper::Trader do
 
     context "when all conditions are met for CE entry" do
       before do
-        allow(DhanScalper::TickCache).to receive(:ltp).and_return(19500.0, 50.0)
+        allow(DhanScalper::TickCache).to receive(:ltp).and_return(19_500.0, 50.0)
         allow(mock_quantity_sizer).to receive(:calculate_lots).and_return(2)
         allow(mock_broker).to receive(:buy_market).and_return(double(id: "ORDER123"))
       end
@@ -247,7 +246,7 @@ RSpec.describe DhanScalper::Trader do
 
     context "when all conditions are met for PE entry" do
       before do
-        allow(DhanScalper::TickCache).to receive(:ltp).and_return(19500.0, 50.0)
+        allow(DhanScalper::TickCache).to receive(:ltp).and_return(19_500.0, 50.0)
         allow(mock_quantity_sizer).to receive(:calculate_lots).and_return(2)
         allow(mock_broker).to receive(:buy_market).and_return(double(id: "ORDER123"))
       end
@@ -270,7 +269,7 @@ RSpec.describe DhanScalper::Trader do
 
     context "when order placement fails" do
       before do
-        allow(DhanScalper::TickCache).to receive(:ltp).and_return(19500.0, 50.0)
+        allow(DhanScalper::TickCache).to receive(:ltp).and_return(19_500.0, 50.0)
         allow(mock_quantity_sizer).to receive(:calculate_lots).and_return(2)
         allow(mock_broker).to receive(:buy_market).and_return(nil)
       end
@@ -471,15 +470,15 @@ RSpec.describe DhanScalper::Trader do
     context "when state is available" do
       it "publishes open position snapshot" do
         expect(mock_state).to receive(:replace_open!).with([{
-          symbol: "NIFTY",
-          sid: "CE123",
-          side: "BUY_CE",
-          qty_lots: 2,
-          entry: 50.0,
-          ltp: 55.0,
-          net: 100.0,
-          best: 0.0
-        }])
+                                                             symbol: "NIFTY",
+                                                             sid: "CE123",
+                                                             side: "BUY_CE",
+                                                             qty_lots: 2,
+                                                             entry: 50.0,
+                                                             ltp: 55.0,
+                                                             net: 100.0,
+                                                             best: 0.0
+                                                           }])
         trader.send(:publish_open_snapshot!)
       end
     end

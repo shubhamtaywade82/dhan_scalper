@@ -10,8 +10,8 @@ module DhanScalper
         @balance_provider = balance_provider
         @logger = Logger.new($stdout)
         @logger.level = Logger::INFO
-        @logger.formatter = proc do |severity, datetime, progname, msg|
-          "[#{datetime.strftime('%H:%M:%S')}] #{msg}\n"
+        @logger.formatter = proc do |_severity, datetime, _progname, msg|
+          "[#{datetime.strftime("%H:%M:%S")}] #{msg}\n"
         end
         @last_update = Time.at(0)
         @update_interval = 10 # Update every 10 seconds

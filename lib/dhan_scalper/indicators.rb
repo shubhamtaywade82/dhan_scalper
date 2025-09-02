@@ -12,12 +12,13 @@ module DhanScalper
       else
         k = 2.0 / (period + 1)
         ema = nil
-        values.each { |v| ema = ema.nil? ? v.to_f : (v.to_f * k + ema * (1 - k)) }
+        values.each { |v| ema = ema.nil? ? v.to_f : ((v.to_f * k) + (ema * (1 - k))) }
         ema.to_f
       end
     rescue StandardError
       # Handle nil values and other errors gracefully
       return 0.0 if values.nil? || !values.respond_to?(:last)
+
       values.last.to_f
     end
 
@@ -40,8 +41,8 @@ module DhanScalper
         ag = gains.first(period).sum / period
         al = losses.first(period).sum / period
         (period...gains.size).each do |i|
-          ag = (ag * (period - 1) + gains[i]) / period
-          al = (al * (period - 1) + losses[i]) / period
+          ag = ((ag * (period - 1)) + gains[i]) / period
+          al = ((al * (period - 1)) + losses[i]) / period
         end
         rs = al.zero? ? 100.0 : ag / al
         100 - (100 / (1 + rs))
@@ -49,6 +50,7 @@ module DhanScalper
     rescue StandardError
       # Handle nil values and other errors gracefully
       return 50.0 if values.nil? || !values.respond_to?(:size)
+
       50.0
     end
   end

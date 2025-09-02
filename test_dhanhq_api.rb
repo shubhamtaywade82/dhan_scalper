@@ -4,8 +4,8 @@
 # Simple test script to verify DhanHQ API methods
 # Run with: ruby test_dhanhq_api.rb
 
-require 'bundler/setup'
-require 'dhan_scalper'
+require "bundler/setup"
+require "dhan_scalper"
 
 puts "Testing DhanHQ API methods..."
 puts "=" * 50
@@ -24,7 +24,7 @@ begin
     puts "  Available Balance: #{funds.available_balance}"
     puts "  Utilized Amount: #{funds.utilized_amount}"
     puts "  SOD Limit: #{funds.sod_limit}"
-  rescue => e
+  rescue StandardError => e
     puts "✗ Funds API failed: #{e.message}"
   end
 
@@ -34,7 +34,7 @@ begin
     # This is just a test, don't actually place orders
     puts "  Note: Skipping actual order creation for safety"
     puts "✓ Order creation test skipped"
-  rescue => e
+  rescue StandardError => e
     puts "✗ Order creation test failed: #{e.message}"
   end
 
@@ -55,9 +55,9 @@ begin
     )
     puts "✓ Historical Data API successful"
     puts "  Data type: #{data.class}"
-    puts "  Data size: #{data.respond_to?(:size) ? data.size : 'N/A'}"
+    puts "  Data size: #{data.respond_to?(:size) ? data.size : "N/A"}"
     puts "  Date range: #{from_date} to #{to_date}"
-  rescue => e
+  rescue StandardError => e
     puts "✗ Historical Data API failed: #{e.message}"
   end
 
@@ -67,14 +67,13 @@ begin
     # Just test if the class exists and can be instantiated
     ws_class = DhanHQ::WS::Client
     puts "✓ WebSocket class found: #{ws_class}"
-  rescue => e
+  rescue StandardError => e
     puts "✗ WebSocket test failed: #{e.message}"
   end
 
-  puts "\n" + "=" * 50
+  puts "\n#{"=" * 50}"
   puts "API testing completed!"
-
-rescue => e
+rescue StandardError => e
   puts "\n✗ Overall test failed: #{e.message}"
   puts "Backtrace: #{e.backtrace.first(3).join("\n")}"
 end

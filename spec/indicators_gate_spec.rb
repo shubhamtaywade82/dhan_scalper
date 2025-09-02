@@ -24,7 +24,8 @@ RSpec.describe IndicatorsGate do
       before do
         hide_const("TechnicalAnalysis")
         stub_const("RubyTechnicalAnalysis", double)
-        allow(RubyTechnicalAnalysis::Indicator::Ema).to receive(:new).and_return(double(calculate: [100.0, 100.5, 101.0, 101.5, 102.0]))
+        allow(RubyTechnicalAnalysis::Indicator::Ema).to receive(:new).and_return(double(calculate: [100.0, 100.5,
+                                                                                                    101.0, 101.5, 102.0]))
       end
 
       it "uses RubyTechnicalAnalysis::Indicator::Ema" do
@@ -101,7 +102,8 @@ RSpec.describe IndicatorsGate do
       before do
         hide_const("TechnicalAnalysis")
         stub_const("RubyTechnicalAnalysis", double)
-        allow(RubyTechnicalAnalysis::Indicator::Rsi).to receive(:new).and_return(double(calculate: [50.0, 55.0, 60.0, 65.0, 70.0]))
+        allow(RubyTechnicalAnalysis::Indicator::Rsi).to receive(:new).and_return(double(calculate: [50.0, 55.0, 60.0,
+                                                                                                    65.0, 70.0]))
       end
 
       it "uses RubyTechnicalAnalysis::Indicator::Rsi" do
@@ -365,7 +367,7 @@ RSpec.describe IndicatorsGate do
     end
 
     it "handles string values in EMA calculation" do
-      result = described_class.ema_series(["100", "101", "102"], 2)
+      result = described_class.ema_series(%w[100 101 102], 2)
       expect(result).to be_an(Array)
       expect(result.length).to eq(3)
     end

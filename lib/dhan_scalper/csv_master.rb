@@ -24,16 +24,15 @@ module DhanScalper
 
       # Look for both OPTFUT and OPTIDX instruments
       expiries = @data
-        .select { |row|
-          row["UNDERLYING_SYMBOL"] == underlying_symbol &&
-          ["OPTFUT", "OPTIDX"].include?(row["INSTRUMENT"])
-        }
-        .map { |row| row["SM_EXPIRY_DATE"] }
-        .compact
-        .uniq
-        .sort
+                 .select do |row|
+        row["UNDERLYING_SYMBOL"] == underlying_symbol &&
+          %w[OPTFUT OPTIDX].include?(row["INSTRUMENT"])
+      end
+        .filter_map { |row| row["SM_EXPIRY_DATE"] }
+                 .uniq
+                 .sort
 
-      puts "[CSV_MASTER] Found #{expiries.length} expiry dates for #{underlying_symbol}: #{expiries.join(', ')}"
+      puts "[CSV_MASTER] Found #{expiries.length} expiry dates for #{underlying_symbol}: #{expiries.join(", ")}"
       expiries
     end
 
@@ -47,14 +46,14 @@ module DhanScalper
 
       security = @data.find do |row|
         row["UNDERLYING_SYMBOL"] == underlying_symbol &&
-        ["OPTFUT", "OPTIDX"].include?(row["INSTRUMENT"]) &&
-        row["SM_EXPIRY_DATE"] == expiry_date &&
-        row["STRIKE_PRICE"].to_f == strike_price &&
-        row["OPTION_TYPE"] == option_type
+          %w[OPTFUT OPTIDX].include?(row["INSTRUMENT"]) &&
+          row["SM_EXPIRY_DATE"] == expiry_date &&
+          row["STRIKE_PRICE"].to_f == strike_price &&
+          row["OPTION_TYPE"] == option_type
       end
 
       if security
-        puts "[CSV_MASTER] Found security ID #{security['SECURITY_ID']} for #{underlying_symbol} #{expiry_date} #{strike_price} #{option_type}"
+        puts "[CSV_MASTER] Found security ID #{security["SECURITY_ID"]} for #{underlying_symbol} #{expiry_date} #{strike_price} #{option_type}"
         security["SECURITY_ID"]
       else
         puts "[CSV_MASTER] No security found for #{underlying_symbol} #{expiry_date} #{strike_price} #{option_type}"
@@ -77,15 +76,14 @@ module DhanScalper
       return [] unless @data
 
       strikes = @data
-        .select { |row|
-          row["UNDERLYING_SYMBOL"] == underlying_symbol &&
-          ["OPTFUT", "OPTIDX"].include?(row["INSTRUMENT"]) &&
+                .select do |row|
+        row["UNDERLYING_SYMBOL"] == underlying_symbol &&
+          %w[OPTFUT OPTIDX].include?(row["INSTRUMENT"]) &&
           row["SM_EXPIRY_DATE"] == expiry_date
-        }
-        .map { |row| row["STRIKE_PRICE"].to_f }
-        .compact
-        .uniq
-        .sort
+      end
+        .filter_map { |row| row["STRIKE_PRICE"].to_f }
+                .uniq
+                .sort
 
       puts "[CSV_MASTER] Found #{strikes.length} strikes for #{underlying_symbol} #{expiry_date}"
       strikes
@@ -115,7 +113,7 @@ module DhanScalper
       @data = CSV.read(CACHE_FILE, headers: true)
       @last_fetch = File.mtime(CACHE_FILE)
       puts "[CSV_MASTER] Loaded #{@data.length} records from cache"
-    rescue => e
+    rescue StandardError => e
       puts "[CSV_MASTER] Failed to load from cache: #{e.message}"
       fetch_and_cache
     end
@@ -127,9 +125,7 @@ module DhanScalper
         uri = URI(CSV_URL)
         response = Net::HTTP.get_response(uri)
 
-        unless response.is_a?(Net::HTTPSuccess)
-          raise "HTTP error: #{response.code} #{response.message}"
-        end
+        raise "HTTP error: #{response.code} #{response.message}" unless response.is_a?(Net::HTTPSuccess)
 
         # Ensure cache directory exists
         FileUtils.mkdir_p(CACHE_DIR)
@@ -142,17 +138,14 @@ module DhanScalper
         @last_fetch = Time.now
 
         puts "[CSV_MASTER] Successfully fetched and cached #{@data.length} records"
-
-      rescue => e
+      rescue StandardError => e
         puts "[CSV_MASTER] Failed to fetch data: #{e.message}"
 
         # Try to load from cache even if it's stale
-        if File.exist?(CACHE_FILE)
-          puts "[CSV_MASTER] Falling back to stale cache"
-          load_from_cache
-        else
-          raise "Unable to fetch CSV master data and no cache available"
-        end
+        raise "Unable to fetch CSV master data and no cache available" unless File.exist?(CACHE_FILE)
+
+        puts "[CSV_MASTER] Falling back to stale cache"
+        load_from_cache
       end
     end
   end

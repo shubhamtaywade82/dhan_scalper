@@ -41,11 +41,11 @@ RSpec.configure do |config|
 
   config.after(:suite) do
     # Clean up test data
-    FileUtils.rm_rf("test_data") if Dir.exist?("test_data")
+    FileUtils.rm_rf("test_data")
   end
 
   # Mock DhanHQ to avoid actual API calls
-  config.before(:each) do
+  config.before do
     # Create a mock module for DhanHQ
     dhanhq_module = Module.new
     stub_const("DhanHQ", dhanhq_module)
@@ -62,9 +62,9 @@ RSpec.configure do |config|
     funds_class = Class.new
     stub_const("DhanHQ::Models::Funds", funds_class)
     allow(funds_class).to receive(:fetch).and_return(double(
-      available_balance: 100000.0,
-      utilized_amount: 50000.0
-    ))
+                                                       available_balance: 100_000.0,
+                                                       utilized_amount: 50_000.0
+                                                     ))
 
     # Mock DhanHQ::WS
     ws_module = Module.new
@@ -83,8 +83,7 @@ RSpec.configure do |config|
 
     # Mock Technical Analysis libraries
     stub_const("TechnicalAnalysis", double)
-    allow(TechnicalAnalysis).to receive(:ema).and_return([50.0, 51.0, 52.0])
-    allow(TechnicalAnalysis).to receive(:rsi).and_return([45.0, 46.0, 47.0])
+    allow(TechnicalAnalysis).to receive_messages(ema: [50.0, 51.0, 52.0], rsi: [45.0, 46.0, 47.0])
 
     # Mock RubyTechnicalAnalysis
     ruby_ta_module = Module.new

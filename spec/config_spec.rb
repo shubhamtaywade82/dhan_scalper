@@ -47,13 +47,13 @@ RSpec.describe DhanScalper::Config do
   end
 
   after do
-    FileUtils.rm_rf("test_data") if Dir.exist?("test_data")
+    FileUtils.rm_rf("test_data")
   end
 
   describe ".load" do
     context "without config file" do
       it "returns default configuration" do
-        config = DhanScalper::Config.load(path: nil)
+        config = described_class.load(path: nil)
 
         expect(config["symbols"]).to eq(["NIFTY"])
         expect(config.dig("global", "min_profit_target")).to eq(1000.0)
@@ -67,13 +67,13 @@ RSpec.describe DhanScalper::Config do
         expect(config.dig("global", "tp_pct")).to eq(0.35)
         expect(config.dig("global", "sl_pct")).to eq(0.18)
         expect(config.dig("global", "trail_pct")).to eq(0.12)
-        expect(config.dig("paper", "starting_balance")).to eq(200000.0)
+        expect(config.dig("paper", "starting_balance")).to eq(200_000.0)
       end
 
       it "uses environment variables for NIFTY_IDX_SID" do
         allow(ENV).to receive(:fetch).with("NIFTY_IDX_SID", "13").and_return("99")
 
-        config = DhanScalper::Config.load(path: nil)
+        config = described_class.load(path: nil)
 
         expect(config.dig("SYMBOLS", "NIFTY", "idx_sid")).to eq("99")
       end
@@ -85,9 +85,9 @@ RSpec.describe DhanScalper::Config do
       end
 
       it "loads configuration from file" do
-        config = DhanScalper::Config.load(path: temp_config_file)
+        config = described_class.load(path: temp_config_file)
 
-        expect(config["symbols"]).to eq(["NIFTY", "BANKNIFTY"])
+        expect(config["symbols"]).to eq(%w[NIFTY BANKNIFTY])
         expect(config.dig("global", "min_profit_target")).to eq(2000)
         expect(config.dig("global", "max_day_loss")).to eq(3000)
         expect(config.dig("global", "charge_per_order")).to eq(25)
@@ -99,7 +99,7 @@ RSpec.describe DhanScalper::Config do
         expect(config.dig("global", "tp_pct")).to eq(0.40)
         expect(config.dig("global", "sl_pct")).to eq(0.20)
         expect(config.dig("global", "trail_pct")).to eq(0.15)
-        expect(config.dig("paper", "starting_balance")).to eq(300000)
+        expect(config.dig("paper", "starting_balance")).to eq(300_000)
       end
 
       it "merges with defaults for missing keys" do
@@ -110,17 +110,17 @@ RSpec.describe DhanScalper::Config do
         YAML
 
         File.write(temp_config_file, partial_config)
-        config = DhanScalper::Config.load(path: temp_config_file)
+        config = described_class.load(path: temp_config_file)
 
         expect(config["symbols"]).to eq(["NIFTY"])
         expect(config.dig("global", "min_profit_target")).to eq(2000)
         expect(config.dig("global", "max_day_loss")).to eq(1500.0) # default
         expect(config.dig("global", "charge_per_order")).to eq(20.0) # default
-        expect(config.dig("paper", "starting_balance")).to eq(200000.0) # default
+        expect(config.dig("paper", "starting_balance")).to eq(200_000.0) # default
       end
 
       it "loads SYMBOLS configuration" do
-        config = DhanScalper::Config.load(path: temp_config_file)
+        config = described_class.load(path: temp_config_file)
 
         expect(config.dig("SYMBOLS", "NIFTY", "idx_sid")).to eq("13")
         expect(config.dig("SYMBOLS", "NIFTY", "seg_idx")).to eq("IDX_I")
@@ -138,7 +138,7 @@ RSpec.describe DhanScalper::Config do
 
       it "handles empty config file" do
         File.write(temp_config_file, "")
-        config = DhanScalper::Config.load(path: temp_config_file)
+        config = described_class.load(path: temp_config_file)
 
         # Should return defaults
         expect(config["symbols"]).to eq(["NIFTY"])
@@ -147,7 +147,7 @@ RSpec.describe DhanScalper::Config do
 
       it "handles invalid YAML gracefully" do
         File.write(temp_config_file, "invalid: yaml: content: [")
-        config = DhanScalper::Config.load(path: temp_config_file)
+        config = described_class.load(path: temp_config_file)
 
         # Should return defaults
         expect(config["symbols"]).to eq(["NIFTY"])
@@ -155,7 +155,7 @@ RSpec.describe DhanScalper::Config do
       end
 
       it "handles non-existent file" do
-        config = DhanScalper::Config.load(path: "non_existent.yml")
+        config = described_class.load(path: "non_existent.yml")
 
         # Should return defaults
         expect(config["symbols"]).to eq(["NIFTY"])
@@ -168,9 +168,9 @@ RSpec.describe DhanScalper::Config do
         allow(ENV).to receive(:[]).with("SCALPER_CONFIG").and_return(temp_config_file)
         File.write(temp_config_file, temp_config_content)
 
-        config = DhanScalper::Config.load
+        config = described_class.load
 
-        expect(config["symbols"]).to eq(["NIFTY", "BANKNIFTY"])
+        expect(config["symbols"]).to eq(%w[NIFTY BANKNIFTY])
         expect(config.dig("global", "min_profit_target")).to eq(2000)
       end
     end
@@ -178,7 +178,7 @@ RSpec.describe DhanScalper::Config do
 
   describe "configuration validation" do
     it "ensures required keys exist" do
-      config = DhanScalper::Config.load(path: nil)
+      config = described_class.load(path: nil)
 
       expect(config).to have_key("symbols")
       expect(config).to have_key("global")
@@ -187,7 +187,7 @@ RSpec.describe DhanScalper::Config do
     end
 
     it "ensures global configuration has all required keys" do
-      config = DhanScalper::Config.load(path: nil)
+      config = described_class.load(path: nil)
       global = config["global"]
 
       expect(global).to have_key("min_profit_target")
@@ -204,14 +204,14 @@ RSpec.describe DhanScalper::Config do
     end
 
     it "ensures paper configuration has required keys" do
-      config = DhanScalper::Config.load(path: nil)
+      config = described_class.load(path: nil)
       paper = config["paper"]
 
       expect(paper).to have_key("starting_balance")
     end
 
     it "ensures SYMBOLS configuration has required keys" do
-      config = DhanScalper::Config.load(path: nil)
+      config = described_class.load(path: nil)
       nifty = config.dig("SYMBOLS", "NIFTY")
 
       expect(nifty).to have_key("idx_sid")
@@ -226,7 +226,7 @@ RSpec.describe DhanScalper::Config do
 
   describe "data types" do
     it "preserves correct data types" do
-      config = DhanScalper::Config.load(path: nil)
+      config = described_class.load(path: nil)
 
       expect(config["symbols"]).to be_a(Array)
       expect(config.dig("global", "min_profit_target")).to be_a(Numeric)
@@ -254,7 +254,7 @@ RSpec.describe DhanScalper::Config do
       YAML
 
       File.write(temp_config_file, config_with_nils)
-      config = DhanScalper::Config.load(path: temp_config_file)
+      config = described_class.load(path: temp_config_file)
 
       expect(config.dig("global", "min_profit_target")).to eq(1000.0) # default
       expect(config.dig("global", "max_day_loss")).to eq(1500)
@@ -269,7 +269,7 @@ RSpec.describe DhanScalper::Config do
       YAML
 
       File.write(temp_config_file, config_with_empty)
-      config = DhanScalper::Config.load(path: temp_config_file)
+      config = described_class.load(path: temp_config_file)
 
       expect(config["symbols"]).to eq([])
       expect(config["global"]).to eq({})
@@ -289,12 +289,12 @@ RSpec.describe DhanScalper::Config do
       YAML
 
       File.write(temp_config_file, config_with_large_numbers)
-      config = DhanScalper::Config.load(path: temp_config_file)
+      config = described_class.load(path: temp_config_file)
 
-      expect(config.dig("global", "min_profit_target")).to eq(999999999)
-      expect(config.dig("global", "max_day_loss")).to eq(999999999)
-      expect(config.dig("global", "charge_per_order")).to eq(999999999)
-      expect(config.dig("paper", "starting_balance")).to eq(999999999)
+      expect(config.dig("global", "min_profit_target")).to eq(999_999_999)
+      expect(config.dig("global", "max_day_loss")).to eq(999_999_999)
+      expect(config.dig("global", "charge_per_order")).to eq(999_999_999)
+      expect(config.dig("paper", "starting_balance")).to eq(999_999_999)
     end
 
     it "handles negative numbers" do
@@ -309,12 +309,12 @@ RSpec.describe DhanScalper::Config do
       YAML
 
       File.write(temp_config_file, config_with_negative)
-      config = DhanScalper::Config.load(path: temp_config_file)
+      config = described_class.load(path: temp_config_file)
 
       expect(config.dig("global", "min_profit_target")).to eq(-1000)
       expect(config.dig("global", "max_day_loss")).to eq(-1500)
       expect(config.dig("global", "charge_per_order")).to eq(-20)
-      expect(config.dig("paper", "starting_balance")).to eq(-200000)
+      expect(config.dig("paper", "starting_balance")).to eq(-200_000)
     end
   end
 end

@@ -59,17 +59,23 @@ module IntegrationHelpers
     mock_master = double("CsvMaster")
 
     # Mock expiry dates
-    allow(mock_master).to receive(:get_expiry_dates).with("NIFTY").and_return([
-      "2025-09-02", "2025-09-09", "2025-09-16", "2025-09-23", "2025-09-30"
-    ])
+    allow(mock_master).to receive(:get_expiry_dates).with("NIFTY").and_return(%w[
+                                                                                2025-09-02 2025-09-09 2025-09-16 2025-09-23 2025-09-30
+                                                                              ])
 
     # Mock security ID lookups
-    allow(mock_master).to receive(:get_security_id).with("NIFTY", "2025-09-02", 25000, "CE").and_return("TEST_CE_25000")
-    allow(mock_master).to receive(:get_security_id).with("NIFTY", "2025-09-02", 25000, "PE").and_return("TEST_PE_25000")
-    allow(mock_master).to receive(:get_security_id).with("NIFTY", "2025-09-02", 24950, "CE").and_return("TEST_CE_24950")
-    allow(mock_master).to receive(:get_security_id).with("NIFTY", "2025-09-02", 24950, "PE").and_return("TEST_PE_24950")
-    allow(mock_master).to receive(:get_security_id).with("NIFTY", "2025-09-02", 25050, "CE").and_return("TEST_CE_25050")
-    allow(mock_master).to receive(:get_security_id).with("NIFTY", "2025-09-02", 25050, "PE").and_return("TEST_PE_25050")
+    allow(mock_master).to receive(:get_security_id).with("NIFTY", "2025-09-02", 25_000,
+                                                         "CE").and_return("TEST_CE_25000")
+    allow(mock_master).to receive(:get_security_id).with("NIFTY", "2025-09-02", 25_000,
+                                                         "PE").and_return("TEST_PE_25000")
+    allow(mock_master).to receive(:get_security_id).with("NIFTY", "2025-09-02", 24_950,
+                                                         "CE").and_return("TEST_CE_24950")
+    allow(mock_master).to receive(:get_security_id).with("NIFTY", "2025-09-02", 24_950,
+                                                         "PE").and_return("TEST_PE_24950")
+    allow(mock_master).to receive(:get_security_id).with("NIFTY", "2025-09-02", 25_050,
+                                                         "CE").and_return("TEST_CE_25050")
+    allow(mock_master).to receive(:get_security_id).with("NIFTY", "2025-09-02", 25_050,
+                                                         "PE").and_return("TEST_PE_25050")
 
     # Mock lot size
     allow(mock_master).to receive(:get_lot_size).and_return(75)
@@ -90,9 +96,7 @@ module IntegrationHelpers
       result = yield
       return result if result
 
-      if Time.now - start_time > timeout
-        raise "Condition not met within #{timeout} seconds"
-      end
+      raise "Condition not met within #{timeout} seconds" if Time.now - start_time > timeout
 
       sleep(interval)
     end
@@ -132,7 +136,8 @@ module IntegrationHelpers
   # Helper method to test CSV master data quality
   def validate_csv_data_quality(data)
     # Check for required fields
-    required_fields = ["UNDERLYING_SYMBOL", "INSTRUMENT", "SM_EXPIRY_DATE", "STRIKE_PRICE", "OPTION_TYPE", "SECURITY_ID"]
+    required_fields = %w[UNDERLYING_SYMBOL INSTRUMENT SM_EXPIRY_DATE STRIKE_PRICE OPTION_TYPE
+                         SECURITY_ID]
 
     required_fields.each do |field|
       missing_count = data.count { |r| r[field].nil? || r[field].to_s.strip.empty? }
@@ -140,29 +145,29 @@ module IntegrationHelpers
     end
 
     # Check for valid expiry dates
-    expiry_dates = data.map { |r| r["SM_EXPIRY_DATE"] }.compact.uniq
-    valid_dates = expiry_dates.select { |d| d.match?(/\d{4}-\d{2}-\d{2}/) }
+    expiry_dates = data.filter_map { |r| r["SM_EXPIRY_DATE"] }.uniq
+    valid_dates = expiry_dates.grep(/\d{4}-\d{2}-\d{2}/)
     expect(valid_dates.length).to be > 0, "No valid expiry dates found"
 
     # Check for unique security IDs
-    security_ids = data.map { |r| r["SECURITY_ID"] }.compact
+    security_ids = data.filter_map { |r| r["SECURITY_ID"] }
     unique_ids = security_ids.uniq
     expect(unique_ids.length).to eq(security_ids.length), "Security IDs are not unique"
   end
 
   # Helper method to test option picker with real data
-  def test_option_picker_with_real_data(picker, symbol_config)
+  def test_option_picker_with_real_data(picker, _symbol_config)
     # Test expiry fetching
     expiry = picker.fetch_first_expiry
     expect(expiry).to match(/\d{4}-\d{2}-\d{2}/), "Invalid expiry date format"
 
     # Test option picking
-    current_spot = 25000
+    current_spot = 25_000
     options = picker.pick(current_spot: current_spot)
 
     expect(options).not_to be_nil, "Options should not be nil"
     expect(options[:expiry]).to eq(expiry), "Expiry should match"
-    expect(options[:strikes]).to eq([24950, 25000, 25050]), "Strikes should be correct"
+    expect(options[:strikes]).to eq([24_950, 25_000, 25_050]), "Strikes should be correct"
 
     # Check that we have security IDs for all strikes
     options[:strikes].each do |strike|

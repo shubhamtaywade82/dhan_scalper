@@ -37,7 +37,7 @@ module DhanScalper
       lots = [lots, 0].max
 
       # Log sizing decision
-      if lots > 0
+      if lots.positive?
         puts "[#{symbol}] Sizing: Balance=₹#{balance.round(0)}, Allocation=₹#{allocation_amount.round(0)}, Premium=₹#{premium.round(2)}, Lots=#{lots}"
       else
         puts "[#{symbol}] Sizing: Insufficient balance or premium too high for position"
@@ -55,7 +55,7 @@ module DhanScalper
     end
 
     def can_afford_position?(symbol, premium, side: "BUY")
-      calculate_lots(symbol, premium, side: side) > 0
+      calculate_lots(symbol, premium, side: side).positive?
     end
   end
 end

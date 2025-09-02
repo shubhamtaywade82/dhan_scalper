@@ -14,8 +14,7 @@ RSpec.describe CandleSeries do
 
     # Mock TimeZone
     stub_const("TimeZone", double)
-    allow(TimeZone).to receive(:parse).and_return(Time.now)
-    allow(TimeZone).to receive(:at).and_return(Time.now)
+    allow(TimeZone).to receive_messages(parse: Time.now, at: Time.now)
   end
 
   describe "#initialize" do
@@ -52,9 +51,8 @@ RSpec.describe CandleSeries do
     let(:mock_data) { [{ timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1000 }] }
 
     before do
-      allow(described_class).to receive(:new).and_return(mock_series)
       allow(mock_series).to receive(:load_from_raw).and_return(mock_series)
-      allow(described_class).to receive(:fetch_historical_data).and_return(mock_data)
+      allow(described_class).to receive_messages(new: mock_series, fetch_historical_data: mock_data)
     end
 
     it "creates new series and loads data" do
@@ -78,7 +76,9 @@ RSpec.describe CandleSeries do
     let(:interval) { "5" }
 
     context "when first method succeeds" do
-      let(:mock_data) { [{ timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1000 }] }
+      let(:mock_data) do
+        [{ timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1000 }]
+      end
 
       before do
         allow(DhanHQ::Models::HistoricalData).to receive(:intraday).and_return(mock_data)
@@ -101,7 +101,9 @@ RSpec.describe CandleSeries do
     end
 
     context "when first method fails, second succeeds" do
-      let(:mock_data) { [{ timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1000 }] }
+      let(:mock_data) do
+        [{ timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1000 }]
+      end
 
       before do
         allow(DhanHQ::Models::HistoricalData).to receive(:intraday).and_raise(StandardError, "Failed")
@@ -115,7 +117,9 @@ RSpec.describe CandleSeries do
     end
 
     context "when first two methods fail, third succeeds" do
-      let(:mock_data) { [{ timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1000 }] }
+      let(:mock_data) do
+        [{ timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1000 }]
+      end
 
       before do
         allow(DhanHQ::Models::HistoricalData).to receive(:intraday).and_raise(StandardError, "Failed")
@@ -130,7 +134,9 @@ RSpec.describe CandleSeries do
     end
 
     context "when first three methods fail, fourth succeeds" do
-      let(:mock_data) { [{ timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1000 }] }
+      let(:mock_data) do
+        [{ timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1000 }]
+      end
 
       before do
         allow(DhanHQ::Models::HistoricalData).to receive(:intraday).and_raise(StandardError, "Failed")
@@ -146,7 +152,9 @@ RSpec.describe CandleSeries do
     end
 
     context "when first four methods fail, fifth succeeds" do
-      let(:mock_data) { [{ timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1000 }] }
+      let(:mock_data) do
+        [{ timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1000 }]
+      end
 
       before do
         allow(DhanHQ::Models::HistoricalData).to receive(:intraday).and_raise(StandardError, "Failed")
@@ -163,7 +171,9 @@ RSpec.describe CandleSeries do
     end
 
     context "when first five methods fail, sixth succeeds" do
-      let(:mock_data) { [{ timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1000 }] }
+      let(:mock_data) do
+        [{ timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1000 }]
+      end
 
       before do
         allow(DhanHQ::Models::HistoricalData).to receive(:intraday).and_raise(StandardError, "Failed")
@@ -202,7 +212,8 @@ RSpec.describe CandleSeries do
       end
 
       it "tries next method" do
-        allow(DhanHQ::HistoricalData).to receive(:intraday).and_return([{ timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1000 }])
+        allow(DhanHQ::HistoricalData).to receive(:intraday).and_return([{ timestamp: Time.now.to_i, open: 100.0,
+                                                                          high: 105.0, low: 98.0, close: 103.0, volume: 1000 }])
         result = described_class.fetch_historical_data(seg, sid, interval)
         expect(result).not_to be_nil
       end
@@ -214,7 +225,8 @@ RSpec.describe CandleSeries do
       end
 
       it "tries next method" do
-        allow(DhanHQ::HistoricalData).to receive(:intraday).and_return([{ timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1000 }])
+        allow(DhanHQ::HistoricalData).to receive(:intraday).and_return([{ timestamp: Time.now.to_i, open: 100.0,
+                                                                          high: 105.0, low: 98.0, close: 103.0, volume: 1000 }])
         result = described_class.fetch_historical_data(seg, sid, interval)
         expect(result).not_to eq("invalid_data")
       end

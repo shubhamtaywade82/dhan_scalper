@@ -5,19 +5,19 @@ require "spec_helper"
 RSpec.describe DhanScalper::PnL do
   describe ".round_trip_orders" do
     it "calculates round trip charges correctly" do
-      expect(DhanScalper::PnL.round_trip_orders(20)).to eq(40)
+      expect(described_class.round_trip_orders(20)).to eq(40)
     end
 
     it "handles zero charge" do
-      expect(DhanScalper::PnL.round_trip_orders(0)).to eq(0)
+      expect(described_class.round_trip_orders(0)).to eq(0)
     end
 
     it "handles fractional charges" do
-      expect(DhanScalper::PnL.round_trip_orders(15.5)).to eq(31.0)
+      expect(described_class.round_trip_orders(15.5)).to eq(31.0)
     end
 
     it "handles large charges" do
-      expect(DhanScalper::PnL.round_trip_orders(100)).to eq(200)
+      expect(described_class.round_trip_orders(100)).to eq(200)
     end
   end
 
@@ -32,7 +32,7 @@ RSpec.describe DhanScalper::PnL do
       # Gross profit: (110 - 100) * (75 * 2) = 10 * 150 = 1500
       # Charges: 2 * 20 = 40
       # Net: 1500 - 40 = 1460
-      net = DhanScalper::PnL.net(
+      net = described_class.net(
         entry: entry,
         ltp: ltp,
         lot_size: lot_size,
@@ -47,7 +47,7 @@ RSpec.describe DhanScalper::PnL do
       # Gross loss: (90 - 100) * (75 * 2) = -10 * 150 = -1500
       # Charges: 2 * 20 = 40
       # Net: -1500 - 40 = -1540
-      net = DhanScalper::PnL.net(
+      net = described_class.net(
         entry: entry,
         ltp: 90.0,
         lot_size: lot_size,
@@ -62,7 +62,7 @@ RSpec.describe DhanScalper::PnL do
       # Gross: (100 - 100) * (75 * 2) = 0
       # Charges: 2 * 20 = 40
       # Net: 0 - 40 = -40
-      net = DhanScalper::PnL.net(
+      net = described_class.net(
         entry: entry,
         ltp: entry,
         lot_size: lot_size,
@@ -74,7 +74,7 @@ RSpec.describe DhanScalper::PnL do
     end
 
     it "handles zero quantity" do
-      net = DhanScalper::PnL.net(
+      net = described_class.net(
         entry: entry,
         ltp: ltp,
         lot_size: lot_size,
@@ -86,7 +86,7 @@ RSpec.describe DhanScalper::PnL do
     end
 
     it "handles zero lot size" do
-      net = DhanScalper::PnL.net(
+      net = described_class.net(
         entry: entry,
         ltp: ltp,
         lot_size: 0,
@@ -98,7 +98,7 @@ RSpec.describe DhanScalper::PnL do
     end
 
     it "handles zero charges" do
-      net = DhanScalper::PnL.net(
+      net = described_class.net(
         entry: entry,
         ltp: ltp,
         lot_size: lot_size,
@@ -110,7 +110,7 @@ RSpec.describe DhanScalper::PnL do
     end
 
     it "handles fractional prices" do
-      net = DhanScalper::PnL.net(
+      net = described_class.net(
         entry: 100.25,
         ltp: 110.75,
         lot_size: lot_size,
@@ -125,7 +125,7 @@ RSpec.describe DhanScalper::PnL do
     end
 
     it "handles large numbers" do
-      net = DhanScalper::PnL.net(
+      net = described_class.net(
         entry: 1_000_000.0,
         ltp: 1_000_100.0,
         lot_size: 1_000_000,
@@ -140,7 +140,7 @@ RSpec.describe DhanScalper::PnL do
     end
 
     it "handles negative entry price" do
-      net = DhanScalper::PnL.net(
+      net = described_class.net(
         entry: -100.0,
         ltp: -90.0,
         lot_size: lot_size,
@@ -155,7 +155,7 @@ RSpec.describe DhanScalper::PnL do
     end
 
     it "handles negative LTP" do
-      net = DhanScalper::PnL.net(
+      net = described_class.net(
         entry: 100.0,
         ltp: -50.0,
         lot_size: lot_size,
@@ -166,12 +166,12 @@ RSpec.describe DhanScalper::PnL do
       # Gross: (-50 - 100) * (75 * 2) = -150 * 150 = -22500
       # Charges: 40
       # Net: -22500 - 40 = -22540
-      expect(net).to eq(-22540.0)
+      expect(net).to eq(-22_540.0)
     end
 
     context "with different lot sizes and quantities" do
       it "calculates with single lot" do
-        net = DhanScalper::PnL.net(
+        net = described_class.net(
           entry: entry,
           ltp: ltp,
           lot_size: 50,
@@ -186,7 +186,7 @@ RSpec.describe DhanScalper::PnL do
       end
 
       it "calculates with multiple lots" do
-        net = DhanScalper::PnL.net(
+        net = described_class.net(
           entry: entry,
           ltp: ltp,
           lot_size: 25,
@@ -204,7 +204,7 @@ RSpec.describe DhanScalper::PnL do
 
   describe "edge cases" do
     it "handles all zero values" do
-      net = DhanScalper::PnL.net(
+      net = described_class.net(
         entry: 0,
         ltp: 0,
         lot_size: 0,
@@ -216,7 +216,7 @@ RSpec.describe DhanScalper::PnL do
     end
 
     it "handles very small fractional values" do
-      net = DhanScalper::PnL.net(
+      net = described_class.net(
         entry: 0.001,
         ltp: 0.002,
         lot_size: 1,
@@ -231,7 +231,7 @@ RSpec.describe DhanScalper::PnL do
     end
 
     it "handles extreme price differences" do
-      net = DhanScalper::PnL.net(
+      net = described_class.net(
         entry: 1.0,
         ltp: 1000.0,
         lot_size: 1,

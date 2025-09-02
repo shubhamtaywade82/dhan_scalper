@@ -14,7 +14,16 @@ RSpec.describe "CSV Master Integration with Real Data" do
 
     puts "\n📊 CSV Master Data Loaded:"
     puts "   Total records: #{@data.length}"
-    puts "   Sample symbols: #{@data.map { |r| r['UNDERLYING_SYMBOL'] }.compact.uniq.first(10).join(', ')}"
+    puts "   Sample symbols: #{@data.filter_map { |r| r["UNDERLYING_SYMBOL"] }.uniq.first(10).join(", ")}"
+  end
+
+  after(:all) do
+    puts "\n✅ CSV Master Integration Tests Completed"
+    puts "   Total records processed: #{@data.length}"
+    puts "   Unique symbols: #{@data.filter_map { |r| r["UNDERLYING_SYMBOL"] }.uniq.length}"
+    puts "   Unique expiries: #{@data.filter_map do |r|
+      r["SM_EXPIRY_DATE"]
+    end.uniq.count { |d| d.match?(/\d{4}-\d{2}-\d{2}/) }}"
   end
 
   describe "Real Data Validation" do
@@ -31,15 +40,15 @@ RSpec.describe "CSV Master Integration with Real Data" do
     end
 
     it "contains expected instrument types" do
-      instruments = @data.map { |r| r["INSTRUMENT"] }.compact.uniq
+      instruments = @data.filter_map { |r| r["INSTRUMENT"] }.uniq
       expect(instruments).to include("OPTFUT")
       expect(instruments).to include("OPTIDX")
-      puts "   Instrument types: #{instruments.join(', ')}"
+      puts "   Instrument types: #{instruments.join(", ")}"
     end
 
     it "has valid expiry dates" do
-      expiry_dates = @data.map { |r| r["SM_EXPIRY_DATE"] }.compact.uniq
-      valid_dates = expiry_dates.select { |d| d.match?(/\d{4}-\d{2}-\d{2}/) }
+      expiry_dates = @data.filter_map { |r| r["SM_EXPIRY_DATE"] }.uniq
+      valid_dates = expiry_dates.grep(/\d{4}-\d{2}-\d{2}/)
       expect(valid_dates.length).to be > 0
       puts "   Valid expiry dates: #{valid_dates.length} out of #{expiry_dates.length}"
     end
@@ -55,21 +64,21 @@ RSpec.describe "CSV Master Integration with Real Data" do
     end
 
     it "has valid strike prices" do
-      strikes = nifty_options.map { |r| r["STRIKE_PRICE"].to_f }.compact.uniq
+      strikes = nifty_options.filter_map { |r| r["STRIKE_PRICE"].to_f }.uniq
       expect(strikes).not_to be_empty
       expect(strikes.all? { |s| s > 0 }).to be true
       puts "   NIFTY strike range: #{strikes.min} to #{strikes.max}"
     end
 
     it "has both call and put options" do
-      option_types = nifty_options.map { |r| r["OPTION_TYPE"] }.compact.uniq
+      option_types = nifty_options.filter_map { |r| r["OPTION_TYPE"] }.uniq
       expect(option_types).to include("CE")
       expect(option_types).to include("PE")
-      puts "   NIFTY option types: #{option_types.join(', ')}"
+      puts "   NIFTY option types: #{option_types.join(", ")}"
     end
 
     it "has consistent lot sizes" do
-      lot_sizes = nifty_options.map { |r| r["LOT_SIZE"].to_i }.compact.uniq
+      lot_sizes = nifty_options.filter_map { |r| r["LOT_SIZE"].to_i }.uniq
       expect(lot_sizes).to eq([75]) # NIFTY should always be 75
       puts "   NIFTY lot size: #{lot_sizes.first}"
     end
@@ -83,10 +92,10 @@ RSpec.describe "CSV Master Integration with Real Data" do
       if banknifty_options.any?
         puts "   BANKNIFTY options: #{banknifty_options.length} records"
 
-        strikes = banknifty_options.map { |r| r["STRIKE_PRICE"].to_f }.compact.uniq
+        strikes = banknifty_options.filter_map { |r| r["STRIKE_PRICE"].to_f }.uniq
         puts "   BANKNIFTY strike range: #{strikes.min} to #{strikes.max}"
 
-        lot_sizes = banknifty_options.map { |r| r["LOT_SIZE"].to_i }.compact.uniq
+        lot_sizes = banknifty_options.filter_map { |r| r["LOT_SIZE"].to_i }.uniq
         puts "   BANKNIFTY lot size: #{lot_sizes.first}"
       else
         puts "   BANKNIFTY options: No data available"
@@ -95,38 +104,38 @@ RSpec.describe "CSV Master Integration with Real Data" do
   end
 
   describe "Commodity Options Data" do
-    let(:commodity_symbols) { ["GOLD", "SILVER", "CRUDEOIL", "NICKEL", "COPPER"] }
+    let(:commodity_symbols) { %w[GOLD SILVER CRUDEOIL NICKEL COPPER] }
 
     it "has commodity options data" do
       commodity_symbols.each do |symbol|
         data = @data.select { |r| r["UNDERLYING_SYMBOL"] == symbol }
         options = data.select { |r| r["INSTRUMENT"] == "OPTFUT" }
 
-        if options.any?
-          puts "   #{symbol} options: #{options.length} records"
+        next unless options.any?
 
-          strikes = options.map { |r| r["STRIKE_PRICE"].to_f }.compact.uniq
-          puts "     Strike range: #{strikes.min} to #{strikes.max}"
+        puts "   #{symbol} options: #{options.length} records"
 
-          lot_sizes = options.map { |r| r["LOT_SIZE"].to_i }.compact.uniq
-          puts "     Lot size: #{lot_sizes.first}"
-        end
+        strikes = options.filter_map { |r| r["STRIKE_PRICE"].to_f }.uniq
+        puts "     Strike range: #{strikes.min} to #{strikes.max}"
+
+        lot_sizes = options.filter_map { |r| r["LOT_SIZE"].to_i }.uniq
+        puts "     Lot size: #{lot_sizes.first}"
       end
     end
   end
 
   describe "Expiry Date Analysis" do
     it "has multiple expiry series" do
-      all_expiries = @data.map { |r| r["SM_EXPIRY_DATE"] }.compact.uniq
-      valid_expiries = all_expiries.select { |d| d.match?(/\d{4}-\d{2}-\d{2}/) }
+      all_expiries = @data.filter_map { |r| r["SM_EXPIRY_DATE"] }.uniq
+      valid_expiries = all_expiries.grep(/\d{4}-\d{2}-\d{2}/)
 
       expect(valid_expiries.length).to be > 5 # Should have multiple expiry series
       puts "   Total expiry series: #{valid_expiries.length}"
 
       # Show first few expiries
       sorted_expiries = valid_expiries.sort
-      puts "   First 5 expiries: #{sorted_expiries.first(5).join(', ')}"
-      puts "   Last 5 expiries: #{sorted_expiries.last(5).join(', ')}"
+      puts "   First 5 expiries: #{sorted_expiries.first(5).join(", ")}"
+      puts "   Last 5 expiries: #{sorted_expiries.last(5).join(", ")}"
     end
 
     it "has weekly and monthly expiries" do
@@ -135,15 +144,13 @@ RSpec.describe "CSV Master Integration with Real Data" do
 
       # Check for weekly expiries (should be multiple in same month)
       september_expiries = nifty_expiries.select { |e| e.start_with?("2025-09") }
-      if september_expiries.length > 1
-        puts "   Weekly expiries detected: #{september_expiries.join(', ')}"
-      end
+      puts "   Weekly expiries detected: #{september_expiries.join(", ")}" if september_expiries.length > 1
     end
   end
 
   describe "Security ID Validation" do
-        it "has unique security IDs" do
-      security_ids = @data.map { |r| r["SECURITY_ID"] }.compact
+    it "has unique security IDs" do
+      security_ids = @data.filter_map { |r| r["SECURITY_ID"] }
       unique_ids = security_ids.uniq
 
       # Some records might have duplicate security IDs (e.g., different segments)
@@ -158,46 +165,42 @@ RSpec.describe "CSV Master Integration with Real Data" do
       first_expiry = expiries.first
 
       # Test with a reasonable strike price
-      test_strikes = [25000, 25500, 26000]
+      test_strikes = [25_000, 25_500, 26_000]
 
       test_strikes.each do |strike|
         ce_id = csv_master.get_security_id("NIFTY", first_expiry, strike, "CE")
         pe_id = csv_master.get_security_id("NIFTY", first_expiry, strike, "PE")
 
-        if ce_id && pe_id
-          puts "   NIFTY #{first_expiry} #{strike}: CE=#{ce_id}, PE=#{pe_id}"
+        next unless ce_id && pe_id
 
-          # Verify lot sizes
-          ce_lot = csv_master.get_lot_size(ce_id)
-          pe_lot = csv_master.get_lot_size(pe_id)
-          expect(ce_lot).to eq(75)
-          expect(pe_lot).to eq(75)
-        end
+        puts "   NIFTY #{first_expiry} #{strike}: CE=#{ce_id}, PE=#{pe_id}"
+
+        # Verify lot sizes
+        ce_lot = csv_master.get_lot_size(ce_id)
+        pe_lot = csv_master.get_lot_size(pe_id)
+        expect(ce_lot).to eq(75)
+        expect(pe_lot).to eq(75)
       end
     end
   end
 
   describe "Data Quality Checks" do
-        it "has no missing critical fields" do
-      critical_fields = ["UNDERLYING_SYMBOL", "INSTRUMENT", "SECURITY_ID"]
+    it "has no missing critical fields" do
+      critical_fields = %w[UNDERLYING_SYMBOL INSTRUMENT SECURITY_ID]
 
       critical_fields.each do |field|
         missing_count = @data.count { |r| r[field].nil? || r[field].to_s.strip.empty? }
-        if missing_count > 0
-          puts "   Warning: #{missing_count} records missing #{field}"
-        end
+        puts "   Warning: #{missing_count} records missing #{field}" if missing_count > 0
         expect(missing_count).to be < @data.length * 0.1 # Less than 10% missing
       end
 
       # For option-specific fields, only check records that are actually options
-      option_records = @data.select { |r| ["OPTFUT", "OPTIDX", "OPTCUR", "OPTSTK"].include?(r["INSTRUMENT"]) }
+      option_records = @data.select { |r| %w[OPTFUT OPTIDX OPTCUR OPTSTK].include?(r["INSTRUMENT"]) }
       if option_records.any?
-        option_critical_fields = ["SM_EXPIRY_DATE", "STRIKE_PRICE", "OPTION_TYPE"]
+        option_critical_fields = %w[SM_EXPIRY_DATE STRIKE_PRICE OPTION_TYPE]
         option_critical_fields.each do |field|
           missing_count = option_records.count { |r| r[field].nil? || r[field].to_s.strip.empty? }
-          if missing_count > 0
-            puts "   Warning: #{missing_count} option records missing #{field}"
-          end
+          puts "   Warning: #{missing_count} option records missing #{field}" if missing_count > 0
           expect(missing_count).to be < option_records.length * 0.1 # Less than 10% missing
         end
       end
@@ -205,13 +208,11 @@ RSpec.describe "CSV Master Integration with Real Data" do
 
     it "has consistent data types" do
       # Check numeric fields
-      numeric_fields = ["STRIKE_PRICE", "LOT_SIZE"]
+      numeric_fields = %w[STRIKE_PRICE LOT_SIZE]
 
       numeric_fields.each do |field|
         non_numeric = @data.count { |r| r[field] && !r[field].to_s.match?(/^\d+(\.\d+)?$/) }
-        if non_numeric > 0
-          puts "   Warning: #{non_numeric} records have non-numeric #{field}"
-        end
+        puts "   Warning: #{non_numeric} records have non-numeric #{field}" if non_numeric > 0
         expect(non_numeric).to be < @data.length * 0.05 # Less than 5% invalid
       end
     end
@@ -235,11 +236,11 @@ RSpec.describe "CSV Master Integration with Real Data" do
       puts "   Cache performance: First call #{first_call_time.round(4)}s, Second call #{second_call_time.round(4)}s"
     end
 
-        it "handles large datasets efficiently" do
+    it "handles large datasets efficiently" do
       start_time = Time.now
 
       # Test with multiple symbols
-      symbols = ["NIFTY", "BANKNIFTY", "GOLD", "SILVER"]
+      symbols = %w[NIFTY BANKNIFTY GOLD SILVER]
       symbols.each do |symbol|
         csv_master.get_expiry_dates(symbol)
       end
@@ -258,7 +259,7 @@ RSpec.describe "CSV Master Integration with Real Data" do
     end
 
     it "handles invalid expiry dates gracefully" do
-      result = csv_master.get_security_id("NIFTY", "invalid-date", 25000, "CE")
+      result = csv_master.get_security_id("NIFTY", "invalid-date", 25_000, "CE")
       expect(result).to be_nil
     end
 
@@ -269,12 +270,5 @@ RSpec.describe "CSV Master Integration with Real Data" do
       result = csv_master.get_security_id("NIFTY", first_expiry, -1000, "CE")
       expect(result).to be_nil
     end
-  end
-
-  after(:all) do
-    puts "\n✅ CSV Master Integration Tests Completed"
-    puts "   Total records processed: #{@data.length}"
-    puts "   Unique symbols: #{@data.map { |r| r['UNDERLYING_SYMBOL'] }.compact.uniq.length}"
-    puts "   Unique expiries: #{@data.map { |r| r['SM_EXPIRY_DATE'] }.compact.uniq.select { |d| d.match?(/\d{4}-\d{2}-\d{2}/) }.length}"
   end
 end

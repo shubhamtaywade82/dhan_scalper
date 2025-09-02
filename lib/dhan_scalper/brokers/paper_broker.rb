@@ -46,26 +46,18 @@ module DhanScalper
         price = DhanScalper::TickCache.ltp(segment, security_id).to_f
         return nil unless price&.positive?
 
-        # Calculate total proceeds minus charges
-        total_proceeds = (price * quantity) - charge_per_order
-
-        # Credit the balance (after deducting charges)
-        @balance_provider&.update_balance(total_proceeds, type: :credit)
+        # For paper trading, we don't update balance here
+        # The balance update is handled by the trader's close! method
+        # which calculates the net P&L and updates the balance accordingly
 
         order = Order.new("P-#{Time.now.to_f}", security_id, "SELL", quantity, price)
 
         # Log the order
         log_order(order)
 
-        # Create and log position
-        position = DhanScalper::Position.new(
-          security_id: security_id,
-          side: "SELL",
-          entry_price: price,
-          quantity: quantity,
-          current_price: price
-        )
-        log_position(position)
+        # For sell orders (position exits), we don't create a new position
+        # The position management is handled by the trader's close! method
+        # which will remove the existing position from the virtual data manager
 
         order
       end

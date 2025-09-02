@@ -16,10 +16,11 @@ module DhanScalper
         "log_level" => "INFO",
         "tp_pct" => 0.35,
         "sl_pct" => 0.18,
-        "trail_pct" => 0.12
+        "trail_pct" => 0.12,
+        "min_premium_price" => 1.0
       },
       "paper" => {
-        "starting_balance" => 200000.0
+        "starting_balance" => 200_000.0
       },
       "SYMBOLS" => {
         "NIFTY" => {
@@ -34,10 +35,10 @@ module DhanScalper
       }
     }.freeze
 
-    def self.load(path: ENV["SCALPER_CONFIG"])
+    def self.load(path: ENV.fetch("SCALPER_CONFIG", nil))
       cfg = DEFAULT.dup
       if path && File.exist?(path)
-        yml = YAML.safe_load(File.read(path), permitted_classes: [], aliases: false) || {}
+        yml = YAML.safe_load_file(path, permitted_classes: [], aliases: false) || {}
         cfg = DEFAULT.merge(yml) { |_, a, b| a.is_a?(Hash) ? a.merge(b || {}) : b || a }
       end
       cfg

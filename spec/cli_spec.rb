@@ -4,6 +4,13 @@ require "spec_helper"
 
 RSpec.describe DhanScalper::CLI do
   let(:cli) { described_class.new }
+  let(:mock_vdm) do
+    double(
+      get_balance: 100_000.0,
+      get_positions: [],
+      get_orders: []
+    )
+  end
 
   before do
     # Mock the App class to avoid actual execution
@@ -13,14 +20,6 @@ RSpec.describe DhanScalper::CLI do
     # Mock VirtualDataManager
     stub_const("DhanScalper::VirtualDataManager", double)
     allow(DhanScalper::VirtualDataManager).to receive(:new).and_return(mock_vdm)
-  end
-
-  let(:mock_vdm) do
-    double(
-      get_balance: 100_000.0,
-      get_positions: [],
-      get_orders: []
-    )
   end
 
   describe "#initialize" do

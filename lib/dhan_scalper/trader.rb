@@ -42,7 +42,7 @@ module DhanScalper
         st1 = DhanScalper::Indicators::Supertrend.new(series: c1_series).call
         st5 = DhanScalper::Indicators::Supertrend.new(series: c5_series).call
 
-        if st1 && st1.any? && st5 && st5.any?
+        if st1&.any? && st5&.any?
           last_close_1 = c1_series.closes.last.to_f
           last_close_5 = c5_series.closes.last.to_f
           last_st_1 = st1.compact.last
@@ -138,13 +138,13 @@ module DhanScalper
       # Use QuantitySizer for allocation-based sizing
       if @quantity_sizer
         qty_lots = @quantity_sizer.calculate_lots(@symbol, ltp)
-        return unless qty_lots > 0
-        qty = @cfg["lot_size"] * qty_lots
+        return unless qty_lots.positive?
+
       else
         # Fallback to old fixed sizing
         qty_lots = @cfg["qty_multiplier"]
-        qty = @cfg["lot_size"] * qty_lots
       end
+      qty = @cfg["lot_size"] * qty_lots
 
       # Get broker from global context
       broker = @gl.instance_variable_get(:@broker)
@@ -181,7 +181,7 @@ module DhanScalper
       @open.best = [@open.best, net].max
 
       trail_trig = @open.entry * (1.0 + trail_pct)
-      @open.trail_anchor = [@open.trail_anchor, ltp * (1.0 - trail_pct / 2)].compact.max if ltp >= trail_trig
+      @open.trail_anchor = [@open.trail_anchor, ltp * (1.0 - (trail_pct / 2))].compact.max if ltp >= trail_trig
 
       if ltp >= @open.entry * (1.0 + tp_pct) || (@gl.session_pnl_preview(self, net) >= @gl.session_target)
         return close!("TP", ltp, charge_per_order)
@@ -214,11 +214,10 @@ module DhanScalper
       net = PnL.net(entry: @open.entry, ltp: ltp, lot_size: @cfg["lot_size"], qty_lots: @open.qty_lots,
                     charge_per_order: charge_per_order)
       @session_pnl += net
-      
-      # Update balance provider with realized PnL
-      balance_provider = @gl.instance_variable_get(:@balance_provider)
-      balance_provider&.add_realized_pnl(net)
-      
+
+      # NOTE: Balance is already updated by the broker through the sell order
+      # No need to call add_realized_pnl here as it would double-count the PnL
+
       puts "\n[#{@symbol}] EXIT #{reason} sid=#{@open.sid} ltp≈#{ltp.round(2)} net=#{net.round(0)} session=#{@session_pnl.round(0)}"
       publish_closed!(reason: reason, exit_price: ltp, net: net)
       @open = nil

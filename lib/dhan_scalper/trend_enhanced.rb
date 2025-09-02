@@ -58,19 +58,17 @@ module DhanScalper
           else
             puts "[TrendEnhanced] Holy Grail: Not proceeding (1m: proceed=#{hg_1m&.proceed?}, #{@secondary_timeframe}m: proceed=#{hg_tf&.proceed?})"
           end
-        else
+        elsif hg_1m&.proceed?
           # Single timeframe analysis
-          if hg_1m&.proceed?
-            if hg_1m.bias == :bullish && hg_1m.momentum == :up
-              puts "[TrendEnhanced] Holy Grail: Bullish signal (1m: bias=#{hg_1m.bias}, momentum=#{hg_1m.momentum}, adx=#{hg_1m.adx.round(1)})"
-              return :long_ce
-            elsif hg_1m.bias == :bearish && hg_1m.momentum == :down
-              puts "[TrendEnhanced] Holy Grail: Bearish signal (1m: bias=#{hg_1m.bias}, momentum=#{hg_1m.momentum}, adx=#{hg_1m.adx.round(1)})"
-              return :long_pe
-            end
-          else
-            puts "[TrendEnhanced] Holy Grail: Not proceeding (1m: proceed=#{hg_1m&.proceed?})"
+          if hg_1m.bias == :bullish && hg_1m.momentum == :up
+            puts "[TrendEnhanced] Holy Grail: Bullish signal (1m: bias=#{hg_1m.bias}, momentum=#{hg_1m.momentum}, adx=#{hg_1m.adx.round(1)})"
+            return :long_ce
+          elsif hg_1m.bias == :bearish && hg_1m.momentum == :down
+            puts "[TrendEnhanced] Holy Grail: Bearish signal (1m: bias=#{hg_1m.bias}, momentum=#{hg_1m.momentum}, adx=#{hg_1m.adx.round(1)})"
+            return :long_pe
           end
+        else
+          puts "[TrendEnhanced] Holy Grail: Not proceeding (1m: proceed=#{hg_1m&.proceed?})"
         end
 
         # Fallback to combined signal
@@ -92,17 +90,14 @@ module DhanScalper
             puts "[TrendEnhanced] Combined: Weak sell signal"
             return :long_pe
           end
-        else
+        elsif %i[strong_buy weak_buy].include?(signal_1m)
           # Single timeframe combined signal
-          if signal_1m == :strong_buy || signal_1m == :weak_buy
-            puts "[TrendEnhanced] Combined: Buy signal (1m: #{signal_1m})"
-            return :long_ce
-          elsif signal_1m == :strong_sell || signal_1m == :weak_sell
-            puts "[TrendEnhanced] Combined: Sell signal (1m: #{signal_1m})"
-            return :long_pe
-          end
+          puts "[TrendEnhanced] Combined: Buy signal (1m: #{signal_1m})"
+          return :long_ce
+        elsif %i[strong_sell weak_sell].include?(signal_1m)
+          puts "[TrendEnhanced] Combined: Sell signal (1m: #{signal_1m})"
+          return :long_pe
         end
-
       rescue StandardError => e
         puts "[TrendEnhanced] Holy Grail failed, falling back to simple indicators: #{e.message}"
       end
@@ -121,15 +116,13 @@ module DhanScalper
             puts "[TrendEnhanced] Supertrend: Bearish signal"
             return :long_pe
           end
-        else
+        elsif st_signal_1m == :bullish
           # Single timeframe Supertrend
-          if st_signal_1m == :bullish
-            puts "[TrendEnhanced] Supertrend: Bullish signal (1m)"
-            return :long_ce
-          elsif st_signal_1m == :bearish
-            puts "[TrendEnhanced] Supertrend: Bearish signal (1m)"
-            return :long_pe
-          end
+          puts "[TrendEnhanced] Supertrend: Bullish signal (1m)"
+          return :long_ce
+        elsif st_signal_1m == :bearish
+          puts "[TrendEnhanced] Supertrend: Bearish signal (1m)"
+          return :long_pe
         end
       rescue StandardError => e
         puts "[TrendEnhanced] Supertrend failed: #{e.message}"

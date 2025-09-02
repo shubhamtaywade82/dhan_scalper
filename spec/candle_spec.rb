@@ -16,7 +16,7 @@ RSpec.describe Candle do
 
   describe "#initialize" do
     it "creates a candle with valid data" do
-      candle = Candle.new(**valid_data)
+      candle = described_class.new(**valid_data)
 
       expect(candle.timestamp).to eq(valid_data[:ts])
       expect(candle.open).to eq(100.0)
@@ -27,7 +27,7 @@ RSpec.describe Candle do
     end
 
     it "converts string values to appropriate types" do
-      candle = Candle.new(
+      candle = described_class.new(
         ts: "2023-01-01",
         open: "100.5",
         high: "105.5",
@@ -44,7 +44,7 @@ RSpec.describe Candle do
     end
 
     it "handles integer values" do
-      candle = Candle.new(
+      candle = described_class.new(
         ts: Time.now,
         open: 100,
         high: 105,
@@ -63,41 +63,41 @@ RSpec.describe Candle do
 
   describe "#bullish?" do
     it "returns true when close is greater than open" do
-      candle = Candle.new(**valid_data.merge(close: 105.0, open: 100.0))
+      candle = described_class.new(**valid_data, close: 105.0, open: 100.0)
       expect(candle.bullish?).to be true
     end
 
     it "returns true when close equals open" do
-      candle = Candle.new(**valid_data.merge(close: 100.0, open: 100.0))
+      candle = described_class.new(**valid_data, close: 100.0, open: 100.0)
       expect(candle.bullish?).to be true
     end
 
     it "returns false when close is less than open" do
-      candle = Candle.new(**valid_data.merge(close: 95.0, open: 100.0))
+      candle = described_class.new(**valid_data, close: 95.0, open: 100.0)
       expect(candle.bullish?).to be false
     end
   end
 
   describe "#bearish?" do
     it "returns true when close is less than open" do
-      candle = Candle.new(**valid_data.merge(close: 95.0, open: 100.0))
+      candle = described_class.new(**valid_data, close: 95.0, open: 100.0)
       expect(candle.bearish?).to be true
     end
 
     it "returns false when close equals open" do
-      candle = Candle.new(**valid_data.merge(close: 100.0, open: 100.0))
+      candle = described_class.new(**valid_data, close: 100.0, open: 100.0)
       expect(candle.bearish?).to be false
     end
 
     it "returns false when close is greater than open" do
-      candle = Candle.new(**valid_data.merge(close: 105.0, open: 100.0))
+      candle = described_class.new(**valid_data, close: 105.0, open: 100.0)
       expect(candle.bearish?).to be false
     end
   end
 
   describe "edge cases" do
     it "handles zero values" do
-      candle = Candle.new(
+      candle = described_class.new(
         ts: Time.now,
         open: 0,
         high: 0,
@@ -116,7 +116,7 @@ RSpec.describe Candle do
     end
 
     it "handles negative values" do
-      candle = Candle.new(
+      candle = described_class.new(
         ts: Time.now,
         open: -100,
         high: -95,
@@ -136,7 +136,7 @@ RSpec.describe Candle do
 
     it "handles very large numbers" do
       large_number = 1_000_000_000_000.0
-      candle = Candle.new(
+      candle = described_class.new(
         ts: Time.now,
         open: large_number,
         high: large_number + 1000,

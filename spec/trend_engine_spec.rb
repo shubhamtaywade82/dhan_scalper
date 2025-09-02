@@ -4,19 +4,18 @@ require "spec_helper"
 
 RSpec.describe TrendEngine do
   let(:trend_engine) { described_class.new(seg_idx: "IDX_I", sid_idx: "13") }
-
-  before do
-    # Mock CandleSeries to avoid actual API calls
-    stub_const("CandleSeries", double)
-    allow(CandleSeries).to receive(:load_from_dhan_intraday).and_return(mock_candle_series)
-  end
-
   let(:mock_candle_series) do
     double(
       candles: Array.new(60, double), # More than 50 candles
       ema: double(last: 100.0),
       rsi: double(last: 60.0)
     )
+  end
+
+  before do
+    # Mock CandleSeries to avoid actual API calls
+    stub_const("CandleSeries", double)
+    allow(CandleSeries).to receive(:load_from_dhan_intraday).and_return(mock_candle_series)
   end
 
   describe "#initialize" do

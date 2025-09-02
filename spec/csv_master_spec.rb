@@ -4,22 +4,6 @@ require "spec_helper"
 
 RSpec.describe DhanScalper::CsvMaster do
   let(:csv_master) { described_class.new }
-  let(:csv_url) { "https://images.dhan.co/api-data/api-scrip-master-detailed.csv" }
-  let(:cache_file) { described_class::CACHE_FILE }
-
-  before do
-    # Mock file operations to avoid actual file I/O
-    allow(File).to receive(:exist?).and_return(false)
-    allow(File).to receive(:mtime).and_return(Time.now - 3600) # 1 hour ago
-    allow(File).to receive(:read).and_return(mock_csv_data)
-    allow(File).to receive(:write)
-    allow(File).to receive(:open).and_yield(StringIO.new(mock_csv_data))
-
-    # Mock HTTP requests
-    allow(Net::HTTP).to receive(:get_response).and_return(mock_http_response)
-    allow(Net::HTTP).to receive(:get).and_return(mock_csv_data)
-  end
-
   let(:mock_csv_data) do
     <<~CSV
       UNDERLYING_SYMBOL,INSTRUMENT,SECURITY_ID,SM_EXPIRY_DATE,STRIKE_PRICE,OPTION_TYPE,LOT_SIZE
@@ -33,13 +17,24 @@ RSpec.describe DhanScalper::CsvMaster do
       GOLD,OPTFUT,GOLD25SEP65000PE,2025-09-25,65000,PE,100
     CSV
   end
-
   let(:mock_http_response) do
     double(
       code: "200",
       body: mock_csv_data,
       success?: true
     )
+  end
+  let(:csv_url) { "https://images.dhan.co/api-data/api-scrip-master-detailed.csv" }
+  let(:cache_file) { described_class::CACHE_FILE }
+
+  before do
+    # Mock file operations to avoid actual file I/O
+    allow(File).to receive_messages(exist?: false, mtime: Time.now - 3600, read: mock_csv_data)
+    allow(File).to receive(:write)
+    allow(File).to receive(:open).and_yield(StringIO.new(mock_csv_data))
+
+    # Mock HTTP requests
+    allow(Net::HTTP).to receive_messages(get_response: mock_http_response, get: mock_csv_data)
   end
 
   describe "#initialize" do
@@ -102,9 +97,7 @@ RSpec.describe DhanScalper::CsvMaster do
   describe "#load_from_cache" do
     context "when cache file exists and is valid" do
       before do
-        allow(File).to receive(:exist?).and_return(true)
-        allow(File).to receive(:mtime).and_return(Time.now - 1800) # 30 minutes ago
-        allow(File).to receive(:read).and_return(mock_csv_data)
+        allow(File).to receive_messages(exist?: true, mtime: Time.now - 1800, read: mock_csv_data)
       end
 
       it "loads data from cache successfully" do
@@ -128,8 +121,7 @@ RSpec.describe DhanScalper::CsvMaster do
 
     context "when cache file is expired" do
       before do
-        allow(File).to receive(:exist?).and_return(true)
-        allow(File).to receive(:mtime).and_return(Time.now - 90000) # 25 hours ago
+        allow(File).to receive_messages(exist?: true, mtime: Time.now - 90_000) # 25 hours ago
       end
 
       it "returns nil when cache file is expired" do
@@ -194,9 +186,8 @@ RSpec.describe DhanScalper::CsvMaster do
     context "when data is not loaded" do
       before do
         csv_master.instance_variable_set(:@data, nil)
-        allow(csv_master).to receive(:load_from_cache).and_return(mock_csv_data)
-        allow(csv_master).to receive(:download_csv).and_return(mock_csv_data)
-        allow(csv_master).to receive(:parse_csv).and_return([{ "test" => "data" }])
+        allow(csv_master).to receive_messages(load_from_cache: mock_csv_data, download_csv: mock_csv_data,
+                                              parse_csv: [{ "test" => "data" }])
       end
 
       it "tries to load from cache first" do
@@ -248,7 +239,8 @@ RSpec.describe DhanScalper::CsvMaster do
 
     it "filters by both OPTIDX and OPTFUT instrument types" do
       # Add some mixed data
-      mixed_data = csv_master.send(:parse_csv, mock_csv_data + "NIFTY,OPTCUR,NIFTY25SEP19000CE,2025-09-25,19000,CE,50\n")
+      mixed_data = csv_master.send(:parse_csv,
+                                   "#{mock_csv_data}NIFTY,OPTCUR,NIFTY25SEP19000CE,2025-09-25,19000,CE,50\n")
       csv_master.instance_variable_set(:@data, mixed_data)
 
       result = csv_master.get_expiry_dates("NIFTY")

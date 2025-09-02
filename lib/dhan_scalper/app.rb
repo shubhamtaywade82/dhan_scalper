@@ -49,8 +49,9 @@ module DhanScalper
 
     def start
       DhanHQ.configure_with_env
-      DhanHQ.logger.level = (@cfg.dig("global", "log_level") == "DEBUG" ? Logger::DEBUG : Logger::INFO)
-
+      # DhanHQ.logger.level = (@cfg.dig("global", "log_level") == "DEBUG" ? Logger::DEBUG : Logger::INFO)
+      DhanHQ.logger.level = Logger::WARN      # or Logger::ERROR
+      DhanHQ.logger = Logger.new($stderr)      # never stdout
       # Try to create WebSocket client with fallback methods
       ws = create_websocket_client
       return unless ws
@@ -188,7 +189,7 @@ module DhanScalper
 
       methods_to_try.each do |method|
         result = method.call
-        return result if result && result.respond_to?(:on)
+        return result if result.respond_to?(:on)
       rescue StandardError => e
         puts "Warning: Failed to create WebSocket client via method: #{e.message}"
         next
@@ -227,7 +228,7 @@ module DhanScalper
       ce_map = {}
       pe_map = {}
 
-      @cfg["SYMBOLS"]&.each do |sym, _|
+      @cfg["SYMBOLS"]&.each_key do |sym|
         s = sym_cfg(sym)
         if s["idx_sid"].to_s.empty?
           puts "[SKIP] #{sym}: idx_sid not set."

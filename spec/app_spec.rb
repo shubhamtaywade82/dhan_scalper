@@ -87,13 +87,13 @@ RSpec.describe DhanScalper::App do
     allow(mock_trader).to receive(:subscribe_options)
     allow(mock_trader).to receive(:maybe_enter)
     allow(mock_trader).to receive(:manage_open)
-    allow(mock_trader).to receive(:session_pnl).and_return(0.0)
-    allow(mock_trader).to receive(:instance_variable_get).and_return(nil)
+    allow(mock_trader).to receive_messages(session_pnl: 0.0, instance_variable_get: nil)
 
     # Mock OptionPicker
     allow(DhanScalper::OptionPicker).to receive(:new).and_return(double(
-      pick: { expiry: "2024-01-25", strikes: [19500, 19550, 19600], ce_sid: { 19500 => "CE123" }, pe_sid: { 19500 => "PE123" } }
-    ))
+                                                                   pick: { expiry: "2024-01-25", strikes: [19_500, 19_550, 19_600], ce_sid: { 19_500 => "CE123" },
+                                                                           pe_sid: { 19_500 => "PE123" } }
+                                                                 ))
 
     # Mock Trend
     allow(DhanScalper::Trend).to receive(:new).and_return(double(decide: :none))
@@ -104,12 +104,12 @@ RSpec.describe DhanScalper::App do
     # Mock TickCache
     stub_const("DhanScalper::TickCache", double)
     allow(DhanScalper::TickCache).to receive(:put)
-    allow(DhanScalper::TickCache).to receive(:ltp).and_return(19500.0)
+    allow(DhanScalper::TickCache).to receive(:ltp).and_return(19_500.0)
 
     # Mock CandleSeries
     stub_const("DhanScalper::CandleSeries", double)
     allow(DhanScalper::CandleSeries).to receive(:load_from_dhan_intraday).and_return(
-      double(closes: [19500.0, 19501.0, 19502.0])
+      double(closes: [19_500.0, 19_501.0, 19_502.0])
     )
 
     # Mock Thread
@@ -190,13 +190,8 @@ RSpec.describe DhanScalper::App do
 
     before do
       # Mock WebSocket creation
-      allow(app).to receive(:create_websocket_client).and_return(mock_websocket)
-      allow(app).to receive(:setup_traders).and_return([{ "NIFTY" => mock_trader }, {}, {}])
-      allow(app).to receive(:sym_cfg).and_return(config["SYMBOLS"]["NIFTY"])
-      allow(app).to receive(:wait_for_spot).and_return(19500.0)
-      allow(app).to receive(:total_pnl_preview).and_return(0.0)
-      allow(app).to receive(:instance_open?).and_return(false)
-      allow(app).to receive(:session_target).and_return(1000.0)
+      allow(app).to receive_messages(create_websocket_client: mock_websocket,
+                                     setup_traders: [{ "NIFTY" => mock_trader }, {}, {}], sym_cfg: config["SYMBOLS"]["NIFTY"], wait_for_spot: 19_500.0, total_pnl_preview: 0.0, instance_open?: false, session_target: 1000.0)
     end
 
     it "configures DhanHQ" do
@@ -207,7 +202,7 @@ RSpec.describe DhanScalper::App do
     it "sets logger level based on config" do
       config["global"]["log_level"] = "DEBUG"
       app.start
-      # Note: This is hard to test directly due to Logger::DEBUG constant
+      # NOTE: This is hard to test directly due to Logger::DEBUG constant
     end
 
     it "creates WebSocket client" do
@@ -328,8 +323,7 @@ RSpec.describe DhanScalper::App do
     let(:app) { described_class.new(config) }
 
     before do
-      allow(app).to receive(:sym_cfg).and_return(config["SYMBOLS"]["NIFTY"])
-      allow(app).to receive(:wait_for_spot).and_return(19500.0)
+      allow(app).to receive_messages(sym_cfg: config["SYMBOLS"]["NIFTY"], wait_for_spot: 19_500.0)
       allow(mock_websocket).to receive(:subscribe_one)
     end
 
@@ -342,12 +336,12 @@ RSpec.describe DhanScalper::App do
     end
 
     it "creates traders for each symbol" do
-      traders, _, _ = app.send(:setup_traders, mock_websocket)
+      traders, = app.send(:setup_traders, mock_websocket)
       expect(traders).to have_key("NIFTY")
     end
 
     it "subscribes to options data" do
-      _, _, _ = app.send(:setup_traders, mock_websocket)
+      app.send(:setup_traders, mock_websocket)
       expect(mock_trader).to have_received(:subscribe_options)
     end
   end
@@ -357,24 +351,24 @@ RSpec.describe DhanScalper::App do
 
     context "when tick data is available" do
       before do
-        allow(DhanScalper::TickCache).to receive(:ltp).and_return(19500.0)
+        allow(DhanScalper::TickCache).to receive(:ltp).and_return(19_500.0)
       end
 
       it "returns the LTP immediately" do
         result = app.send(:wait_for_spot, config["SYMBOLS"]["NIFTY"])
-        expect(result).to eq(19500.0)
+        expect(result).to eq(19_500.0)
       end
     end
 
     context "when tick data is not available initially" do
       before do
-        allow(DhanScalper::TickCache).to receive(:ltp).and_return(nil, nil, 19500.0)
+        allow(DhanScalper::TickCache).to receive(:ltp).and_return(nil, nil, 19_500.0)
         allow(Time).to receive(:now).and_return(Time.at(0), Time.at(5), Time.at(15))
       end
 
       it "waits for tick data" do
         result = app.send(:wait_for_spot, config["SYMBOLS"]["NIFTY"])
-        expect(result).to eq(19500.0)
+        expect(result).to eq(19_500.0)
       end
     end
 
@@ -383,13 +377,13 @@ RSpec.describe DhanScalper::App do
         allow(DhanScalper::TickCache).to receive(:ltp).and_return(nil)
         allow(Time).to receive(:now).and_return(Time.at(0), Time.at(15))
         allow(DhanScalper::CandleSeries).to receive(:load_from_dhan_intraday).and_return(
-          double(closes: [19500.0, 19501.0, 19502.0])
+          double(closes: [19_500.0, 19_501.0, 19_502.0])
         )
       end
 
       it "falls back to historical data" do
         result = app.send(:wait_for_spot, config["SYMBOLS"]["NIFTY"])
-        expect(result).to eq(19502.0)
+        expect(result).to eq(19_502.0)
       end
     end
   end

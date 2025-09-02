@@ -4,6 +4,15 @@ require "spec_helper"
 
 RSpec.describe DhanScalper::UI::DataViewer do
   let(:data_viewer) { described_class.new }
+  let(:mock_vdm) { double("VirtualDataManager") }
+  let(:mock_cursor) { double("Cursor") }
+  let(:mock_pastel) { double("Pastel") }
+  let(:mock_balance) { double("Balance") }
+  let(:mock_positions) { double("Positions") }
+  let(:mock_orders) { double("Orders") }
+  let(:mock_table) { double("Table") }
+  let(:mock_position_rows) { [["NIFTY", "BUY", "100", "₹100.0", "₹105.0", "₹500.0"]] }
+  let(:mock_order_rows) { [["ORDER123...", "BUY", "100", "₹100.0", "10:30:15"]] }
 
   before do
     # Mock dependencies
@@ -23,28 +32,15 @@ RSpec.describe DhanScalper::UI::DataViewer do
 
     # Mock Pastel
     allow(Pastel).to receive(:new).and_return(mock_pastel)
-  end
-
-  let(:mock_vdm) { double("VirtualDataManager") }
-  let(:mock_cursor) { double("Cursor") }
-  let(:mock_pastel) { double("Pastel") }
-
-  before do
-    # Mock VDM methods
-    allow(mock_vdm).to receive(:get_balance).and_return(mock_balance)
-    allow(mock_vdm).to receive(:get_positions).and_return(mock_positions)
-    allow(mock_vdm).to receive(:get_orders).and_return(mock_orders)
+    allow(mock_vdm).to receive_messages(get_balance: mock_balance, get_positions: mock_positions,
+                                        get_orders: mock_orders)
 
     # Mock cursor methods
     allow(mock_cursor).to receive(:hide)
     allow(mock_cursor).to receive(:show)
 
     # Mock pastel methods
-    allow(mock_pastel).to receive(:green).and_return("GREEN")
-    allow(mock_pastel).to receive(:red).and_return("RED")
-    allow(mock_pastel).to receive(:blue).and_return("BLUE")
-    allow(mock_pastel).to receive(:yellow).and_return("YELLOW")
-    allow(mock_pastel).to receive(:dim).and_return("DIM")
+    allow(mock_pastel).to receive_messages(green: "GREEN", red: "RED", blue: "BLUE", yellow: "YELLOW", dim: "DIM")
 
     # Mock balance data
     allow(mock_balance).to receive(:[]).with(:available).and_return(100_000.0)
@@ -52,12 +48,10 @@ RSpec.describe DhanScalper::UI::DataViewer do
     allow(mock_balance).to receive(:[]).with(:total).and_return(150_000.0)
 
     # Mock positions data
-    allow(mock_positions).to receive(:empty?).and_return(false)
-    allow(mock_positions).to receive(:map).and_return(mock_position_rows)
+    allow(mock_positions).to receive_messages(empty?: false, map: mock_position_rows)
 
     # Mock orders data
-    allow(mock_orders).to receive(:empty?).and_return(false)
-    allow(mock_orders).to receive(:map).and_return(mock_order_rows)
+    allow(mock_orders).to receive_messages(empty?: false, map: mock_order_rows)
 
     # Mock TTY::Box
     stub_const("TTY::Box", double)
@@ -68,13 +62,6 @@ RSpec.describe DhanScalper::UI::DataViewer do
     allow(TTY::Table).to receive(:new).and_return(mock_table)
     allow(mock_table).to receive(:render).and_return("TABLE_CONTENT")
   end
-
-  let(:mock_balance) { double("Balance") }
-  let(:mock_positions) { double("Positions") }
-  let(:mock_orders) { double("Orders") }
-  let(:mock_table) { double("Table") }
-  let(:mock_position_rows) { [["NIFTY", "BUY", "100", "₹100.0", "₹105.0", "₹500.0"]] }
-  let(:mock_order_rows) { [["ORDER123...", "BUY", "100", "₹100.0", "10:30:15"]] }
 
   describe "#initialize" do
     it "sets instance variables correctly" do
@@ -189,11 +176,8 @@ RSpec.describe DhanScalper::UI::DataViewer do
 
   describe "#render_frame" do
     before do
-      allow(data_viewer).to receive(:header_box).and_return("HEADER")
-      allow(data_viewer).to receive(:balance_box).and_return("BALANCE")
-      allow(data_viewer).to receive(:positions_box).and_return("POSITIONS")
-      allow(data_viewer).to receive(:recent_orders_box).and_return("ORDERS")
-      allow(data_viewer).to receive(:footer_hint).and_return("FOOTER")
+      allow(data_viewer).to receive_messages(header_box: "HEADER", balance_box: "BALANCE", positions_box: "POSITIONS",
+                                             recent_orders_box: "ORDERS", footer_hint: "FOOTER")
     end
 
     it "renders all components" do
@@ -252,8 +236,7 @@ RSpec.describe DhanScalper::UI::DataViewer do
   describe "#positions_box" do
     context "when positions exist" do
       before do
-        allow(mock_positions).to receive(:empty?).and_return(false)
-        allow(mock_positions).to receive(:map).and_return(mock_position_rows)
+        allow(mock_positions).to receive_messages(empty?: false, map: mock_position_rows)
       end
 
       it "creates positions box with correct title" do
@@ -303,8 +286,7 @@ RSpec.describe DhanScalper::UI::DataViewer do
   describe "#recent_orders_box" do
     context "when orders exist" do
       before do
-        allow(mock_orders).to receive(:empty?).and_return(false)
-        allow(mock_orders).to receive(:map).and_return(mock_order_rows)
+        allow(mock_orders).to receive_messages(empty?: false, map: mock_order_rows)
       end
 
       it "creates orders box with correct title" do
@@ -371,20 +353,19 @@ RSpec.describe DhanScalper::UI::DataViewer do
     end
 
     before do
-      allow(mock_positions).to receive(:empty?).and_return(false)
-      allow(mock_positions).to receive(:map).and_return([mock_position])
+      allow(mock_positions).to receive_messages(empty?: false, map: [mock_position])
     end
 
     it "formats position data correctly" do
       expect(mock_positions).to receive(:map) do |&block|
         expect(block.call(mock_position)).to eq([
-          "NIFTY",
-          "BUY",
-          100,
-          "₹100.0",
-          "₹105.0",
-          "₹500.0"
-        ])
+                                                  "NIFTY",
+                                                  "BUY",
+                                                  100,
+                                                  "₹100.0",
+                                                  "₹105.0",
+                                                  "₹500.0"
+                                                ])
         [["NIFTY", "BUY", "100", "₹100.0", "₹105.0", "₹500.0"]]
       end
       data_viewer.send(:positions_box, 80)
@@ -425,19 +406,18 @@ RSpec.describe DhanScalper::UI::DataViewer do
     end
 
     before do
-      allow(mock_orders).to receive(:empty?).and_return(false)
-      allow(mock_orders).to receive(:map).and_return([mock_order])
+      allow(mock_orders).to receive_messages(empty?: false, map: [mock_order])
     end
 
     it "formats order data correctly" do
       expect(mock_orders).to receive(:map) do |&block|
         expect(block.call(mock_order)).to eq([
-          "ORDER123...",
-          "BUY",
-          100,
-          "₹100.0",
-          "10:30:15"
-        ])
+                                               "ORDER123...",
+                                               "BUY",
+                                               100,
+                                               "₹100.0",
+                                               "10:30:15"
+                                             ])
         [["ORDER123...", "BUY", "100", "₹100.0", "10:30:15"]]
       end
       data_viewer.send(:recent_orders_box, 80)
@@ -505,7 +485,7 @@ RSpec.describe DhanScalper::UI::DataViewer do
   describe "signal handling integration" do
     it "stops rendering when signal received" do
       # Mock signal to set @alive to false
-      allow(Signal).to receive(:trap).with("INT") do |&block|
+      allow(Signal).to receive(:trap).with("INT") do
         data_viewer.instance_variable_set(:@alive, false)
       end
       allow(Signal).to receive(:trap).with("TERM")

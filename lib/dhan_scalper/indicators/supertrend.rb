@@ -44,6 +44,7 @@ module DhanScalper
         lowerband = Array.new(n)
         (0...n).each do |i|
           next if atr[i].nil?
+
           mid = (highs[i].to_f + lows[i].to_f) / 2.0
           upperband[i] = mid + (@multiplier * atr[i])
           lowerband[i] = mid - (@multiplier * atr[i])
@@ -53,8 +54,10 @@ module DhanScalper
         st = Array.new(n)
         (0...n).each do |i|
           next if atr[i].nil?
+
           if i == @period
             next if upperband[i].nil? || lowerband[i].nil?
+
             st[i] = closes[i].to_f <= upperband[i] ? upperband[i] : lowerband[i]
             next
           end
@@ -69,11 +72,11 @@ module DhanScalper
           # Skip if any required values are nil
           next if prev_st.nil? || prev_up.nil? || prev_dn.nil? || cur_up.nil? || cur_dn.nil?
 
-          if prev_st == prev_up
-            st[i] = close <= cur_up ? [cur_up, prev_st].min : cur_dn
-          else
-            st[i] = close >= cur_dn ? [cur_dn, prev_st].max : cur_up
-          end
+          st[i] = if prev_st == prev_up
+                    close <= cur_up ? [cur_up, prev_st].min : cur_dn
+                  else
+                    close >= cur_dn ? [cur_dn, prev_st].max : cur_up
+                  end
         end
 
         st
@@ -81,4 +84,3 @@ module DhanScalper
     end
   end
 end
-

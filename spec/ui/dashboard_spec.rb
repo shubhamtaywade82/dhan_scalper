@@ -14,27 +14,23 @@ RSpec.describe DhanScalper::UI::Dashboard do
     stub_const("Pastel", double)
 
     # Mock state methods
-    allow(mock_state).to receive(:symbols).and_return(["NIFTY", "BANKNIFTY"])
-    allow(mock_state).to receive(:open_positions).and_return([])
-    allow(mock_state).to receive(:closed_positions).and_return([])
-    allow(mock_state).to receive(:total_pnl).and_return(0.0)
-    allow(mock_state).to receive(:session_pnl).and_return(0.0)
+    allow(mock_state).to receive_messages(symbols: %w[NIFTY BANKNIFTY], open_positions: [], closed_positions: [],
+                                          total_pnl: 0.0, session_pnl: 0.0)
 
     # Mock balance provider methods
-    allow(mock_balance_provider).to receive(:available_balance).and_return(100_000.0)
-    allow(mock_balance_provider).to receive(:total_balance).and_return(200_000.0)
-    allow(mock_balance_provider).to receive(:used_balance).and_return(100_000.0)
+    allow(mock_balance_provider).to receive_messages(available_balance: 100_000.0, total_balance: 200_000.0,
+                                                     used_balance: 100_000.0)
 
     # Mock TTY components
     allow(TTY::Box).to receive(:new).and_return(double(render: "Mock Box"))
     allow(TTY::Table).to receive(:new).and_return(double(render: "Mock Table"))
     allow(Pastel).to receive(:new).and_return(double(
-      green: "Mock Green",
-      red: "Mock Red",
-      yellow: "Mock Yellow",
-      blue: "Mock Blue",
-      white: "Mock White"
-    ))
+                                                green: "Mock Green",
+                                                red: "Mock Red",
+                                                yellow: "Mock Yellow",
+                                                blue: "Mock Blue",
+                                                white: "Mock White"
+                                              ))
   end
 
   describe "#initialize" do
@@ -109,8 +105,7 @@ RSpec.describe DhanScalper::UI::Dashboard do
   describe "#render_positions_section" do
     context "when no positions exist" do
       before do
-        allow(mock_state).to receive(:open_positions).and_return([])
-        allow(mock_state).to receive(:closed_positions).and_return([])
+        allow(mock_state).to receive_messages(open_positions: [], closed_positions: [])
       end
 
       it "renders empty positions section" do
@@ -145,8 +140,8 @@ RSpec.describe DhanScalper::UI::Dashboard do
       end
 
       before do
-        allow(mock_state).to receive(:open_positions).and_return([mock_open_position])
-        allow(mock_state).to receive(:closed_positions).and_return([mock_closed_position])
+        allow(mock_state).to receive_messages(open_positions: [mock_open_position],
+                                              closed_positions: [mock_closed_position])
       end
 
       it "renders open positions" do
@@ -157,9 +152,7 @@ RSpec.describe DhanScalper::UI::Dashboard do
       end
 
       it "displays position details" do
-        allow(mock_open_position).to receive(:symbol).and_return("NIFTY")
-        allow(mock_open_position).to receive(:quantity).and_return(100)
-        allow(mock_open_position).to receive(:side).and_return("LONG")
+        allow(mock_open_position).to receive_messages(symbol: "NIFTY", quantity: 100, side: "LONG")
 
         result = dashboard.send(:render_positions_section)
         expect(result).to include("Mock Box")
@@ -169,8 +162,7 @@ RSpec.describe DhanScalper::UI::Dashboard do
 
   describe "#render_pnl_section" do
     it "renders PnL information" do
-      allow(mock_state).to receive(:total_pnl).and_return(1500.0)
-      allow(mock_state).to receive(:session_pnl).and_return(500.0)
+      allow(mock_state).to receive_messages(total_pnl: 1500.0, session_pnl: 500.0)
 
       result = dashboard.send(:render_pnl_section)
 
@@ -179,24 +171,21 @@ RSpec.describe DhanScalper::UI::Dashboard do
     end
 
     it "handles positive PnL" do
-      allow(mock_state).to receive(:total_pnl).and_return(1000.0)
-      allow(mock_state).to receive(:session_pnl).and_return(250.0)
+      allow(mock_state).to receive_messages(total_pnl: 1000.0, session_pnl: 250.0)
 
       result = dashboard.send(:render_pnl_section)
       expect(result).to include("Mock Box")
     end
 
     it "handles negative PnL" do
-      allow(mock_state).to receive(:total_pnl).and_return(-500.0)
-      allow(mock_state).to receive(:session_pnl).and_return(-100.0)
+      allow(mock_state).to receive_messages(total_pnl: -500.0, session_pnl: -100.0)
 
       result = dashboard.send(:render_pnl_section)
       expect(result).to include("Mock Box")
     end
 
     it "handles zero PnL" do
-      allow(mock_state).to receive(:total_pnl).and_return(0.0)
-      allow(mock_state).to receive(:session_pnl).and_return(0.0)
+      allow(mock_state).to receive_messages(total_pnl: 0.0, session_pnl: 0.0)
 
       result = dashboard.send(:render_pnl_section)
       expect(result).to include("Mock Box")
@@ -205,7 +194,7 @@ RSpec.describe DhanScalper::UI::Dashboard do
 
   describe "#render_symbols_section" do
     it "renders symbols information" do
-      allow(mock_state).to receive(:symbols).and_return(["NIFTY", "BANKNIFTY", "GOLD"])
+      allow(mock_state).to receive(:symbols).and_return(%w[NIFTY BANKNIFTY GOLD])
 
       result = dashboard.send(:render_symbols_section)
 
@@ -284,8 +273,8 @@ RSpec.describe DhanScalper::UI::Dashboard do
 
   describe "#create_table" do
     it "creates table with headers and rows" do
-      headers = ["Symbol", "Quantity", "PnL"]
-      rows = [["NIFTY", "100", "500"], ["BANKNIFTY", "50", "250"]]
+      headers = %w[Symbol Quantity PnL]
+      rows = [%w[NIFTY 100 500], %w[BANKNIFTY 50 250]]
 
       result = dashboard.send(:create_table, headers, rows)
 
@@ -293,7 +282,7 @@ RSpec.describe DhanScalper::UI::Dashboard do
     end
 
     it "handles empty rows" do
-      headers = ["Symbol", "Quantity", "PnL"]
+      headers = %w[Symbol Quantity PnL]
       rows = []
 
       result = dashboard.send(:create_table, headers, rows)
@@ -301,8 +290,8 @@ RSpec.describe DhanScalper::UI::Dashboard do
     end
 
     it "handles single row" do
-      headers = ["Symbol", "Quantity", "PnL"]
-      rows = [["NIFTY", "100", "500"]]
+      headers = %w[Symbol Quantity PnL]
+      rows = [%w[NIFTY 100 500]]
 
       result = dashboard.send(:create_table, headers, rows)
       expect(result).to include("Mock Table")

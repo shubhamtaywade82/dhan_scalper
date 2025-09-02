@@ -4,8 +4,8 @@
 # Test script for the new indicators
 # Run with: ruby test_indicators.rb
 
-require 'bundler/setup'
-require_relative 'lib/dhan_scalper'
+require "bundler/setup"
+require_relative "lib/dhan_scalper"
 
 puts "Testing DhanScalper Indicators..."
 puts "=" * 50
@@ -78,7 +78,7 @@ begin
       else
         puts "⚠ Holy Grail returned nil"
       end
-    rescue => e
+    rescue StandardError => e
       puts "✗ Holy Grail failed: #{e.message}"
     end
   else
@@ -91,7 +91,7 @@ begin
     begin
       signal = c1_series.combined_signal
       puts "✓ Combined signal: #{signal}"
-    rescue => e
+    rescue StandardError => e
       puts "✗ Combined signal failed: #{e.message}"
     end
   else
@@ -105,17 +105,16 @@ begin
       trend = DhanScalper::TrendEnhanced.new(seg_idx: "IDX_I", sid_idx: "13")
       decision = trend.decide
       puts "✓ Enhanced Trend decision: #{decision}"
-    rescue => e
+    rescue StandardError => e
       puts "✗ Enhanced Trend failed: #{e.message}"
     end
   else
     puts "⚠ Not enough data for Enhanced Trend"
   end
 
-  puts "\n" + "=" * 50
+  puts "\n#{"=" * 50}"
   puts "Indicator testing completed!"
-
-rescue => e
+rescue StandardError => e
   puts "\n✗ Overall test failed: #{e.message}"
   puts "Backtrace: #{e.backtrace.first(3).join("\n")}"
 end

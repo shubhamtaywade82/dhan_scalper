@@ -27,44 +27,44 @@ RSpec.describe "DhanScalper::VERSION" do
     end
 
     it "has major version number" do
-      major = DhanScalper::VERSION.split('.').first
+      major = DhanScalper::VERSION.split(".").first
       expect(major).to match(/^\d+$/)
       expect(major.to_i).to be >= 0
     end
 
     it "has minor version number" do
-      minor = DhanScalper::VERSION.split('.')[1]
+      minor = DhanScalper::VERSION.split(".")[1]
       expect(minor).to match(/^\d+$/)
       expect(minor.to_i).to be >= 0
     end
 
     it "has patch version number" do
-      patch = DhanScalper::VERSION.split('.')[2]
+      patch = DhanScalper::VERSION.split(".")[2]
       expect(patch).to match(/^\d+$/)
       expect(patch.to_i).to be >= 0
     end
 
     it "does not have more than 3 version components" do
-      components = DhanScalper::VERSION.split('.')
+      components = DhanScalper::VERSION.split(".")
       expect(components.length).to be <= 3
     end
   end
 
   describe "version values" do
     it "has reasonable major version" do
-      major = DhanScalper::VERSION.split('.').first.to_i
+      major = DhanScalper::VERSION.split(".").first.to_i
       expect(major).to be >= 0
       expect(major).to be <= 999
     end
 
     it "has reasonable minor version" do
-      minor = DhanScalper::VERSION.split('.')[1].to_i
+      minor = DhanScalper::VERSION.split(".")[1].to_i
       expect(minor).to be >= 0
       expect(minor).to be <= 999
     end
 
     it "has reasonable patch version" do
-      patch = DhanScalper::VERSION.split('.')[2].to_i
+      patch = DhanScalper::VERSION.split(".")[2].to_i
       expect(patch).to be >= 0
       expect(patch).to be <= 999
     end
@@ -196,14 +196,14 @@ RSpec.describe "DhanScalper::VERSION" do
     end
 
     it "version components are integers" do
-      components = DhanScalper::VERSION.split('.')
+      components = DhanScalper::VERSION.split(".")
       components.each do |component|
         expect(component.to_i.to_s).to eq(component)
       end
     end
 
     it "version follows semantic versioning rules" do
-      major, minor, patch = DhanScalper::VERSION.split('.').map(&:to_i)
+      major, minor, patch = DhanScalper::VERSION.split(".").map(&:to_i)
 
       expect(major).to be >= 0
       expect(minor).to be >= 0
@@ -242,7 +242,7 @@ RSpec.describe "DhanScalper::VERSION" do
     end
 
     it "version is reasonable for production use" do
-      major = DhanScalper::VERSION.split('.').first.to_i
+      major = DhanScalper::VERSION.split(".").first.to_i
       if major == 0
         # Pre-release versions are acceptable
         expect(major).to eq(0)

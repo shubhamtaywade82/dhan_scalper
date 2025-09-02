@@ -12,15 +12,21 @@ gem "rspec", "~> 3.0"
 
 gem "rubocop", "~> 1.21"
 
+gem "rubocop-rake"
+
+gem "rubocop-performance"
+
+gem "rubocop-rspec"
+
 gem "DhanHQ", git: "https://github.com/shubhamtaywade82/dhanhq-client.git", branch: "main"
 
 gem "concurrent-ruby"
 gem "dotenv"
 gem "pastel"
+gem "simplecov", require: false, group: :test
 gem "thor" # CLI
 gem "tty-box"
 gem "tty-reader"
 gem "tty-screen"
 gem "tty-table"
 gem "webmock", group: :test
-gem "simplecov", require: false, group: :test

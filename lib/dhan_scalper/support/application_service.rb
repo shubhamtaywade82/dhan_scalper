@@ -3,9 +3,8 @@
 module DhanScalper
   # Minimal service base: subclasses implement #call
   class ApplicationService
-    def self.call(*args, **kwargs)
-      new(*args, **kwargs).call
+    def self.call(*, **)
+      new(*, **).call
     end
   end
 end
-

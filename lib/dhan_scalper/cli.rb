@@ -42,7 +42,8 @@ module DhanScalper
     option :config, type: :string, aliases: "-c", desc: "Path to scalper.yml"
     option :mode, aliases: "-m", desc: "Trading mode (live/paper)", default: "paper"
     option :quiet, type: :boolean, aliases: "-q", desc: "Run in quiet mode (no TTY dashboard)", default: false
-    option :enhanced, type: :boolean, aliases: "-e", desc: "Use enhanced indicators (Holy Grail, Supertrend)", default: true
+    option :enhanced, type: :boolean, aliases: "-e", desc: "Use enhanced indicators (Holy Grail, Supertrend)",
+                      default: true
     def start
       cfg = Config.load(path: options[:config])
       mode = options[:mode].to_sym
@@ -56,7 +57,8 @@ module DhanScalper
     desc "dryrun", "Run signals only, no orders"
     option :config, type: :string, aliases: "-c"
     option :quiet, type: :boolean, aliases: "-q", desc: "Run in quiet mode (no TTY dashboard)", default: false
-    option :enhanced, type: :boolean, aliases: "-e", desc: "Use enhanced indicators (Holy Grail, Supertrend)", default: true
+    option :enhanced, type: :boolean, aliases: "-e", desc: "Use enhanced indicators (Holy Grail, Supertrend)",
+                      default: true
     def dryrun
       cfg = Config.load(path: options[:config])
       quiet = options[:quiet]
@@ -69,7 +71,8 @@ module DhanScalper
     desc "paper", "Start paper trading (alias for start -m paper)"
     option :config, type: :string, aliases: "-c"
     option :quiet, type: :boolean, aliases: "-q", desc: "Run in quiet mode (no TTY dashboard)", default: false
-    option :enhanced, type: :boolean, aliases: "-e", desc: "Use enhanced indicators (Holy Grail, Supertrend)", default: true
+    option :enhanced, type: :boolean, aliases: "-e", desc: "Use enhanced indicators (Holy Grail, Supertrend)",
+                      default: true
     def paper
       cfg = Config.load(path: options[:config])
       quiet = options[:quiet]
@@ -138,7 +141,7 @@ module DhanScalper
     def clear_data
       VirtualDataManager.new
       # This will clear the data directory
-      FileUtils.rm_rf("data") if Dir.exist?("data")
+      FileUtils.rm_rf("data")
       puts "All virtual data cleared."
     end
 

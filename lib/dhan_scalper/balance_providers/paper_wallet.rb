@@ -6,6 +6,7 @@ module DhanScalper
   module BalanceProviders
     class PaperWallet < Base
       def initialize(starting_balance: 200_000.0)
+        super()
         @starting_balance = starting_balance
         @available = starting_balance
         @used = 0.0
@@ -35,6 +36,8 @@ module DhanScalper
           @used -= amount
         end
 
+        # Ensure used balance doesn't go negative
+        @used = [@used, 0.0].max
         @total = @available + @used
         @total
       end

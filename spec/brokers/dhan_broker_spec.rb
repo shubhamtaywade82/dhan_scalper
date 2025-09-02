@@ -54,8 +54,7 @@ RSpec.describe DhanScalper::Brokers::DhanBroker do
       let(:mock_trade) { double("Trade", avg_price: 50.0) }
 
       before do
-        allow(broker).to receive(:create_order).and_return({ order_id: "ORDER123", error: nil })
-        allow(broker).to receive(:fetch_trade_price).and_return(50.0)
+        allow(broker).to receive_messages(create_order: { order_id: "ORDER123", error: nil }, fetch_trade_price: 50.0)
       end
 
       it "creates buy order with correct parameters" do
@@ -91,8 +90,7 @@ RSpec.describe DhanScalper::Brokers::DhanBroker do
 
     context "when trade price fetch fails" do
       before do
-        allow(broker).to receive(:create_order).and_return({ order_id: "ORDER123", error: nil })
-        allow(broker).to receive(:fetch_trade_price).and_return(nil)
+        allow(broker).to receive_messages(create_order: { order_id: "ORDER123", error: nil }, fetch_trade_price: nil)
       end
 
       it "creates order with zero price" do
@@ -116,8 +114,7 @@ RSpec.describe DhanScalper::Brokers::DhanBroker do
       let(:mock_trade) { double("Trade", avg_price: 55.0) }
 
       before do
-        allow(broker).to receive(:create_order).and_return({ order_id: "ORDER123", error: nil })
-        allow(broker).to receive(:fetch_trade_price).and_return(55.0)
+        allow(broker).to receive_messages(create_order: { order_id: "ORDER123", error: nil }, fetch_trade_price: 55.0)
       end
 
       it "creates sell order with correct parameters" do
@@ -179,8 +176,10 @@ RSpec.describe DhanScalper::Brokers::DhanBroker do
 
     context "when first method fails, second succeeds" do
       before do
-        allow(broker).to receive(:create_order_via_models).and_return({ error: "Failed" })
-        allow(broker).to receive(:create_order_via_direct).and_return({ order_id: "ORDER123", error: nil })
+        allow(broker).to receive_messages(create_order_via_models: { error: "Failed" },
+                                          create_order_via_direct: {
+                                            order_id: "ORDER123", error: nil
+                                          })
       end
 
       it "falls back to second method" do
@@ -192,9 +191,8 @@ RSpec.describe DhanScalper::Brokers::DhanBroker do
 
     context "when first two methods fail, third succeeds" do
       before do
-        allow(broker).to receive(:create_order_via_models).and_return({ error: "Failed" })
-        allow(broker).to receive(:create_order_via_direct).and_return({ error: "Failed" })
-        allow(broker).to receive(:create_order_via_orders).and_return({ order_id: "ORDER123", error: nil })
+        allow(broker).to receive_messages(create_order_via_models: { error: "Failed" },
+                                          create_order_via_direct: { error: "Failed" }, create_order_via_orders: { order_id: "ORDER123", error: nil })
       end
 
       it "falls back to third method" do
@@ -206,9 +204,8 @@ RSpec.describe DhanScalper::Brokers::DhanBroker do
 
     context "when all methods fail" do
       before do
-        allow(broker).to receive(:create_order_via_models).and_return({ error: "Failed" })
-        allow(broker).to receive(:create_order_via_direct).and_return({ error: "Failed" })
-        allow(broker).to receive(:create_order_via_orders).and_return({ error: "Failed" })
+        allow(broker).to receive_messages(create_order_via_models: { error: "Failed" },
+                                          create_order_via_direct: { error: "Failed" }, create_order_via_orders: { error: "Failed" })
       end
 
       it "returns error from all methods" do
@@ -547,8 +544,7 @@ RSpec.describe DhanScalper::Brokers::DhanBroker do
     end
 
     before do
-      allow(broker).to receive(:create_order).and_return({ order_id: "ORDER123", error: nil })
-      allow(broker).to receive(:fetch_trade_price).and_return(50.0)
+      allow(broker).to receive_messages(create_order: { order_id: "ORDER123", error: nil }, fetch_trade_price: 50.0)
     end
 
     it "logs orders to VDM" do
@@ -572,8 +568,7 @@ RSpec.describe DhanScalper::Brokers::DhanBroker do
     end
 
     it "constructs correct order parameters for buy" do
-      allow(broker).to receive(:create_order).and_return({ order_id: "ORDER123", error: nil })
-      allow(broker).to receive(:fetch_trade_price).and_return(50.0)
+      allow(broker).to receive_messages(create_order: { order_id: "ORDER123", error: nil }, fetch_trade_price: 50.0)
 
       broker.buy_market(**order_params)
 
@@ -592,8 +587,7 @@ RSpec.describe DhanScalper::Brokers::DhanBroker do
     end
 
     it "constructs correct order parameters for sell" do
-      allow(broker).to receive(:create_order).and_return({ order_id: "ORDER123", error: nil })
-      allow(broker).to receive(:fetch_trade_price).and_return(50.0)
+      allow(broker).to receive_messages(create_order: { order_id: "ORDER123", error: nil }, fetch_trade_price: 50.0)
 
       broker.sell_market(**order_params)
 

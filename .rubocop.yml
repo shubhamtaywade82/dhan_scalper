@@ -1,4 +1,11 @@
+plugins:
+  - rubocop-performance
+  - rubocop-rake
+  - rubocop-rspec
+
 AllCops:
+  Enabled: true
+  NewCops: enable
   TargetRubyVersion: 3.2
 
 Style/StringLiterals:

@@ -30,12 +30,10 @@ require "dhan_scalper/brokers/paper_broker"
 require "dhan_scalper/brokers/dhan_broker"
 require "dhan_scalper/state"
 require "dhan_scalper/pnl"
-require "dhan_scalper/support/time_zone"
 require "dhan_scalper/ui/dashboard"
 require "dhan_scalper/ui/data_viewer"
 require "dhan_scalper/ui/simple_logger"
 require "ruby-technical-analysis"
 require "technical-analysis"
-
 
 module DhanScalper; end

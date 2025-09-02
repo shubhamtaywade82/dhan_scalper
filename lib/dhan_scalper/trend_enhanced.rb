@@ -32,8 +32,6 @@ module DhanScalper
         hg_1m = c1_series.holy_grail
         hg_3m = c3_series.holy_grail
 
-        pp hg_1m
-        pp hg_3m
         if hg_1m&.proceed? && hg_3m&.proceed?
           # Both timeframes agree on direction
           if hg_1m.bias == :bullish && hg_3m.bias == :bullish &&

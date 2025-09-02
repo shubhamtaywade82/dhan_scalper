@@ -200,10 +200,10 @@ module DhanScalper
       end
     end
 
-    def total_pnl_preview(_trader, net)
-      # Optionally add open traders' session_pnl + the candidate net
-      # For simplicity return net here; the stopping condition uses realized session sums
-      net
+    # Preview the global session PnL if a trader were to close with `net` profit/loss.
+    # Adds the candidate net to the currently realised session PnL tracked in state.
+    def session_pnl_preview(_trader, net)
+      @state.pnl + net
     end
 
     def sym_cfg(sym) = @cfg.fetch("SYMBOLS").fetch(sym)

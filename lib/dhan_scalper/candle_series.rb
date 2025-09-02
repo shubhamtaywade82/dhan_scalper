@@ -185,13 +185,13 @@ class CandleSeries
   def self.load_from_dhan_intraday(seg:, sid:, interval:, symbol:)
     target_interval = interval.to_i
 
-    # If 3-minute is requested, fetch 1-minute and aggregate locally to 3-minute
-    if target_interval == 3
-      puts "[DEBUG] Aggregating 1m candles to 3m for sid=#{sid}"
+    # If 5-minute is requested, fetch 1-minute and aggregate locally to 5-minute
+    if target_interval == 5
+      puts "[DEBUG] Aggregating 1m candles to 5m for sid=#{sid}"
       rows_1m = fetch_historical_data(seg, sid, "1")
       base = new(symbol: "#{symbol}_1m", interval: "1")
       base.load_from_raw(rows_1m)
-      return base.resample_to_minutes(3, symbol: symbol)
+      return base.resample_to_minutes(5, symbol: symbol)
     end
 
     rows = fetch_historical_data(seg, sid, target_interval.to_s)
@@ -218,6 +218,7 @@ class CandleSeries
       to_date: to_date
     }
 
+    attempts = 0
     begin
       puts "[DEBUG] Calling DhanHQ::Models::HistoricalData.intraday with params: #{params}"
       result = DhanHQ::Models::HistoricalData.intraday(params)
@@ -226,6 +227,11 @@ class CandleSeries
       return result if result && (result.is_a?(Array) || result.is_a?(Hash))
     rescue StandardError => e
       puts "Warning: Failed to fetch historical data: #{e.message}"
+      if e.message =~ /DH-904|Too many requests/i && attempts < 2
+        attempts += 1
+        sleep attempts
+        retry
+      end
     end
 
     # Return empty array if method fails

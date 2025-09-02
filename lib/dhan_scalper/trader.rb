@@ -21,40 +21,39 @@ module DhanScalper
     end
 
     def decide
-      # Load candle series for 1-minute and 3-minute intervals
+      # Load candle series for 1-minute and 5-minute intervals
       c1_series = CandleSeries.load_from_dhan_intraday(
         seg: @seg_idx,
         sid: @sid_idx,
         interval: "1",
         symbol: "INDEX"
       )
-      c3_series = CandleSeries.load_from_dhan_intraday(
+      c5_series = CandleSeries.load_from_dhan_intraday(
         seg: @seg_idx,
         sid: @sid_idx,
-        interval: "3",
+        interval: "5",
         symbol: "INDEX"
       )
+      return :none if c1_series.nil? || c5_series.nil?
+      return :none if c1_series.candles.size < 50 || c5_series.candles.size < 50
 
-      return :none if c1_series.nil? || c3_series.nil?
-      return :none if c1_series.candles.size < 50 || c3_series.candles.size < 50
-
-      # Primary: Supertrend across 1m and 3m
+      # Primary: Supertrend across 1m and 5m
       begin
         st1 = DhanScalper::Indicators::Supertrend.new(series: c1_series).call
-        st3 = DhanScalper::Indicators::Supertrend.new(series: c3_series).call
+        st5 = DhanScalper::Indicators::Supertrend.new(series: c5_series).call
 
-        if st1 && st1.any? && st3 && st3.any?
+        if st1 && st1.any? && st5 && st5.any?
           last_close_1 = c1_series.closes.last.to_f
-          last_close_3 = c3_series.closes.last.to_f
+          last_close_5 = c5_series.closes.last.to_f
           last_st_1 = st1.compact.last
-          last_st_3 = st3.compact.last
+          last_st_5 = st5.compact.last
 
-          if last_st_1 && last_st_3
+          if last_st_1 && last_st_5
             puts "[DEBUG] Supertrend 1m: st=#{last_st_1.round(2)} close=#{last_close_1.round(2)}"
-            puts "[DEBUG] Supertrend 3m: st=#{last_st_3.round(2)} close=#{last_close_3.round(2)}"
+            puts "[DEBUG] Supertrend 5m: st=#{last_st_5.round(2)} close=#{last_close_5.round(2)}"
 
-            up   = (last_close_1 > last_st_1) && (last_close_3 > last_st_3)
-            down = (last_close_1 < last_st_1) && (last_close_3 < last_st_3)
+            up   = (last_close_1 > last_st_1) && (last_close_5 > last_st_5)
+            down = (last_close_1 < last_st_1) && (last_close_5 < last_st_5)
             return :long_ce if up
             return :long_pe if down
           end
@@ -67,12 +66,12 @@ module DhanScalper
       e1f = c1_series.ema(20).last
       e1s = c1_series.ema(50).last
       r1 = c1_series.rsi(14).last
-      e3f = c3_series.ema(20).last
-      e3s = c3_series.ema(50).last
-      r3 = c3_series.rsi(14).last
+      e5f = c5_series.ema(20).last
+      e5s = c5_series.ema(50).last
+      r5 = c5_series.rsi(14).last
 
-      up   = e1f > e1s && r1 > 55 && e3f > e3s && r3 > 52
-      down = e1f < e1s && r1 < 45 && e3f < e3s && r3 < 48
+      up   = e1f > e1s && r1 > 55 && e5f > e5s && r5 > 52
+      down = e1f < e1s && r1 < 45 && e5f < e5s && r5 < 48
       return :long_ce if up
       return :long_pe if down
 

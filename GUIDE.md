@@ -76,8 +76,8 @@ bundle exec exe/dhan_scalper start -c config/scalper.yml -m paper -e -q
 With enhanced indicators (`-e` flag), you'll get:
 - **Holy Grail Analysis**: Bias, momentum, ADX, RSI, MACD
 - **Supertrend Signals**: Bullish/bearish trend signals
-- **Multi-timeframe Analysis**: 1m and 3m combined signals
-- **Dynamic ADX Thresholds**: 10 for 1m, 15 for 3m/5m timeframes
+- **Multi-timeframe Analysis**: 1m and 5m combined signals
+- **Dynamic ADX Thresholds**: 10 for 1m, 15 for 5m timeframe
 
 ## ⚠️ **Important Notes:**
 

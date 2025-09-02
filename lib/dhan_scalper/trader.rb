@@ -42,8 +42,6 @@ module DhanScalper
       begin
         st1 = DhanScalper::Indicators::Supertrend.new(series: c1_series).call
         st3 = DhanScalper::Indicators::Supertrend.new(series: c3_series).call
-        pp st1
-        pp st3
 
         if st1 && st1.any? && st3 && st3.any?
           last_close_1 = c1_series.closes.last.to_f

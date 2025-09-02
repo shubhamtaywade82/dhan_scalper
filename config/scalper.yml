@@ -14,6 +14,7 @@ global:
   log_level: "INFO"
   use_multi_timeframe: false # true for 1m+3m/5m, false for 1m only
   secondary_timeframe: 5 # 3 or 5 minutes for secondary timeframe
+  min_premium_price: 1.0 # minimum premium price to avoid very low value orders
 
 paper:
   starting_balance: 200000 # paper wallet starting cash

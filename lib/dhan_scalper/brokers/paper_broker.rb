@@ -8,12 +8,12 @@ module DhanScalper
         @balance_provider = balance_provider
       end
 
-      def buy_market(segment:, security_id:, quantity:)
+      def buy_market(segment:, security_id:, quantity:, charge_per_order: 20)
         price = DhanScalper::TickCache.ltp(segment, security_id).to_f
         return nil unless price&.positive?
 
-        # Calculate total cost
-        total_cost = price * quantity
+        # Calculate total cost including charges
+        total_cost = (price * quantity) + charge_per_order
 
         # Check if we can afford this position
         if @balance_provider && @balance_provider.available_balance < total_cost
@@ -21,7 +21,7 @@ module DhanScalper
           return nil
         end
 
-        # Debit the balance
+        # Debit the balance (including charges)
         @balance_provider&.update_balance(total_cost, type: :debit)
 
         order = Order.new("P-#{Time.now.to_f}", security_id, "BUY", quantity, price)
@@ -42,14 +42,14 @@ module DhanScalper
         order
       end
 
-      def sell_market(segment:, security_id:, quantity:)
+      def sell_market(segment:, security_id:, quantity:, charge_per_order: 20)
         price = DhanScalper::TickCache.ltp(segment, security_id).to_f
         return nil unless price&.positive?
 
-        # Calculate total proceeds
-        total_proceeds = price * quantity
+        # Calculate total proceeds minus charges
+        total_proceeds = (price * quantity) - charge_per_order
 
-        # Credit the balance
+        # Credit the balance (after deducting charges)
         @balance_provider&.update_balance(total_proceeds, type: :credit)
 
         order = Order.new("P-#{Time.now.to_f}", security_id, "SELL", quantity, price)

@@ -128,6 +128,13 @@ module DhanScalper
       ltp = TickCache.ltp(@cfg["seg_opt"], sid)&.to_f
       return unless ltp&.positive?
 
+      # Check minimum premium price
+      min_premium = @gl.instance_variable_get(:@cfg)&.dig("global", "min_premium_price") || 1.0
+      if ltp < min_premium
+        puts "[#{@symbol}] SKIP: Premium too low (#{ltp.round(2)} < #{min_premium})"
+        return
+      end
+
       # Use QuantitySizer for allocation-based sizing
       if @quantity_sizer
         qty_lots = @quantity_sizer.calculate_lots(@symbol, ltp)
@@ -143,11 +150,15 @@ module DhanScalper
       broker = @gl.instance_variable_get(:@broker)
       return unless broker
 
+      # Get charge per order from global config
+      charge_per_order = @gl.instance_variable_get(:@cfg)&.dig("global", "charge_per_order") || 20
+
       # Place order through broker
       order = broker.buy_market(
         segment: @cfg["seg_opt"],
         security_id: sid,
-        quantity: qty
+        quantity: qty,
+        charge_per_order: charge_per_order
       )
 
       return puts("[#{@symbol}] ORDER FAIL: Could not place order") unless order
@@ -194,7 +205,8 @@ module DhanScalper
       sell_order = broker.sell_market(
         segment: @cfg["seg_opt"],
         security_id: @open.sid,
-        quantity: qty
+        quantity: qty,
+        charge_per_order: charge_per_order
       )
 
       return puts("[#{@symbol}] EXIT FAIL: Could not place sell order") unless sell_order
@@ -202,6 +214,11 @@ module DhanScalper
       net = PnL.net(entry: @open.entry, ltp: ltp, lot_size: @cfg["lot_size"], qty_lots: @open.qty_lots,
                     charge_per_order: charge_per_order)
       @session_pnl += net
+      
+      # Update balance provider with realized PnL
+      balance_provider = @gl.instance_variable_get(:@balance_provider)
+      balance_provider&.add_realized_pnl(net)
+      
       puts "\n[#{@symbol}] EXIT #{reason} sid=#{@open.sid} ltp≈#{ltp.round(2)} net=#{net.round(0)} session=#{@session_pnl.round(0)}"
       publish_closed!(reason: reason, exit_price: ltp, net: net)
       @open = nil

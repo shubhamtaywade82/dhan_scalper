@@ -84,9 +84,9 @@ module DhanScalper
           style: { border: { fg: :bright_green } }
         ) do
           [
-            "Available: #{@pastel.green("₹#{balance[:available].round(2)}")}",
-            "Used: #{@pastel.red("₹#{balance[:used].round(2)}")}",
-            "Total: #{@pastel.blue("₹#{balance[:total].round(2)}")}"
+            "Available: #{@pastel.green("₹#{balance[:available].to_f.round(2)}")}",
+            "Used: #{@pastel.red("₹#{balance[:used].to_f.round(2)}")}",
+            "Total: #{@pastel.blue("₹#{balance[:total].to_f.round(2)}")}"
           ].join("\n")
         end
       end
@@ -106,14 +106,15 @@ module DhanScalper
 
         headers = ["Symbol", "Side", "Qty", "Entry", "Current", "P&L"]
         rows = positions.map do |pos|
-          pnl_color = pos[:pnl] >= 0 ? :green : :red
+          pnl_value = pos[:pnl].to_f
+          pnl_color = pnl_value >= 0 ? :green : :red
           [
             pos[:symbol] || pos[:security_id],
             @pastel.send(pos[:side] == "BUY" ? :green : :red, pos[:side]),
             pos[:quantity],
-            "₹#{pos[:entry_price].round(2)}",
-            "₹#{pos[:current_price].round(2)}",
-            @pastel.send(pnl_color, "₹#{pos[:pnl]&.round(2)}")
+            "₹#{pos[:entry_price].to_f.round(2)}",
+            "₹#{pos[:current_price].to_f.round(2)}",
+            @pastel.send(pnl_color, "₹#{pnl_value.round(2)}")
           ]
         end
 
@@ -146,7 +147,7 @@ module DhanScalper
             "#{order[:id][0..8]}...",
             @pastel.send(order[:side] == "BUY" ? :green : :red, order[:side]),
             order[:quantity],
-            "₹#{order[:avg_price].round(2)}",
+            "₹#{order[:avg_price].to_f.round(2)}",
             Time.parse(order[:timestamp]).strftime("%H:%M:%S")
           ]
         end

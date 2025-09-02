@@ -59,6 +59,9 @@ module DhanScalper
 
       def add_realized_pnl(pnl)
         @realized_pnl += pnl
+        # Update available balance to reflect the PnL change
+        @available += pnl
+        # Update total balance to reflect realized PnL
         @total = @starting_balance + @realized_pnl
         @total
       end

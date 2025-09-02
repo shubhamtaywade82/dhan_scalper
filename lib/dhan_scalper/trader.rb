@@ -215,8 +215,9 @@ module DhanScalper
                     charge_per_order: charge_per_order)
       @session_pnl += net
 
-      # NOTE: Balance is already updated by the broker through the sell order
-      # No need to call add_realized_pnl here as it would double-count the PnL
+      # Update balance provider with realized PnL
+      balance_provider = @gl.instance_variable_get(:@balance_provider)
+      balance_provider&.add_realized_pnl(net)
 
       puts "\n[#{@symbol}] EXIT #{reason} sid=#{@open.sid} ltp≈#{ltp.round(2)} net=#{net.round(0)} session=#{@session_pnl.round(0)}"
       publish_closed!(reason: reason, exit_price: ltp, net: net)

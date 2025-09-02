@@ -5,6 +5,7 @@ require "yaml"
 require "DhanHQ"
 
 require_relative "virtual_data_manager"
+require_relative "ui/live_dashboard"
 
 module DhanScalper
   class CLI < Thor
@@ -27,6 +28,9 @@ module DhanScalper
       puts "  reset-balance   - Reset virtual balance to initial amount"
       puts "  clear-data      - Clear all virtual data (orders, positions, balance)"
       puts "  dashboard       - Show real-time virtual data dashboard"
+      puts "  live            - Show live LTP dashboard with WebSocket feed"
+      puts "                    Use --simple for basic terminal output"
+      puts "  config          - Show DhanHQ configuration status"
       puts "  help            - Show this help message"
       puts
       puts "Options:"
@@ -149,6 +153,65 @@ module DhanScalper
     def dashboard
       require_relative "ui/data_viewer"
       UI::DataViewer.new.run
+    end
+
+    desc "live", "Show live LTP dashboard with WebSocket feed"
+    option :interval, type: :numeric, default: 0.5, desc: "Refresh interval (seconds)"
+    option :instruments, type: :string,
+                        desc: "Comma-separated list of instruments (format: name:segment:security_id)"
+    option :simple, type: :boolean, default: false, desc: "Use simple dashboard (no full screen control)"
+    def live
+      # Ensure global WebSocket cleanup is registered
+      DhanScalper::Services::WebSocketCleanup.register_cleanup
+
+      instruments = parse_instruments(options[:instruments])
+
+      if options[:simple]
+        require_relative "ui/simple_dashboard"
+        UI::SimpleDashboard.new(refresh: options[:interval], instruments: instruments).run
+      else
+        UI::LiveDashboard.new(refresh: options[:interval], instruments: instruments).run
+      end
+    end
+
+    desc "config", "Show DhanHQ configuration status"
+    def config
+      require_relative "services/dhanhq_config"
+      status = DhanScalper::Services::DhanHQConfig.status
+
+      puts "DhanHQ Configuration Status:"
+      puts "============================"
+      puts "Client ID: #{status[:client_id_present] ? "✓ Set" : "✗ Missing"}"
+      puts "Access Token: #{status[:access_token_present] ? "✓ Set" : "✗ Missing"}"
+      puts "Base URL: #{status[:base_url]}"
+      puts "Log Level: #{status[:log_level]}"
+      puts "Configured: #{status[:configured] ? "✓ Yes" : "✗ No"}"
+
+      return if status[:configured]
+
+      puts "\nTo configure, create a .env file with:"
+      puts DhanScalper::Services::DhanHQConfig.sample_env
+    end
+
+    private
+
+    def parse_instruments(instruments_str)
+      return nil unless instruments_str
+
+      instruments_str.split(",").map do |instrument|
+        parts = instrument.strip.split(":")
+        unless parts.length == 3
+          raise ArgumentError, "Invalid instrument format: #{instrument}. Expected: name:segment:security_id"
+        end
+
+        { name: parts[0], segment: parts[1], security_id: parts[2] }
+      end
+    end
+
+    desc "version", "Show version"
+    map %w[-v --version] => :version
+    def version
+      puts DhanScalper::VERSION
     end
   end
 end

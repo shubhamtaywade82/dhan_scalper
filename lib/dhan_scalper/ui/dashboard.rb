@@ -25,12 +25,10 @@ module DhanScalper
 
       def run
         trap_signals
-        enter_alternate_screen
         hide_cursor
         render_loop
       ensure
         show_cursor
-        exit_alternate_screen
       end
 
       private
@@ -54,9 +52,8 @@ module DhanScalper
       end
 
       def clear_fullscreen!
-        # Clear and go home. Using both avoids odd terminals.
-        print @cur.clear_screen
-        print @cur.move_to(0, 0)
+        # Simple clear screen
+        system("clear") || system("cls")
       end
 
       def trap_signals
@@ -153,7 +150,7 @@ module DhanScalper
           header: ["Symbol","Side","SID","Lots","Entry","LTP","Net₹","Best₹"],
           rows: rows
         )
-        content = rows.empty? ? "No open positions" : table.render(:unicode, multiline: true)
+        content = rows.empty? ? "No open positions" : table.render(:ascii, resize: true)
         boxed(" Open Positions ", content)
       end
 
@@ -170,7 +167,7 @@ module DhanScalper
           header: ["Symbol","Side","Reason","Entry","Exit","Net₹"],
           rows: rows
         )
-        content = rows.empty? ? "No recent closed positions" : table.render(:unicode, multiline: true)
+        content = rows.empty? ? "No recent closed positions" : table.render(:ascii, resize: true)
         boxed(" Closed Positions (10) ", content)
       end
 
@@ -180,8 +177,8 @@ module DhanScalper
         idx_tbl = TTY::Table.new(header: ["Index", "Key", "LTP", "Age"], rows: idx_rows)
         opt_tbl = TTY::Table.new(header: ["Option", "Key", "LTP", "Age"], rows: opt_rows)
 
-        out  = boxed(" Index Subscriptions ", idx_rows.empty? ? "None" : idx_tbl.render(:unicode, multiline: true))
-        out << boxed(" Option Subscriptions ", opt_rows.empty? ? "None" : opt_tbl.render(:unicode, multiline: true))
+        out  = boxed(" Index Subscriptions ", idx_rows.empty? ? "None" : idx_tbl.render(:ascii, resize: true))
+        out << boxed(" Option Subscriptions ", opt_rows.empty? ? "None" : opt_tbl.render(:ascii, resize: true))
         out
       end
 

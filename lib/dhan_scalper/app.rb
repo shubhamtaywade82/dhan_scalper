@@ -52,6 +52,9 @@ module DhanScalper
       # DhanHQ.logger.level = (@cfg.dig("global", "log_level") == "DEBUG" ? Logger::DEBUG : Logger::INFO)
       DhanHQ.logger.level = Logger::WARN      # or Logger::ERROR
       DhanHQ.logger = Logger.new($stderr)      # never stdout
+
+      # Ensure global WebSocket cleanup is registered
+      DhanScalper::Services::WebSocketCleanup.register_cleanup
       # Try to create WebSocket client with fallback methods
       ws = create_websocket_client
       return unless ws
@@ -77,7 +80,10 @@ module DhanScalper
       if @quiet
         simple_logger = UI::SimpleLogger.new(@state, balance_provider: @balance_provider)
       else
-        ui = Thread.new { UI::Dashboard.new(@state, balance_provider: @balance_provider).run }
+        # Small delay to ensure terminal is ready before starting dashboard
+        sleep 0.3
+        # Use the new live dashboard that shows both trading data and live LTPs
+        ui = Thread.new { UI::LiveDashboard.new(state: @state, balance_provider: @balance_provider).run }
       end
 
       puts "[READY] Symbols: #{@cfg["SYMBOLS"]&.keys&.join(", ") || "None"}"
@@ -111,7 +117,7 @@ module DhanScalper
               s = sym_cfg(sym)
               if @enhanced
                 use_multi_timeframe = @cfg.dig("global", "use_multi_timeframe") != false
-                secondary_timeframe = @cfg.dig("global", "secondary_timeframe") || 3
+                secondary_timeframe = @cfg.dig("global", "secondary_timeframe") || 5
                 dir = DhanScalper::TrendEnhanced.new(
                   seg_idx: s["seg_idx"],
                   sid_idx: s["idx_sid"],

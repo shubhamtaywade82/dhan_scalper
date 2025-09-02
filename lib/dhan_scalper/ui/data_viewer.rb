@@ -111,7 +111,7 @@ module DhanScalper
           [
             pos[:symbol] || pos[:security_id],
             @pastel.send(pos[:side] == "BUY" ? :green : :red, pos[:side]),
-            pos[:quantity],
+            pos[:quantity].to_s,
             "₹#{pos[:entry_price].to_f.round(2)}",
             "₹#{pos[:current_price].to_f.round(2)}",
             @pastel.send(pnl_color, "₹#{pnl_value.round(2)}")
@@ -146,7 +146,7 @@ module DhanScalper
           [
             "#{order[:id][0..8]}...",
             @pastel.send(order[:side] == "BUY" ? :green : :red, order[:side]),
-            order[:quantity],
+            order[:quantity].to_s,
             "₹#{order[:avg_price].to_f.round(2)}",
             Time.parse(order[:timestamp]).strftime("%H:%M:%S")
           ]

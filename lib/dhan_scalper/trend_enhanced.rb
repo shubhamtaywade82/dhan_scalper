@@ -4,11 +4,13 @@ require_relative "candle_series"
 
 module DhanScalper
   class TrendEnhanced
-    def initialize(seg_idx:, sid_idx:, use_multi_timeframe: true, secondary_timeframe: 3)
+    VALID_INTERVALS = [1, 5, 15, 25, 60].freeze
+
+    def initialize(seg_idx:, sid_idx:, use_multi_timeframe: true, secondary_timeframe: 5)
       @seg_idx = seg_idx
       @sid_idx = sid_idx
       @use_multi_timeframe = use_multi_timeframe
-      @secondary_timeframe = secondary_timeframe
+      @secondary_timeframe = validate_interval(secondary_timeframe)
     end
 
     def decide
@@ -168,6 +170,16 @@ module DhanScalper
 
       puts "[TrendEnhanced] No clear signal"
       :none
+    end
+
+    private
+
+    def validate_interval(interval)
+      unless VALID_INTERVALS.include?(interval)
+        puts "[WARNING] Invalid interval #{interval}, falling back to 5 minutes. Valid intervals: #{VALID_INTERVALS.join(', ')}"
+        return 5
+      end
+      interval
     end
   end
 end

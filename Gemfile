@@ -26,6 +26,8 @@ gem "pastel"
 gem "simplecov", require: false, group: :test
 gem "thor" # CLI
 gem "tty-box"
+gem "tty-cursor"
+gem "tty-font"
 gem "tty-reader"
 gem "tty-screen"
 gem "tty-table"

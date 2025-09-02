@@ -121,8 +121,8 @@ module DhanScalper
         "NIFTY"
       when "23"
         "BANKNIFTY"
-      when "25"
-        "FINNIFTY"
+      when "51"
+        "SENSEX"
       else
         # Default fallback - you might want to make this configurable
         "NIFTY"

@@ -33,7 +33,14 @@ require "dhan_scalper/pnl"
 require "dhan_scalper/ui/dashboard"
 require "dhan_scalper/ui/data_viewer"
 require "dhan_scalper/ui/simple_logger"
+require "dhan_scalper/ui/live_dashboard"
+require "dhan_scalper/services/dhanhq_config"
+require "dhan_scalper/services/market_feed"
+require "dhan_scalper/services/websocket_cleanup"
 require "ruby-technical-analysis"
 require "technical-analysis"
 
-module DhanScalper; end
+module DhanScalper
+  # Register global WebSocket cleanup handlers
+  Services::WebSocketCleanup.register_cleanup
+end

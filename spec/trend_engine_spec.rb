@@ -34,9 +34,9 @@ RSpec.describe TrendEngine do
           .with(seg: "IDX_I", sid: "13", interval: "1", symbol: "INDEX_1m")
           .and_return(mock_candle_series)
 
-        # Mock 3-minute data (aggregated from 1m internally)
+        # Mock 5-minute data (aggregated from 1m internally)
         allow(CandleSeries).to receive(:load_from_dhan_intraday)
-          .with(seg: "IDX_I", sid: "13", interval: "3", symbol: "INDEX_3m")
+          .with(seg: "IDX_I", sid: "13", interval: "5", symbol: "INDEX_5m")
           .and_return(mock_candle_series)
       end
 
@@ -82,7 +82,7 @@ RSpec.describe TrendEngine do
         end
       end
 
-      context "when 1-minute trend is bullish but 3-minute is neutral" do
+      context "when 1-minute trend is bullish but 5-minute is neutral" do
         before do
           # Mock mixed indicators
           allow(mock_candle_series).to receive(:ema).with(20).and_return(double(last: 102.0))
@@ -90,13 +90,13 @@ RSpec.describe TrendEngine do
           allow(mock_candle_series).to receive(:rsi).with(14).and_return(double(last: 60.0))
         end
 
-        it "returns :none when 3-minute trend doesn't confirm" do
+        it "returns :none when 5-minute trend doesn't confirm" do
           result = trend_engine.decide
           expect(result).to eq(:none)
         end
       end
 
-      context "when 3-minute trend is bearish but 1-minute is neutral" do
+      context "when 5-minute trend is bearish but 1-minute is neutral" do
         before do
           # Mock mixed indicators
           allow(mock_candle_series).to receive(:ema).with(20).and_return(double(last: 100.0))
@@ -120,7 +120,7 @@ RSpec.describe TrendEngine do
           .and_return(short_series)
 
         allow(CandleSeries).to receive(:load_from_dhan_intraday)
-          .with(seg: "IDX_I", sid: "13", interval: "3", symbol: "INDEX_3m")
+          .with(seg: "IDX_I", sid: "13", interval: "5", symbol: "INDEX_5m")
           .and_return(mock_candle_series)
       end
 
@@ -130,7 +130,7 @@ RSpec.describe TrendEngine do
       end
     end
 
-    context "when 3-minute data is insufficient" do
+    context "when 5-minute data is insufficient" do
       before do
         short_series = double(candles: Array.new(30, double)) # Less than 50 candles
 
@@ -139,11 +139,11 @@ RSpec.describe TrendEngine do
           .and_return(mock_candle_series)
 
         allow(CandleSeries).to receive(:load_from_dhan_intraday)
-          .with(seg: "IDX_I", sid: "13", interval: "3", symbol: "INDEX_3m")
+          .with(seg: "IDX_I", sid: "13", interval: "5", symbol: "INDEX_5m")
           .and_return(short_series)
       end
 
-      it "returns :none when 3-minute data is insufficient" do
+      it "returns :none when 5-minute data is insufficient" do
         result = trend_engine.decide
         expect(result).to eq(:none)
       end
@@ -215,7 +215,7 @@ RSpec.describe TrendEngine do
       allow(mock_candle_series).to receive(:ema).with(50).and_return(double(last: 98.0))
       allow(mock_candle_series).to receive(:rsi).with(14).and_return(double(last: 60.0))
 
-      # 3-minute also bullish
+      # 5-minute also bullish
       allow(mock_candle_series).to receive(:ema).with(20).and_return(double(last: 101.0))
       allow(mock_candle_series).to receive(:ema).with(50).and_return(double(last: 99.0))
       allow(mock_candle_series).to receive(:rsi).with(14).and_return(double(last: 55.0))
@@ -230,7 +230,7 @@ RSpec.describe TrendEngine do
       allow(mock_candle_series).to receive(:ema).with(50).and_return(double(last: 102.0))
       allow(mock_candle_series).to receive(:rsi).with(14).and_return(double(last: 40.0))
 
-      # 3-minute also bearish
+      # 5-minute also bearish
       allow(mock_candle_series).to receive(:ema).with(20).and_return(double(last: 99.0))
       allow(mock_candle_series).to receive(:ema).with(50).and_return(double(last: 101.0))
       allow(mock_candle_series).to receive(:rsi).with(14).and_return(double(last: 48.0))

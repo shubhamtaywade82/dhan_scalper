@@ -2,7 +2,7 @@
 
 require "spec_helper"
 
-RSpec.describe TimeZone do
+RSpec.describe DhanScalper::TimeZone do
   let(:time_zone) { described_class }
 
   describe ".parse" do

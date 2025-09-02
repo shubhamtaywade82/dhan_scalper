@@ -4,7 +4,7 @@ A production-ready automated options scalping bot built on DhanHQ v2 API with al
 
 ## Features
 
-- **Automated Options Scalping**: EMA(20/50) + RSI(14) strategy on 1m and 3m timeframes
+- **Automated Options Scalping**: EMA(20/50) + RSI(14) strategy on 1m and 5m timeframes
 - **Allocation-Based Sizing**: Dynamic position sizing based on available balance and risk parameters
 - **Real-Time Dashboard**: TTY-based live monitoring with balance, positions, and P&L
 - **Paper & Live Trading**: Switch between paper trading and live execution
@@ -143,7 +143,7 @@ bundle exec exe/dhan_scalper dashboard
 The bot uses a multi-timeframe trend-following strategy:
 
 1. **1-minute timeframe**: EMA(20) vs EMA(50) + RSI(14)
-2. **3-minute timeframe**: EMA(20) vs EMA(50) + RSI(14)
+2. **5-minute timeframe**: EMA(20) vs EMA(50) + RSI(14)
 
 **Entry Conditions:**
 - **Long CE**: Both timeframes bullish (EMA fast > EMA slow, RSI > threshold)

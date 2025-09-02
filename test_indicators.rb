@@ -18,22 +18,22 @@ begin
 
   # Test 2: Load historical data
   puts "\n2. Loading historical data..."
-  c1_series = DhanScalper::CandleSeries.load_from_dhan_intraday(
+  c1_series = CandleSeries.load_from_dhan_intraday(
     seg: "IDX_I",
     sid: "13",
     interval: "1",
     symbol: "NIFTY_1M"
   )
 
-  c3_series = DhanScalper::CandleSeries.load_from_dhan_intraday(
+  c5_series = CandleSeries.load_from_dhan_intraday(
     seg: "IDX_I",
     sid: "13",
-    interval: "3",
-    symbol: "NIFTY_3M"
+    interval: "5",
+    symbol: "NIFTY_5M"
   )
 
   puts "✓ 1M series loaded: #{c1_series.candles.size} candles"
-  puts "✓ 3M series loaded: #{c3_series.candles.size} candles"
+  puts "✓ 5M series loaded: #{c5_series.candles.size} candles"
 
   # Test 3: Basic indicators
   puts "\n3. Testing basic indicators..."
@@ -100,7 +100,7 @@ begin
 
   # Test 7: Enhanced Trend
   puts "\n7. Testing Enhanced Trend..."
-  if c1_series.candles.size >= 100 && c3_series.candles.size >= 100
+  if c1_series.candles.size >= 100 && c5_series.candles.size >= 100
     begin
       trend = DhanScalper::TrendEnhanced.new(seg_idx: "IDX_I", sid_idx: "13")
       decision = trend.decide

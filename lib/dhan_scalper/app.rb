@@ -28,21 +28,23 @@ module DhanScalper
 
       # Initialize balance provider
       @balance_provider = if @mode == :paper
-        starting_balance = cfg.dig("paper", "starting_balance") || 200_000.0
-        BalanceProviders::PaperWallet.new(starting_balance: starting_balance)
-      else
-        BalanceProviders::LiveBalance.new
-      end
+                            starting_balance = cfg.dig("paper", "starting_balance") || 200_000.0
+                            BalanceProviders::PaperWallet.new(starting_balance: starting_balance)
+                          else
+                            BalanceProviders::LiveBalance.new
+                          end
 
       # Initialize quantity sizer
       @quantity_sizer = QuantitySizer.new(cfg, @balance_provider)
 
       # Initialize broker
       @broker = if @mode == :paper
-        Brokers::PaperBroker.new(virtual_data_manager: @virtual_data_manager, balance_provider: @balance_provider)
-      else
-        Brokers::DhanBroker.new(virtual_data_manager: @virtual_data_manager, balance_provider: @balance_provider)
-      end
+                  Brokers::PaperBroker.new(virtual_data_manager: @virtual_data_manager,
+                                           balance_provider: @balance_provider)
+                else
+                  Brokers::DhanBroker.new(virtual_data_manager: @virtual_data_manager,
+                                          balance_provider: @balance_provider)
+                end
     end
 
     def start
@@ -71,10 +73,10 @@ module DhanScalper
       # UI loop (only if not in quiet mode)
       ui = nil
       simple_logger = nil
-      unless @quiet
-        ui = Thread.new { UI::Dashboard.new(@state, balance_provider: @balance_provider).run }
-      else
+      if @quiet
         simple_logger = UI::SimpleLogger.new(@state, balance_provider: @balance_provider)
+      else
+        ui = Thread.new { UI::Dashboard.new(@state, balance_provider: @balance_provider).run }
       end
 
       puts "[READY] Symbols: #{@cfg["SYMBOLS"]&.keys&.join(", ") || "None"}"
@@ -124,6 +126,7 @@ module DhanScalper
 
           traders.each_value do |t|
             next unless t # Skip nil traders
+
             t.manage_open(tp_pct: tp_pct, sl_pct: sl_pct, trail_pct: tr_pct, charge_per_order: charge)
           end
           gpn = traders.values.compact.sum(&:session_pnl)
@@ -184,13 +187,11 @@ module DhanScalper
       ]
 
       methods_to_try.each do |method|
-        begin
-          result = method.call
-          return result if result && result.respond_to?(:on)
-        rescue StandardError => e
-          puts "Warning: Failed to create WebSocket client via method: #{e.message}"
-          next
-        end
+        result = method.call
+        return result if result && result.respond_to?(:on)
+      rescue StandardError => e
+        puts "Warning: Failed to create WebSocket client via method: #{e.message}"
+        next
       end
 
       puts "Error: Failed to create WebSocket client via all available methods"
@@ -207,12 +208,10 @@ module DhanScalper
       ]
 
       methods_to_try.each do |method|
-        begin
-          method.call
-          return
-        rescue StandardError
-          next
-        end
+        method.call
+        return
+      rescue StandardError
+        next
       end
     end
 
@@ -281,6 +280,13 @@ module DhanScalper
       return @cfg["SYMBOLS"].find { |_, v| v["idx_sid"].to_s == t[:security_id].to_s }&.first if t[:segment] == "IDX_I"
 
       "OPT"
+    end
+
+    # Delegate session_target to state
+    public
+
+    def session_target
+      @state.session_target
     end
   end
 end

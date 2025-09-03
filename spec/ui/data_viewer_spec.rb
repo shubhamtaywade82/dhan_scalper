@@ -482,7 +482,7 @@ RSpec.describe DhanScalper::UI::DataViewer do
     end
   end
 
-  describe "signal handling integration" do
+  describe "signal handling integration", :slow do
     it "stops rendering when signal received" do
       # Mock signal to set @alive to false
       allow(Signal).to receive(:trap).with("INT") do
@@ -495,7 +495,7 @@ RSpec.describe DhanScalper::UI::DataViewer do
     end
   end
 
-  describe "cursor management integration" do
+  describe "cursor management integration", :slow do
     it "hides cursor before rendering" do
       expect(data_viewer).to receive(:hide_cursor)
       data_viewer.run
@@ -507,7 +507,7 @@ RSpec.describe DhanScalper::UI::DataViewer do
     end
   end
 
-  describe "data refresh integration" do
+  describe "data refresh integration", :slow do
     it "refreshes data on each render" do
       expect(mock_vdm).to receive(:get_balance)
       expect(mock_vdm).to receive(:get_positions)

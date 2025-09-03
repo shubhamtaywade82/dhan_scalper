@@ -349,7 +349,7 @@ RSpec.describe DhanScalper::UI::Dashboard do
     end
   end
 
-  describe "performance considerations" do
+  describe "performance considerations", :slow do
     it "caches TTY components" do
       # First render should create components
       dashboard.render
@@ -363,7 +363,7 @@ RSpec.describe DhanScalper::UI::Dashboard do
     end
   end
 
-  describe "integration with state" do
+  describe "integration with state", :slow do
     it "reflects state changes in real-time" do
       # Initial state
       allow(mock_state).to receive(:total_pnl).and_return(0.0)

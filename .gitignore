@@ -11,5 +11,5 @@
 .rspec_status
 .env
 dhan_scalper-*.*.*.gem
-data/orders.csv
-data/positions.csv
+data/
+data/

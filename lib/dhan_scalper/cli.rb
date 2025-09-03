@@ -63,27 +63,31 @@ module DhanScalper
     option :quiet, type: :boolean, aliases: "-q", desc: "Run in quiet mode (no TTY dashboard)", default: false
     option :enhanced, type: :boolean, aliases: "-e", desc: "Use enhanced indicators (Holy Grail, Supertrend)",
                       default: true
+    option :once, type: :boolean, aliases: "-o", desc: "Run analysis once and exit (no continuous loop)", default: false
     def dryrun
       cfg = Config.load(path: options[:config])
       quiet = options[:quiet]
       enhanced = options[:enhanced]
+      once = options[:once]
       DhanHQ.configure_with_env
       DhanHQ.logger.level = Logger::INFO
-      App.new(cfg, dryrun: true, quiet: quiet, enhanced: enhanced).start
+      DryrunApp.new(cfg, quiet: quiet, enhanced: enhanced, once: once).start
     end
 
-    desc "paper", "Start paper trading (alias for start -m paper)"
+    desc "paper", "Start paper trading with WebSocket position tracking"
     option :config, type: :string, aliases: "-c"
     option :quiet, type: :boolean, aliases: "-q", desc: "Run in quiet mode (no TTY dashboard)", default: false
     option :enhanced, type: :boolean, aliases: "-e", desc: "Use enhanced indicators (Holy Grail, Supertrend)",
                       default: true
+    option :timeout, type: :numeric, aliases: "-t", desc: "Auto-exit after specified minutes (default: no timeout)"
     def paper
       cfg = Config.load(path: options[:config])
       quiet = options[:quiet]
       enhanced = options[:enhanced]
+      timeout_minutes = options[:timeout]
       DhanHQ.configure_with_env
       DhanHQ.logger.level = (cfg.dig("global", "log_level") || "INFO").upcase == "DEBUG" ? Logger::DEBUG : Logger::INFO
-      App.new(cfg, mode: :paper, quiet: quiet, enhanced: enhanced).start
+      PaperApp.new(cfg, quiet: quiet, enhanced: enhanced, timeout_minutes: timeout_minutes).start
     end
 
     desc "orders", "View virtual orders"
@@ -117,7 +121,8 @@ module DhanScalper
       puts "\nVirtual Positions:"
       puts "=" * 80
       positions.each_with_index do |pos, index|
-        puts "#{index + 1}. #{pos[:side]} #{pos[:quantity]} #{pos[:symbol] || pos[:security_id]} | Entry: #{pos[:entry_price]} | Current: #{pos[:current_price]} | P&L: #{pos[:pnl]&.round(2)}"
+        pnl_value = pos[:pnl].is_a?(Numeric) ? pos[:pnl].round(2) : pos[:pnl]
+        puts "#{index + 1}. #{pos[:side]} #{pos[:quantity]} #{pos[:symbol] || pos[:security_id]} | Entry: #{pos[:entry_price]} | Current: #{pos[:current_price]} | P&L: #{pnl_value}"
       end
     end
 

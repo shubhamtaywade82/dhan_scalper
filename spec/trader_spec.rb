@@ -351,7 +351,7 @@ RSpec.describe DhanScalper::Trader do
       end
     end
 
-    context "when technical invalidation occurs" do
+    context "when technical invalidation occurs", :slow do
       before do
         allow(DhanScalper::Trend).to receive(:new).and_return(double(decide: :long_pe))
       end

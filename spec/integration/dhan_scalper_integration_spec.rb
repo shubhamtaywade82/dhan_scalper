@@ -3,7 +3,7 @@
 require "spec_helper"
 require "dhan_scalper"
 
-RSpec.describe "DhanScalper Integration" do
+RSpec.describe "DhanScalper Integration", :slow do
   let(:config) do
     {
       "global" => {

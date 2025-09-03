@@ -384,7 +384,7 @@ RSpec.describe DhanScalper::CsvMaster do
     end
   end
 
-  describe "performance considerations" do
+  describe "performance considerations", :slow do
     it "loads data only once per instance" do
       expect(csv_master).to receive(:download_csv).once.and_return(mock_csv_data)
       allow(csv_master).to receive(:parse_csv).and_return([{ "test" => "data" }])

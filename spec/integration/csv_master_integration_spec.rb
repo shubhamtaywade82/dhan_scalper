@@ -3,7 +3,7 @@
 require "spec_helper"
 require "dhan_scalper"
 
-RSpec.describe "CSV Master Integration with Real Data" do
+RSpec.describe "CSV Master Integration with Real Data", :slow do
   let(:csv_master) { DhanScalper::CsvMaster.new }
 
   before(:all) do

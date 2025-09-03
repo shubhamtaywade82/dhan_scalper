@@ -1,0 +1,55 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "optparse"
+
+# Test runner script for DhanScalper
+# Usage:
+#   bin/test                    # Run fast tests only
+#   bin/test --slow            # Run all tests including slow ones
+#   bin/test --integration     # Run integration tests only
+#   bin/test --unit           # Run unit tests only
+
+options = {}
+OptionParser.new do |opts|
+  opts.banner = "Usage: bin/test [options]"
+
+  opts.on("--slow", "Include slow tests") do
+    options[:slow] = true
+  end
+
+  opts.on("--integration", "Run integration tests only") do
+    options[:integration] = true
+  end
+
+  opts.on("--unit", "Run unit tests only") do
+    options[:unit] = true
+  end
+
+  opts.on("--help", "Show this help message") do
+    puts opts
+    exit
+  end
+end.parse!
+
+# Set environment variables based on options
+ENV["RUN_SLOW_TESTS"] = "1" if options[:slow]
+
+# Build RSpec command
+rspec_cmd = ["bundle", "exec", "rspec"]
+
+if options[:integration]
+  rspec_cmd << "spec/integration/"
+elsif options[:unit]
+  rspec_cmd << "spec/" << "--exclude-pattern" << "spec/integration/**/*_spec.rb"
+end
+
+# Add format options
+rspec_cmd += ["--format", "progress", "--color"]
+
+puts "Running tests with options: #{options.inspect}"
+puts "Command: #{rspec_cmd.join(' ')}"
+puts
+
+# Execute the command
+exec(*rspec_cmd)

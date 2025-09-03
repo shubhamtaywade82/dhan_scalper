@@ -15,24 +15,40 @@ module DhanScalper
 
     def decide
       # Load 1-minute candle series
-      c1_series = CandleSeries.load_from_dhan_intraday(
-        seg: @seg_idx,
-        sid: @sid_idx,
-        interval: "1",
-        symbol: "INDEX"
-      )
+      begin
+        c1_series = CandleSeries.load_from_dhan_intraday(
+          seg: @seg_idx,
+          sid: @sid_idx,
+          interval: "1",
+          symbol: "INDEX"
+        )
 
-      return :none if c1_series.nil? || c1_series.candles.size < 100
+        if c1_series.nil? || c1_series.candles.nil? || c1_series.candles.size < 100
+          puts "[TrendEnhanced] Insufficient 1m data: #{c1_series&.candles&.size || 0} candles"
+          return :none
+        end
+      rescue StandardError => e
+        puts "[TrendEnhanced] Failed to load 1m data: #{e.message}"
+        return :none
+      end
 
       # Load secondary timeframe if multi-timeframe is enabled
       if @use_multi_timeframe
-        c_series = CandleSeries.load_from_dhan_intraday(
-          seg: @seg_idx,
-          sid: @sid_idx,
-          interval: @secondary_timeframe.to_s,
-          symbol: "INDEX"
-        )
-        return :none if c_series.nil? || c_series.candles.size < 100
+        begin
+          c_series = CandleSeries.load_from_dhan_intraday(
+            seg: @seg_idx,
+            sid: @sid_idx,
+            interval: @secondary_timeframe.to_s,
+            symbol: "INDEX"
+          )
+          if c_series.nil? || c_series.candles.nil? || c_series.candles.size < 100
+            puts "[TrendEnhanced] Insufficient #{@secondary_timeframe}m data: #{c_series&.candles&.size || 0} candles"
+            return :none
+          end
+        rescue StandardError => e
+          puts "[TrendEnhanced] Failed to load #{@secondary_timeframe}m data: #{e.message}"
+          return :none
+        end
       end
 
       # Try Holy Grail indicator first (more comprehensive)

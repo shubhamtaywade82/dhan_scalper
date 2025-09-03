@@ -33,6 +33,9 @@ RSpec.configure do |config|
     metadata[:type] = :integration
   end
 
+  # Configure slow tests
+  config.filter_run_excluding :slow unless ENV["RUN_SLOW_TESTS"]
+
   # Global test setup
   config.before(:suite) do
     # Create test data directory

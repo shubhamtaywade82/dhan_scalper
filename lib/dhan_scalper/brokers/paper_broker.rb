@@ -61,6 +61,50 @@ module DhanScalper
 
         order
       end
+
+      # Generic place_order method for compatibility with PaperApp
+      def place_order(symbol:, instrument_id:, side:, quantity:, price:, order_type: "MARKET")
+        # Determine segment based on instrument type (simplified)
+        segment = "NSE_FO" # Default to options segment
+
+        # Calculate total cost including charges
+        charge_per_order = 20
+        total_cost = (price * quantity) + charge_per_order
+
+        # Check if we can afford this position
+        if @balance_provider && @balance_provider.available_balance < total_cost
+          return {
+            success: false,
+            error: "Insufficient balance. Required: ₹#{total_cost.round(2)}, Available: ₹#{@balance_provider.available_balance.round(2)}"
+          }
+        end
+
+        # Debit the balance (including charges)
+        @balance_provider&.update_balance(total_cost, type: :debit)
+
+        order_id = "P-#{Time.now.to_f}"
+        order = Order.new(order_id, instrument_id, side, quantity, price)
+
+        # Log the order and create a virtual position
+        log_order(order)
+
+        # Create and log position
+        position = DhanScalper::Position.new(
+          security_id: instrument_id,
+          side: side,
+          entry_price: price,
+          quantity: quantity,
+          current_price: price
+        )
+        log_position(position)
+
+        {
+          success: true,
+          order_id: order_id,
+          order: order,
+          position: position
+        }
+      end
     end
   end
 end

@@ -2,12 +2,15 @@
 
 require "json"
 require "logger"
-require "set"
 
 module DhanScalper
   module Services
     class WebSocketManager
       attr_reader :connected, :subscribed_instruments, :connection
+
+      def connected?
+        @connected
+      end
 
       def initialize(logger: nil)
         @logger = logger || Logger.new($stdout)
@@ -76,10 +79,10 @@ module DhanScalper
         begin
           # Determine segment based on instrument type
           segment = case instrument_type
-                     when "INDEX" then "IDX_I"
-                     when "OPTION" then "NSE_FNO"
-                     else "NSE_EQ"
-                   end
+                    when "INDEX" then "IDX_I"
+                    when "OPTION" then "NSE_FNO"
+                    else "NSE_EQ"
+                    end
 
           @connection.subscribe_one(segment: segment, security_id: instrument_id)
           @subscribed_instruments.add(instrument_id)
@@ -101,14 +104,12 @@ module DhanScalper
         begin
           # For DhanHQ, we need to determine the segment
           # This is a simplified approach - in practice, you'd track segments per instrument
-          segments = ["IDX_I", "NSE_FO", "NSE_EQ"]
+          segments = %w[IDX_I NSE_FO NSE_EQ]
 
           segments.each do |segment|
-            begin
-              @connection.unsubscribe_one(segment: segment, security_id: instrument_id)
-            rescue StandardError
-              # Ignore errors for segments where the instrument isn't subscribed
-            end
+            @connection.unsubscribe_one(segment: segment, security_id: instrument_id)
+          rescue StandardError
+            # Ignore errors for segments where the instrument isn't subscribed
           end
 
           @subscribed_instruments.delete(instrument_id)
@@ -146,26 +147,22 @@ module DhanScalper
       private
 
       def handle_tick_data(tick_data)
-        begin
-          price_data = {
-            instrument_id: tick_data[:security_id],
-            symbol: tick_data[:symbol],
-            last_price: tick_data[:ltp].to_f,
-            open: tick_data[:open].to_f,
-            high: tick_data[:high].to_f,
-            low: tick_data[:low].to_f,
-            close: tick_data[:close].to_f,
-            volume: tick_data[:volume].to_i,
-            timestamp: tick_data[:ts]
-          }
+        price_data = {
+          instrument_id: tick_data[:security_id],
+          symbol: tick_data[:symbol],
+          last_price: tick_data[:ltp].to_f,
+          open: tick_data[:open].to_f,
+          high: tick_data[:high].to_f,
+          low: tick_data[:low].to_f,
+          close: tick_data[:close].to_f,
+          volume: tick_data[:volume].to_i,
+          timestamp: tick_data[:ts]
+        }
 
-          @message_handlers[:price_update]&.call(price_data)
-        rescue StandardError => e
-          @logger.error "[WebSocket] Error handling tick data: #{e.message}"
-        end
+        @message_handlers[:price_update]&.call(price_data)
+      rescue StandardError => e
+        @logger.error "[WebSocket] Error handling tick data: #{e.message}"
       end
-
-
     end
   end
 end

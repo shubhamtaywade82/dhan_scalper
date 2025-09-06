@@ -14,6 +14,10 @@ require_relative "balance_providers/live_balance"
 require_relative "brokers/paper_broker"
 require_relative "brokers/dhan_broker"
 require_relative "tick_cache"
+require_relative "services/websocket_manager"
+require_relative "services/rate_limiter"
+require_relative "services/order_monitor"
+require_relative "services/position_reconciler"
 
 module DhanScalper
   class HeadlessApp
@@ -35,12 +39,14 @@ module DhanScalper
       @logger.info "[HEADLESS] Starting DhanScalper Options Buying Bot"
       @logger.info "[MODE] #{@mode.upcase} trading"
       @logger.info "[BALANCE] ₹#{@balance_provider.available_balance.round(0)}"
-      @logger.info "[SYMBOLS] #{@config['SYMBOLS']&.keys&.join(', ') || 'None'}"
+      @logger.info "[SYMBOLS] #{@config["SYMBOLS"]&.keys&.join(", ") || "None"}"
 
       # Start background services
       start_websocket_connection
       @risk_manager.start
       @ohlc_fetcher.start
+      @order_monitor&.start
+      @position_reconciler&.start
 
       # Main trading loop
       main_trading_loop
@@ -63,18 +69,24 @@ module DhanScalper
                             BalanceProviders::LiveBalance.new
                           end
 
+      # Initialize position tracker first
+      @position_tracker = EnhancedPositionTracker.new(mode: @mode, logger: @logger)
+
       # Initialize quantity sizer
       @quantity_sizer = QuantitySizer.new(@config, @balance_provider)
 
       # Initialize broker
       @broker = if @mode == :paper
-                  Brokers::PaperBroker.new(balance_provider: @balance_provider)
+                  Brokers::PaperBroker.new(
+                    virtual_data_manager: @position_tracker,
+                    balance_provider: @balance_provider
+                  )
                 else
-                  Brokers::DhanBroker.new(balance_provider: @balance_provider)
+                  Brokers::DhanBroker.new(
+                    virtual_data_manager: @position_tracker,
+                    balance_provider: @balance_provider
+                  )
                 end
-
-      # Initialize position tracker
-      @position_tracker = EnhancedPositionTracker.new(mode: @mode, logger: @logger)
 
       # Initialize risk manager
       @risk_manager = RiskManager.new(@config, @position_tracker, @broker, logger: @logger)
@@ -84,6 +96,23 @@ module DhanScalper
 
       # Initialize session reporter
       @session_reporter = SessionReporter.new(logger: @logger)
+
+      # Initialize WebSocket manager
+      @websocket_manager = Services::WebSocketManager.new(logger: @logger)
+
+      # Initialize order monitor for live trading
+      @order_monitor = if @mode == :live
+                         Services::OrderMonitor.new(@broker, @position_tracker, logger: @logger)
+                       else
+                         nil
+                       end
+
+      # Initialize position reconciler for live trading
+      @position_reconciler = if @mode == :live
+                               Services::PositionReconciler.new(@broker, @position_tracker, logger: @logger)
+                             else
+                               nil
+                             end
 
       # Trading parameters
       @decision_interval = @config.dig("global", "decision_interval") || 10
@@ -106,13 +135,13 @@ module DhanScalper
         DhanHQ.logger.level = Logger::WARN
         DhanHQ.logger = Logger.new($stderr)
 
-        # Create WebSocket client
-        @ws_client = create_websocket_client
-        return unless @ws_client
+        # Connect using WebSocketManager
+        @websocket_manager.connect
 
         # Setup tick handler
-        @ws_client.on(:tick) do |tick|
-          TickCache.put(tick)
+        @websocket_manager.on_price_update do |price_data|
+          TickCache.put(price_data)
+          @position_tracker.update_all_positions
         end
 
         # Subscribe to index instruments
@@ -125,44 +154,26 @@ module DhanScalper
       end
     end
 
-    def create_websocket_client
-      methods_to_try = [
-        -> { DhanHQ::WS::Client.new(mode: :quote).start },
-        -> { DhanHQ::WebSocket::Client.new(mode: :quote).start },
-        -> { DhanHQ::WebSocket.new(mode: :quote).start },
-        -> { DhanHQ::WS.new(mode: :quote).start }
-      ]
-
-      methods_to_try.each do |method|
-        result = method.call
-        return result if result.respond_to?(:on)
-      rescue StandardError => e
-        @logger.warn "[WEBSOCKET] Failed to create client via method: #{e.message}"
-        next
-      end
-
-      @logger.error "[WEBSOCKET] Failed to create WebSocket client via all methods"
-      nil
-    end
-
     def subscribe_to_instruments
       @config["SYMBOLS"]&.each_key do |symbol|
         symbol_config = @config["SYMBOLS"][symbol]
         next unless symbol_config["idx_sid"]
 
-        @ws_client.subscribe_one(
-          segment: symbol_config["seg_idx"],
-          security_id: symbol_config["idx_sid"]
+        @websocket_manager.subscribe_to_instrument(
+          symbol_config["idx_sid"],
+          "INDEX"
         )
 
-        @logger.info "[WEBSOCKET] Subscribed to #{symbol} (#{symbol_config['seg_idx']}:#{symbol_config['idx_sid']})"
+        @logger.info "[WEBSOCKET] Subscribed to #{symbol} (#{symbol_config["seg_idx"]}:#{symbol_config["idx_sid"]})"
       end
     end
 
     def main_trading_loop
       last_decision = Time.at(0)
       last_status_update = Time.at(0)
+      last_websocket_check = Time.at(0)
       status_interval = 30 # Update status every 30 seconds
+      websocket_check_interval = 60 # Check WebSocket every 60 seconds
 
       @logger.info "[TRADING] Starting main trading loop (interval: #{@decision_interval}s)"
 
@@ -172,6 +183,12 @@ module DhanScalper
           if should_stop_trading?
             @logger.info "[TRADING] Session limits reached, stopping trading"
             break
+          end
+
+          # Check WebSocket connection periodically
+          if Time.now - last_websocket_check >= websocket_check_interval
+            last_websocket_check = Time.now
+            check_websocket_connection
           end
 
           # Check for new signals
@@ -193,9 +210,46 @@ module DhanScalper
         rescue StandardError => e
           @logger.error "[TRADING] Error in main loop: #{e.message}"
           @logger.error "[TRADING] Backtrace: #{e.backtrace.first(3).join("\n")}"
-          sleep(5)
+
+          # Implement exponential backoff for errors
+          error_count ||= 0
+          error_count += 1
+          sleep_duration = [5 * error_count, 60].min # Max 60 seconds
+
+          @logger.warn "[TRADING] Sleeping for #{sleep_duration}s due to error (count: #{error_count})"
+          sleep(sleep_duration)
+
+          # Reset error count after successful operation
+          error_count = 0 if error_count > 10
         end
       end
+    end
+
+    def check_websocket_connection
+      return if @websocket_manager&.connected?
+
+      @logger.warn "[WEBSOCKET] Connection lost, attempting reconnection..."
+      begin
+        start_websocket_connection
+        @logger.info "[WEBSOCKET] Reconnection successful"
+      rescue StandardError => e
+        @logger.error "[WEBSOCKET] Reconnection failed: #{e.message}"
+      end
+    end
+
+    def market_open?
+      current_time = Time.now
+      current_date = current_time.to_date
+
+      # Check if it's a weekend
+      return false if current_time.saturday? || current_time.sunday?
+
+      # Market hours: 9:15 AM to 3:30 PM IST
+      market_start = Time.new(current_date.year, current_date.month, current_date.day, 9, 15, 0)
+      market_end = Time.new(current_date.year, current_date.month, current_date.day, 15, 30, 0)
+
+      # Check if current time is within market hours
+      current_time.between?(market_start, market_end)
     end
 
     def should_stop_trading?
@@ -217,8 +271,18 @@ module DhanScalper
     end
 
     def check_for_signals
+      # Check if market is open before trading
+      unless market_open?
+        @logger.debug "[SIGNAL] Market is closed, skipping signal check"
+        return
+      end
+
       @config["SYMBOLS"]&.each_key do |symbol|
-        next if @position_tracker.get_open_positions.size >= @max_positions
+        # Check if we've reached maximum positions
+        if @position_tracker.get_open_positions.size >= @max_positions
+          @logger.debug "[SIGNAL] Max positions reached (#{@max_positions}), skipping #{symbol}"
+          next
+        end
 
         signal = get_holy_grail_signal(symbol)
         next if signal == :none || signal.to_s.include?("weak")
@@ -287,17 +351,35 @@ module DhanScalper
         )
 
         if order
-          @position_tracker.add_position(
-            symbol, option_type, option_data[:strike], option_data[:expiry],
-            security_id, quantity, order.avg_price
-          )
+          if @mode == :paper
+            # Paper trading - add position immediately
+            @position_tracker.add_position(
+              symbol, option_type, option_data[:strike], option_data[:expiry],
+              security_id, quantity, order.avg_price
+            )
 
-          @logger.info "[TRADE] #{symbol} #{option_type} #{option_data[:strike]} " \
-                       "#{quantity} lots @ ₹#{order.avg_price} (Spot: #{current_spot})"
+            @logger.info "[TRADE] #{symbol} #{option_type} #{option_data[:strike]} " \
+                         "#{quantity} lots @ ₹#{order.avg_price} (Spot: #{current_spot})"
+          else
+            # Live trading - add to order monitor
+            order_data = {
+              symbol: symbol,
+              option_type: option_type,
+              strike: option_data[:strike],
+              expiry: option_data[:expiry],
+              security_id: security_id,
+              quantity: quantity,
+              price: order.avg_price
+            }
+            @order_monitor.add_pending_order(order.order_id, order_data)
+
+            @logger.info "[TRADE] #{symbol} #{option_type} #{option_data[:strike]} " \
+                         "#{quantity} lots @ ₹#{order.avg_price} (Spot: #{current_spot}) " \
+                         "(Order ID: #{order.order_id})"
+          end
         else
           @logger.error "[TRADE] Failed to place order for #{symbol} #{option_type}"
         end
-
       rescue StandardError => e
         @logger.error "[TRADE] Error executing trade for #{symbol}: #{e.message}"
       end
@@ -325,12 +407,12 @@ module DhanScalper
                    "Trades: #{stats[:total_trades]}, " \
                    "Balance: ₹#{@balance_provider.available_balance.round(0)}"
 
-      if open_positions.any?
-        open_positions.each do |position|
-          @logger.info "[POSITION] #{position[:symbol]} #{position[:option_type]} " \
-                       "#{position[:strike]} P&L: ₹#{position[:pnl].round(2)} " \
-                       "(#{position[:pnl_percentage].round(1)}%)"
-        end
+      return unless open_positions.any?
+
+      open_positions.each do |position|
+        @logger.info "[POSITION] #{position[:symbol]} #{position[:option_type]} " \
+                     "#{position[:strike]} P&L: ₹#{position[:pnl].round(2)} " \
+                     "(#{position[:pnl_percentage].round(1)}%)"
       end
     end
 
@@ -340,10 +422,12 @@ module DhanScalper
       # Stop background services
       @risk_manager&.stop
       @ohlc_fetcher&.stop
+      @order_monitor&.stop
+      @position_reconciler&.stop
 
       # Disconnect WebSocket
       begin
-        @ws_client&.disconnect!
+        @websocket_manager&.disconnect
       rescue StandardError
         nil
       end
@@ -365,4 +449,3 @@ module DhanScalper
     end
   end
 end
-

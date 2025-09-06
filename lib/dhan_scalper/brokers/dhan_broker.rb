@@ -169,6 +169,28 @@ module DhanScalper
         puts "[DEBUG] All methods failed to fetch trade price"
         nil
       end
+
+      def get_order_status(order_id)
+        return nil unless order_id
+
+        begin
+          # Get order details from DhanHQ
+          order_details = DhanHQ::Order.get_order_details(order_id)
+          return nil unless order_details&.dig("data")
+
+          order_data = order_details["data"]
+          {
+            status: order_data["orderStatus"],
+            fill_price: order_data["averagePrice"],
+            fill_quantity: order_data["filledQuantity"],
+            reason: order_data["rejectionReason"],
+            order_id: order_id
+          }
+        rescue StandardError => e
+          @logger&.error "[DHAN_BROKER] Error fetching order status for #{order_id}: #{e.message}"
+          nil
+        end
+      end
     end
   end
 end

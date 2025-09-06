@@ -109,11 +109,9 @@ module DhanScalper
     end
 
     def update_all_positions
-      @positions.each do |key, position|
+      @positions.each do |_key, position|
         current_price = get_current_price(position.security_id)
-        if current_price&.positive?
-          position.update_price(current_price)
-        end
+        position.update_price(current_price) if current_price&.positive?
       end
     end
 
@@ -164,7 +162,7 @@ module DhanScalper
     end
 
     def find_position_key_by_security_id(security_id)
-      @positions.find { |key, position| position.security_id == security_id }&.first
+      @positions.find { |_key, position| position.security_id == security_id }&.first
     end
 
     def get_current_price(security_id)
@@ -307,4 +305,3 @@ module DhanScalper
     end
   end
 end
-

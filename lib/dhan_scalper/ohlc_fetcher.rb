@@ -12,7 +12,6 @@ module DhanScalper
       @running = false
       @fetch_thread = nil
       @candle_cache = Concurrent::Map.new
-      @rate_limiter = Services::RateLimiter.new
       @fetch_interval = config.dig("global", "ohlc_fetch_interval") || 180 # 3 minutes
       @last_fetch_times = Concurrent::Map.new
     end
@@ -59,8 +58,8 @@ module DhanScalper
     def cache_stats
       {
         total_cached: @candle_cache.size,
-        symbols: @candle_cache.keys.map { |k| k.split('_').first }.uniq,
-        timeframes: @candle_cache.keys.map { |k| k.split('_').last }.uniq,
+        symbols: @candle_cache.keys.map { |k| k.split("_").first }.uniq,
+        timeframes: @candle_cache.keys.map { |k| k.split("_").last }.uniq,
         last_fetch_times: @last_fetch_times.to_h
       }
     end
@@ -90,7 +89,7 @@ module DhanScalper
         fetch_symbol_data(symbol)
 
         # Rate limiting between symbols
-        @rate_limiter.wait_if_needed("ohlc_fetch")
+        Services::RateLimiter.wait_if_needed("ohlc_fetch")
         sleep(1) # Additional delay between symbols
       end
     end
@@ -101,7 +100,7 @@ module DhanScalper
 
       begin
         # Fetch data for multiple timeframes
-        timeframes = @config.dig("global", "ohlc_timeframes") || ["1", "5"]
+        timeframes = @config.dig("global", "ohlc_timeframes") || %w[1 5]
 
         timeframes.each do |interval|
           fetch_timeframe_data(symbol, symbol_config, interval)
@@ -112,7 +111,6 @@ module DhanScalper
 
         @last_fetch_times[symbol] = Time.now
         @logger.debug "[OHLC] Successfully fetched data for #{symbol}"
-
       rescue StandardError => e
         @logger.error "[OHLC] Error fetching data for #{symbol}: #{e.message}"
       end
@@ -135,7 +133,6 @@ module DhanScalper
         else
           @logger.warn "[OHLC] No candle data received for #{symbol} #{interval}m"
         end
-
       rescue StandardError => e
         @logger.error "[OHLC] Error fetching #{symbol} #{interval}m data: #{e.message}"
       end
@@ -167,4 +164,3 @@ module DhanScalper
     end
   end
 end
-

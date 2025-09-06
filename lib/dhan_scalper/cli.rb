@@ -21,6 +21,7 @@ module DhanScalper
       puts "Available commands:"
       puts "  start           - Start the scalper (Ctrl+C to stop)"
       puts "  paper           - Start paper trading (alias for start -m paper)"
+      puts "  headless        - Run headless options buying bot (no TTY dashboard)"
       puts "  dryrun          - Run signals only, no orders"
       puts "  orders          - View virtual orders"
       puts "  positions       - View virtual positions"
@@ -30,6 +31,7 @@ module DhanScalper
       puts "  dashboard       - Show real-time virtual data dashboard"
       puts "  live            - Show live LTP dashboard with WebSocket feed"
       puts "                    Use --simple for basic terminal output"
+      puts "  report          - Generate session report from CSV data"
       puts "  config          - Show DhanHQ configuration status"
       puts "  help            - Show this help message"
       puts
@@ -176,6 +178,51 @@ module DhanScalper
         UI::SimpleDashboard.new(refresh: options[:interval], instruments: instruments).run
       else
         UI::LiveDashboard.new(refresh: options[:interval], instruments: instruments).run
+      end
+    end
+
+    desc "headless", "Run headless options buying bot (no TTY dashboard)"
+    option :config, type: :string, aliases: "-c", desc: "Path to scalper.yml", default: "config/scalper.yml"
+    option :mode, aliases: "-m", desc: "Trading mode (live/paper)", default: "paper"
+    def headless
+      require_relative "headless_app"
+
+      cfg = Config.load(path: options[:config])
+      mode = options[:mode].to_sym
+
+      app = HeadlessApp.new(cfg, mode: mode)
+      app.start
+    end
+
+    desc "report", "Generate session report from CSV data"
+    option :session_id, type: :string, desc: "Specific session ID to report on"
+    option :latest, type: :boolean, aliases: "-l", desc: "Generate report for latest session", default: false
+    def report
+      require_relative "session_reporter"
+
+      reporter = SessionReporter.new
+
+      if options[:session_id]
+        reporter.generate_report_for_session(options[:session_id])
+      elsif options[:latest]
+        reporter.generate_latest_session_report
+      else
+        # List available sessions
+        sessions = reporter.list_available_sessions
+
+        if sessions.empty?
+          puts "No session reports found in data/ directory"
+          return
+        end
+
+        puts "Available Sessions:"
+        puts "=" * 50
+        sessions.each do |session|
+          puts "#{session[:session_id]} - #{session[:created]} (#{session[:size]} bytes)"
+        end
+        puts
+        puts "Use: dhan_scalper report --session-id SESSION_ID"
+        puts "Or: dhan_scalper report --latest"
       end
     end
 

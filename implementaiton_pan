@@ -1,0 +1,492 @@
+I'll analyze the DhanScalper codebase and create a comprehensive plan to implement the specified options buying bot. Let me first examine the current structure and then create a detailed implementation plan.
+
+
+[4 tools called]
+
+Now let me create a comprehensive implementation plan for the DhanScalper Options Buying Bot based on the specification and current codebase analysis.
+
+
+[1 tool called]
+
+# DhanScalper Options Buying Bot - Implementation Plan
+
+Based on my analysis of the current DhanScalper codebase and the specification requirements, here's a comprehensive implementation plan for the headless options buying bot:
+
+## Current System Analysis
+
+The existing DhanScalper has a solid foundation with:
+- ✅ WebSocket integration with DhanHQ
+- ✅ Paper and Live trading modes
+- ✅ Holy Grail indicator implementation
+- ✅ Position tracking and risk management
+- ✅ CSV data persistence
+- ✅ Balance providers and brokers
+
+However, it needs significant modifications to meet the headless options buying bot specification.
+
+## Implementation Plan
+
+### 1. **Headless Architecture Design**
+
+**New Components Needed:**
+- `HeadlessApp` - Main orchestrator without TTY dashboard
+- `OHLCFetcher` - Periodic OHLC data fetcher (every 3 minutes)
+- `RiskManager` - Dedicated risk management loop (every 1-30 seconds)
+- `PositionMonitor` - Real-time position tracking and PnL calculation
+- `SessionReporter` - CSV report generation and console summaries
+
+**Modified Components:**
+- `App` → `HeadlessApp` (remove TTY dependencies)
+- `Trader` → Enhanced for options-only trading
+- `HolyGrail` → Modified for options buying signals
+- `OptionPicker` → Enhanced for ATM/ATM±1 selection
+
+### 2. **Holy Grail Strategy Enhancement**
+
+**Current Implementation:**
+- Uses EMA(34/100), RSI(14), MACD, ADX, ATR
+- Generates bias (bullish/bearish) and momentum signals
+- Has `proceed?` flag for signal validation
+
+**Required Modifications:**
+```ruby
+# Enhanced signal logic for options buying
+def options_signal
+  return :none unless proceed?
+
+  case bias
+  when :bullish
+    :buy_ce  # Buy Call Options
+  when :bearish
+    :buy_pe  # Buy Put Options
+  else
+    :none
+  end
+end
+```
+
+### 3. **Risk Management System**
+
+**Current Risk Management:**
+- Basic SL/TP/trailing in `Trader#manage_open`
+- Session-level limits in `App`
+
+**New RiskManager Component:**
+```ruby
+class RiskManager
+  def initialize(config, position_tracker, broker)
+    @config = config
+    @position_tracker = position_tracker
+    @broker = broker
+    @running = false
+  end
+
+  def start
+    @running = true
+    Thread.new { risk_loop }
+  end
+
+  private
+
+  def risk_loop
+    while @running
+      check_all_positions
+      sleep(@config.dig("global", "risk_check_interval") || 1)
+    end
+  end
+
+  def check_all_positions
+    @position_tracker.positions.each do |position|
+      check_position_risk(position)
+    end
+  end
+
+  def check_position_risk(position)
+    current_price = get_current_price(position.security_id)
+    pnl_pct = calculate_pnl_percentage(position, current_price)
+
+    # Check SL/TP/Trailing conditions
+    if should_exit_position?(position, pnl_pct)
+      exit_position(position, current_price)
+    end
+  end
+end
+```
+
+### 4. **Position Tracking Enhancement**
+
+**Current System:**
+- `VirtualDataManager` handles CSV persistence
+- `Position` class tracks basic PnL
+- `PaperPositionTracker` for paper mode
+
+**Enhanced Position Tracking:**
+```ruby
+class EnhancedPositionTracker
+  def initialize(mode: :paper)
+    @mode = mode
+    @positions = {}
+    @tick_cache = TickCache
+  end
+
+  def add_position(symbol, option_type, strike, expiry, security_id, quantity, entry_price)
+    position_key = "#{symbol}_#{option_type}_#{strike}_#{expiry}"
+
+    @positions[position_key] = {
+      symbol: symbol,
+      option_type: option_type,
+      strike: strike,
+      expiry: expiry,
+      security_id: security_id,
+      quantity: quantity,
+      entry_price: entry_price,
+      current_price: entry_price,
+      pnl: 0.0,
+      pnl_percentage: 0.0,
+      timestamp: Time.now
+    }
+
+    save_to_csv
+  end
+
+  def update_all_positions
+    @positions.each do |key, position|
+      current_price = @tick_cache.ltp("NSE_FNO", position[:security_id])
+      if current_price&.positive?
+        position[:current_price] = current_price
+        position[:pnl] = calculate_pnl(position)
+        position[:pnl_percentage] = calculate_pnl_percentage(position)
+      end
+    end
+  end
+
+  private
+
+  def calculate_pnl(position)
+    price_diff = position[:current_price] - position[:entry_price]
+    price_diff * position[:quantity]
+  end
+
+  def calculate_pnl_percentage(position)
+    return 0.0 if position[:entry_price].zero?
+    ((position[:current_price] - position[:entry_price]) / position[:entry_price]) * 100
+  end
+end
+```
+
+### 5. **OHLC Data Fetcher**
+
+**New Component for Periodic Data Fetching:**
+```ruby
+class OHLCFetcher
+  def initialize(config, rate_limiter)
+    @config = config
+    @rate_limiter = rate_limiter
+    @running = false
+    @candle_cache = {}
+  end
+
+  def start
+    @running = true
+    Thread.new { fetch_loop }
+  end
+
+  private
+
+  def fetch_loop
+    while @running
+      @config["SYMBOLS"]&.each_key do |symbol|
+        fetch_ohlc_for_symbol(symbol)
+        @rate_limiter.wait_if_needed("ohlc_fetch")
+      end
+      sleep(180) # 3 minutes
+    end
+  end
+
+  def fetch_ohlc_for_symbol(symbol)
+    symbol_config = @config["SYMBOLS"][symbol]
+    return unless symbol_config
+
+    begin
+      # Fetch 1-minute and 5-minute OHLC data
+      [1, 5].each do |interval|
+        candle_series = CandleSeries.load_from_dhan_intraday(
+          seg: symbol_config["seg_idx"],
+          sid: symbol_config["idx_sid"],
+          interval: interval.to_s,
+          symbol: "INDEX"
+        )
+
+        cache_key = "#{symbol}_#{interval}m"
+        @candle_cache[cache_key] = candle_series
+      end
+    rescue StandardError => e
+      puts "[OHLC] Error fetching data for #{symbol}: #{e.message}"
+    end
+  end
+end
+```
+
+### 6. **Session Reporting System**
+
+**New SessionReporter Component:**
+```ruby
+class SessionReporter
+  def initialize(data_dir: "data")
+    @data_dir = data_dir
+    @session_id = Time.now.strftime("%Y%m%d_%H%M%S")
+  end
+
+  def generate_session_report(position_tracker, balance_provider)
+    report_data = {
+      session_id: @session_id,
+      start_time: session_start_time,
+      end_time: Time.now,
+      total_trades: position_tracker.total_trades,
+      winning_trades: position_tracker.winning_trades,
+      losing_trades: position_tracker.losing_trades,
+      total_pnl: position_tracker.total_pnl,
+      max_drawdown: position_tracker.max_drawdown,
+      final_balance: balance_provider.total_balance
+    }
+
+    # Save to CSV
+    save_to_csv(report_data)
+
+    # Print console summary
+    print_console_summary(report_data)
+
+    report_data
+  end
+
+  private
+
+  def save_to_csv(data)
+    csv_file = File.join(@data_dir, "session_#{@session_id}.csv")
+    CSV.open(csv_file, "w") do |csv|
+      csv << data.keys
+      csv << data.values
+    end
+  end
+
+  def print_console_summary(data)
+    puts "\n" + "="*50
+    puts "SESSION REPORT - #{data[:session_id]}"
+    puts "="*50
+    puts "Duration: #{data[:start_time]} to #{data[:end_time]}"
+    puts "Total Trades: #{data[:total_trades]}"
+    puts "Winning Trades: #{data[:winning_trades]}"
+    puts "Losing Trades: #{data[:losing_trades]}"
+    puts "Total P&L: ₹#{data[:total_pnl].round(2)}"
+    puts "Max Drawdown: ₹#{data[:max_drawdown].round(2)}"
+    puts "Final Balance: ₹#{data[:final_balance].round(2)}"
+    puts "="*50
+  end
+end
+```
+
+### 7. **HeadlessApp Implementation**
+
+**Main Application Coordinator:**
+```ruby
+class HeadlessApp
+  def initialize(config, mode: :paper)
+    @config = config
+    @mode = mode
+    @stop = false
+
+    # Initialize components
+    @balance_provider = initialize_balance_provider
+    @broker = initialize_broker
+    @position_tracker = EnhancedPositionTracker.new(mode: mode)
+    @risk_manager = RiskManager.new(config, @position_tracker, @broker)
+    @ohlc_fetcher = OHLCFetcher.new(config, RateLimiter.new)
+    @session_reporter = SessionReporter.new
+
+    # Setup signal handlers
+    setup_signal_handlers
+  end
+
+  def start
+    puts "[HEADLESS] Starting DhanScalper Options Buying Bot"
+    puts "[MODE] #{@mode.upcase} trading"
+    puts "[BALANCE] ₹#{@balance_provider.available_balance.round(0)}"
+
+    # Start background services
+    start_websocket_connection
+    @risk_manager.start
+    @ohlc_fetcher.start
+
+    # Main trading loop
+    main_trading_loop
+  ensure
+    cleanup_and_report
+  end
+
+  private
+
+  def main_trading_loop
+    last_decision = Time.at(0)
+    decision_interval = @config.dig("global", "decision_interval").to_i
+
+    until @stop
+      if Time.now - last_decision >= decision_interval
+        last_decision = Time.now
+        check_for_signals
+      end
+
+      @position_tracker.update_all_positions
+      sleep(1)
+    end
+  end
+
+  def check_for_signals
+    @config["SYMBOLS"]&.each_key do |symbol|
+      signal = get_holy_grail_signal(symbol)
+      next if signal == :none
+
+      execute_options_trade(symbol, signal)
+    end
+  end
+
+  def get_holy_grail_signal(symbol)
+    symbol_config = @config["SYMBOLS"][symbol]
+    candle_data = @ohlc_fetcher.get_candle_data(symbol, "1m")
+
+    return :none unless candle_data
+
+    holy_grail = DhanScalper::Indicators::HolyGrail.new(candles: candle_data.to_hash)
+    result = holy_grail.call
+
+    return :none unless result.proceed?
+
+    case result.bias
+    when :bullish then :buy_ce
+    when :bearish then :buy_pe
+    else :none
+    end
+  end
+
+  def execute_options_trade(symbol, signal)
+    symbol_config = @config["SYMBOLS"][symbol]
+    current_spot = get_current_spot_price(symbol)
+
+    # Pick ATM or ATM±1 strike
+    option_picker = OptionPicker.new(symbol_config, mode: @mode)
+    option_data = option_picker.pick_atm_strike(current_spot, signal)
+
+    # Calculate position size
+    quantity_sizer = QuantitySizer.new(@config, @balance_provider)
+    quantity = quantity_sizer.calculate_quantity(symbol, option_data[:premium])
+
+    # Execute trade
+    if signal == :buy_ce
+      order = @broker.buy_market(
+        segment: symbol_config["seg_opt"],
+        security_id: option_data[:ce_security_id],
+        quantity: quantity
+      )
+    else # :buy_pe
+      order = @broker.buy_market(
+        segment: symbol_config["seg_opt"],
+        security_id: option_data[:pe_security_id],
+        quantity: quantity
+      )
+    end
+
+    if order
+      @position_tracker.add_position(
+        symbol, signal.to_s.split('_').last.upcase,
+        option_data[:strike], option_data[:expiry],
+        order.security_id, quantity, order.avg_price
+      )
+
+      puts "[#{symbol}] #{signal.to_s.upcase} order executed: #{quantity} lots @ ₹#{order.avg_price}"
+    end
+  end
+
+  def cleanup_and_report
+    puts "\n[HEADLESS] Shutting down..."
+
+    @risk_manager.stop
+    @ohlc_fetcher.stop
+
+    # Generate session report
+    @session_reporter.generate_session_report(@position_tracker, @balance_provider)
+
+    puts "[HEADLESS] Session complete. Report saved to data/ directory."
+  end
+end
+```
+
+### 8. **CLI Interface Updates**
+
+**Enhanced CLI Commands:**
+```ruby
+class CLI < Thor
+  desc "headless", "Run headless options buying bot"
+  option :mode, default: "paper", desc: "Trading mode (paper/live)"
+  option :config, default: "config/scalper.yml", desc: "Configuration file"
+  def headless
+    cfg = Config.load(path: options[:config])
+    mode = options[:mode].to_sym
+
+    app = HeadlessApp.new(cfg, mode: mode)
+    app.start
+  end
+
+  desc "report", "Generate session report from CSV data"
+  option :session_id, desc: "Specific session ID to report on"
+  def report
+    reporter = SessionReporter.new
+    if options[:session_id]
+      reporter.generate_report_for_session(options[:session_id])
+    else
+      reporter.generate_latest_session_report
+    end
+  end
+end
+```
+
+## Implementation Priority
+
+1. **Phase 1: Core Headless Infrastructure**
+   - Create `HeadlessApp` class
+   - Implement `RiskManager` component
+   - Enhance `PositionTracker` for real-time PnL
+
+2. **Phase 2: Data Management**
+   - Implement `OHLCFetcher` with rate limiting
+   - Enhance `OptionPicker` for ATM/ATM±1 selection
+   - Improve `TickCache` for better performance
+
+3. **Phase 3: Strategy & Execution**
+   - Modify Holy Grail for options buying signals
+   - Enhance order execution for options
+   - Implement proper position sizing
+
+4. **Phase 4: Reporting & Monitoring**
+   - Create `SessionReporter` component
+   - Implement CSV export functionality
+   - Add console summary reports
+
+5. **Phase 5: Testing & Optimization**
+   - Add comprehensive tests
+   - Optimize performance
+   - Add error handling and recovery
+
+This implementation plan transforms the current DhanScalper into a fully automated, headless options buying bot that meets all the specification requirements while maintaining the existing codebase structure and leveraging the current components where possible.
+
+
+TODOS:
+
+Analyze current DhanScalper architecture and identify components that need modification for headless options buying bot
+Design new headless architecture with periodic OHLC fetcher, risk manager loop, and position monitor
+Enhance Holy Grail indicator for options buying signals (bullish→CE, bearish→PE)
+Create dedicated RiskManager component for SL/TP/trailing stop management
+Enhance position tracking with real-time PnL calculation and CSV persistence
+Implement session report generation with CSV exports and console summaries
+Create new HeadlessApp class that coordinates all components without TTY dashboard
+Add periodic OHLC data fetcher with rate limiting and staggered requests
+Enhance OptionPicker for ATM/ATM±1 strike selection based on trend direction
+Update CLI to support headless mode and session reporting commands

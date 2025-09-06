@@ -16,6 +16,13 @@ global:
   secondary_timeframe: 5 # 3 or 5 minutes for secondary timeframe
   min_premium_price: 1.0 # minimum premium price to avoid very low value orders
 
+  # Headless bot specific settings
+  min_signal_strength: 0.6 # minimum signal strength to execute trades (0.0-1.0)
+  max_positions: 5 # maximum number of open positions
+  risk_check_interval: 1 # seconds between risk management checks
+  ohlc_fetch_interval: 180 # seconds between OHLC data fetches (3 minutes)
+  ohlc_timeframes: ["1", "5"] # timeframes to fetch OHLC data for
+
 paper:
   starting_balance: 200000 # paper wallet starting cash
 

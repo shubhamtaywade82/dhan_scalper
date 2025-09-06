@@ -63,6 +63,103 @@ module DhanScalper
       end
     end
 
+    def pick_atm_strike(current_spot, signal)
+      # Get available expiry dates from CSV master data
+      expiry = fetch_first_expiry
+      return nil unless expiry
+
+      step = @cfg.fetch("strike_step")
+      atm = nearest_strike(current_spot, step)
+
+      # Determine strike selection based on signal strength and direction
+      selected_strike = select_strike_for_signal(atm, step, signal, current_spot)
+
+      begin
+        underlying_symbol = get_underlying_symbol
+
+        # Get security IDs for the selected strike
+        ce_security_id = @csv_master.get_security_id(underlying_symbol, expiry, selected_strike, "CE")
+        pe_security_id = @csv_master.get_security_id(underlying_symbol, expiry, selected_strike, "PE")
+
+        # Get premium prices (mock for paper trading)
+        premium = get_option_premium(selected_strike, current_spot, signal)
+
+        {
+          strike: selected_strike,
+          expiry: expiry,
+          ce_security_id: ce_security_id || "PAPER_CE_#{selected_strike}",
+          pe_security_id: pe_security_id || "PAPER_PE_#{selected_strike}",
+          premium: premium
+        }
+      rescue StandardError => e
+        raise "Failed to fetch option data for live trading: #{e.message}" unless @mode == :paper
+
+        puts "Warning: CSV master lookup failed (#{e.message}), using mock data for paper trading"
+
+        # Generate mock data for paper trading
+        premium = get_option_premium(selected_strike, current_spot, signal)
+
+        {
+          strike: selected_strike,
+          expiry: expiry,
+          ce_security_id: "PAPER_CE_#{selected_strike}",
+          pe_security_id: "PAPER_PE_#{selected_strike}",
+          premium: premium
+        }
+      end
+    end
+
+    def select_strike_for_signal(atm, step, signal, current_spot)
+      case signal
+      when :buy_ce
+        # For bullish signals, prefer ATM or ATM+1
+        # If current spot is closer to ATM+1, use that
+        atm_plus = atm + step
+        if (current_spot - atm_plus).abs < (current_spot - atm).abs
+          atm_plus
+        else
+          atm
+        end
+      when :buy_pe
+        # For bearish signals, prefer ATM or ATM-1
+        # If current spot is closer to ATM-1, use that
+        atm_minus = atm - step
+        if (current_spot - atm_minus).abs < (current_spot - atm).abs
+          atm_minus
+        else
+          atm
+        end
+      else
+        # Default to ATM
+        atm
+      end
+    end
+
+    def get_option_premium(strike, spot, signal)
+      # Calculate theoretical premium based on moneyness
+      # This is a simplified calculation for paper trading
+      moneyness = case signal
+                  when :buy_ce
+                    (spot - strike) / spot
+                  when :buy_pe
+                    (strike - spot) / spot
+                  else
+                    0.0
+                  end
+
+      # Base premium calculation
+      base_premium = spot * 0.02 # 2% of spot price as base
+
+      # Adjust based on moneyness
+      if moneyness > 0.01 # ITM
+        base_premium * 1.5
+      elsif moneyness > -0.01 # ATM
+        base_premium
+      else # OTM
+        base_premium * 0.5
+      end
+    end
+
     def nearest_strike(spot, step) = ((spot / step.to_f).round * step).to_i
 
     def nearest_weekly(wday_target)
@@ -119,7 +216,7 @@ module DhanScalper
       case @cfg.fetch("idx_sid")
       when "13"
         "NIFTY"
-      when "23"
+      when "25", "23"
         "BANKNIFTY"
       when "51"
         "SENSEX"

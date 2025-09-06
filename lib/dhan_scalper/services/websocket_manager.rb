@@ -2,6 +2,7 @@
 
 require "json"
 require "logger"
+require "set"
 
 module DhanScalper
   module Services
@@ -75,12 +76,9 @@ module DhanScalper
         begin
           # Determine segment based on instrument type
           segment = case instrument_type
-                   when "INDEX"
-                     "IDX_I"
-                   when "OPTION"
-                     "NSE_FO"
-                   else
-                     "NSE_EQ"
+                     when "INDEX" then "IDX_I"
+                     when "OPTION" then "NSE_FNO"
+                     else "NSE_EQ"
                    end
 
           @connection.subscribe_one(segment: segment, security_id: instrument_id)

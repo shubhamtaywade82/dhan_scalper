@@ -8,7 +8,7 @@ module DhanScalper
         @balance_provider = balance_provider
       end
 
-      def buy_market(segment:, security_id:, quantity:)
+      def buy_market(segment:, security_id:, quantity:, charge_per_order: nil)
         order_params = {
           transaction_type: "BUY",
           exchange_segment: segment,
@@ -43,7 +43,7 @@ module DhanScalper
         order_obj
       end
 
-      def sell_market(segment:, security_id:, quantity:)
+      def sell_market(segment:, security_id:, quantity:, charge_per_order: nil)
         order_params = {
           transaction_type: "SELL",
           exchange_segment: segment,

@@ -33,6 +33,13 @@ module DhanScalper
         @cache[:total] || 0.0
       end
 
+      # For live trading, realized PnL is reflected by broker/account; we expose
+      # a no-op so callers don't error when invoking this hook.
+      def add_realized_pnl(_pnl)
+        refresh_cache
+        @cache[:total] || 0.0
+      end
+
       private
 
       def refresh_cache_if_needed
@@ -42,30 +49,20 @@ module DhanScalper
       end
 
       def refresh_cache
-        # Use the correct DhanHQ::Models::Funds.fetch method
+        # Use the DhanHQ Funds API and compute balances sanely
         puts "[DEBUG] Attempting to fetch funds from DhanHQ API..."
         funds = DhanHQ::Models::Funds.fetch
         puts "[DEBUG] Funds object: #{funds.inspect}"
 
-        if funds.respond_to?(:available_balance)
-          # Calculate used balance as difference between total and available
-          total = funds.available_balance.to_f
+        if funds && funds.respond_to?(:available_balance) && funds.respond_to?(:total_balance)
+          total = funds.total_balance.to_f
           available = funds.available_balance.to_f
-          used = funds.utilized_amount.to_f
+          used = (total - available).to_f
 
-          @cache = {
-            available: available,
-            used: used,
-            total: total
-          }
+          @cache = { available: available, used: used, total: total }
         else
           puts "[DEBUG] Funds object doesn't have expected methods, using fallback"
-          # Fallback to basic structure if API response is different
-          @cache = {
-            available: 100_000.0, # Default fallback
-            used: 0.0,
-            total: 100_000.0
-          }
+          @cache = { available: 100_000.0, used: 0.0, total: 100_000.0 }
         end
 
         puts "[DEBUG] Cache updated: #{@cache.inspect}"
@@ -75,11 +72,7 @@ module DhanScalper
         puts "Backtrace: #{e.backtrace.first(3).join("\n")}"
         # Keep existing cache if available, otherwise use defaults
         unless @cache_time
-          @cache = {
-            available: 100_000.0,
-            used: 0.0,
-            total: 100_000.0
-          }
+          @cache = { available: 100_000.0, used: 0.0, total: 100_000.0 }
         end
       end
     end

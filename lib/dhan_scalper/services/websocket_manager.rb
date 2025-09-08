@@ -71,19 +71,25 @@ module DhanScalper
       end
 
       def subscribe_to_instrument(instrument_id, instrument_type = "EQUITY")
+        # Always store the segment mapping, even if not connected
+        @instrument_segments ||= {}
+
+        # Determine segment based on instrument type
+        segment = case instrument_type
+                  when "INDEX" then "IDX_I"
+                  when "OPTION" then "NSE_FNO"
+                  else "NSE_EQ"
+                  end
+
+        # Store the segment mapping for this instrument
+        @instrument_segments[instrument_id] = segment
+
         return false unless @connected
         return true if @subscribed_instruments.include?(instrument_id)
 
         @logger.info "[WebSocket] Subscribing to #{instrument_type}: #{instrument_id}"
 
         begin
-          # Determine segment based on instrument type
-          segment = case instrument_type
-                    when "INDEX" then "IDX_I"
-                    when "OPTION" then "NSE_FNO"
-                    else "NSE_EQ"
-                    end
-
           @connection.subscribe_one(segment: segment, security_id: instrument_id)
           @subscribed_instruments.add(instrument_id)
 
@@ -102,14 +108,20 @@ module DhanScalper
         @logger.info "[WebSocket] Unsubscribing from: #{instrument_id}"
 
         begin
-          # For DhanHQ, we need to determine the segment
-          # This is a simplified approach - in practice, you'd track segments per instrument
-          segments = %w[IDX_I NSE_FO NSE_EQ]
+          # Get the specific segment for this instrument
+          segment = @instrument_segments&.[](instrument_id)
 
-          segments.each do |segment|
+          if segment
             @connection.unsubscribe_one(segment: segment, security_id: instrument_id)
-          rescue StandardError
-            # Ignore errors for segments where the instrument isn't subscribed
+            @instrument_segments.delete(instrument_id)
+          else
+            # Fallback: try all segments
+            segments = %w[IDX_I NSE_FO NSE_EQ]
+            segments.each do |seg|
+              @connection.unsubscribe_one(segment: seg, security_id: instrument_id)
+            rescue StandardError
+              # Ignore errors for segments where the instrument isn't subscribed
+            end
           end
 
           @subscribed_instruments.delete(instrument_id)
@@ -130,6 +142,9 @@ module DhanScalper
         @subscribed_instruments.dup.each do |instrument_id|
           unsubscribe_from_instrument(instrument_id)
         end
+
+        # Clear segment mappings
+        @instrument_segments&.clear
       end
 
       def on_price_update(&block)
@@ -147,8 +162,10 @@ module DhanScalper
       private
 
       def handle_tick_data(tick_data)
+        instrument_id = tick_data[:security_id]
+
         price_data = {
-          instrument_id: tick_data[:security_id],
+          instrument_id: instrument_id,
           symbol: tick_data[:symbol],
           last_price: tick_data[:ltp].to_f,
           open: tick_data[:open].to_f,
@@ -156,7 +173,9 @@ module DhanScalper
           low: tick_data[:low].to_f,
           close: tick_data[:close].to_f,
           volume: tick_data[:volume].to_i,
-          timestamp: tick_data[:ts]
+          timestamp: tick_data[:ts],
+          segment: @instrument_segments&.[](instrument_id) || "NSE_FNO",
+          exchange: "NSE" # Default to NSE for now
         }
 
         @message_handlers[:price_update]&.call(price_data)

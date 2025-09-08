@@ -165,7 +165,7 @@ module DhanScalper
     desc "live", "Show live LTP dashboard with WebSocket feed"
     option :interval, type: :numeric, default: 0.5, desc: "Refresh interval (seconds)"
     option :instruments, type: :string,
-                        desc: "Comma-separated list of instruments (format: name:segment:security_id)"
+                         desc: "Comma-separated list of instruments (format: name:segment:security_id)"
     option :simple, type: :boolean, default: false, desc: "Use simple dashboard (no full screen control)"
     def live
       # Ensure global WebSocket cleanup is registered
@@ -198,9 +198,9 @@ module DhanScalper
     option :session_id, type: :string, desc: "Specific session ID to report on"
     option :latest, type: :boolean, aliases: "-l", desc: "Generate report for latest session", default: false
     def report
-      require_relative "session_reporter"
+      require_relative "services/session_reporter"
 
-      reporter = SessionReporter.new
+      reporter = Services::SessionReporter.new
 
       if options[:session_id]
         reporter.generate_report_for_session(options[:session_id])
@@ -211,7 +211,7 @@ module DhanScalper
         sessions = reporter.list_available_sessions
 
         if sessions.empty?
-          puts "No session reports found in data/ directory"
+          puts "No session reports found in data/reports/ directory"
           return
         end
 

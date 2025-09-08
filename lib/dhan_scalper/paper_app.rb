@@ -11,6 +11,9 @@ require_relative "option_picker"
 require_relative "services/websocket_manager"
 require_relative "services/paper_position_tracker"
 require_relative "ui/simple_logger"
+require_relative "exchange_segment_mapper"
+require_relative "csv_master"
+require_relative "services/session_reporter"
 
 module DhanScalper
   class PaperApp
@@ -59,6 +62,26 @@ module DhanScalper
       @logger = Logger.new($stdout)
       @logger.level = quiet ? Logger::WARN : Logger::INFO
 
+      # Initialize CSV master for exchange segment mapping
+      @csv_master = CsvMaster.new
+
+      # Initialize session reporter
+      @session_reporter = Services::SessionReporter.new
+
+      # Session tracking variables
+      @session_data = {
+        session_id: nil,
+        start_time: nil,
+        end_time: nil,
+        total_trades: 0,
+        successful_trades: 0,
+        failed_trades: 0,
+        trades: [],
+        max_pnl: 0.0,
+        min_pnl: 0.0,
+        symbols_traded: Set.new
+      }
+
       # Cache for trend objects and option pickers
       @cached_trends = {}
       @cached_pickers = {}
@@ -71,7 +94,13 @@ module DhanScalper
       DhanHQ.configure_with_env
       DhanHQ.logger.level = Logger::WARN
 
+      # Initialize session data
+      @session_data[:session_id] = "PAPER_#{Time.now.strftime("%Y%m%d_%H%M%S")}"
+      @session_data[:start_time] = Time.now.strftime("%Y-%m-%d %H:%M:%S")
+      @session_data[:starting_balance] = @balance_provider.available_balance
+
       puts "[PAPER] Starting paper trading mode"
+      puts "[PAPER] Session ID: #{@session_data[:session_id]}"
       puts "[PAPER] WebSocket connection will be established"
       puts "[PAPER] Positions will be tracked in real-time"
       puts "[PAPER] No real money will be used"
@@ -91,9 +120,12 @@ module DhanScalper
 
         # Setup tick handler to store data in TickCache
         @websocket_manager.on_price_update do |price_data|
+          # Use the segment provided by WebSocket manager (it already has the correct segment)
+          exchange_segment = price_data[:segment] || "NSE_FNO"
+
           # Convert price_data to tick format for TickCache
           tick_data = {
-            segment: price_data[:segment] || "NSE_FNO",
+            segment: exchange_segment,
             security_id: price_data[:instrument_id],
             ltp: price_data[:last_price],
             open: price_data[:open],
@@ -178,8 +210,27 @@ module DhanScalper
         @state.set_status(:stopped)
         @websocket_manager.disconnect
         puts "\n[PAPER] Trading stopped"
+
+        # Finalize session data
+        @session_data[:end_time] = Time.now.strftime("%Y-%m-%d %H:%M:%S")
+        @session_data[:duration_minutes] = (Time.now - @start_time) / 60.0
+        @session_data[:ending_balance] = @balance_provider.available_balance
+        @session_data[:total_pnl] = @session_data[:ending_balance] - @session_data[:starting_balance]
+        @session_data[:win_rate] =
+          @session_data[:total_trades] > 0 ? (@session_data[:successful_trades].to_f / @session_data[:total_trades] * 100) : 0.0
+        @session_data[:average_trade_pnl] =
+          @session_data[:total_trades] > 0 ? (@session_data[:total_pnl] / @session_data[:total_trades]) : 0.0
+
+        # Get positions summary
+        positions_summary = @position_tracker.get_positions_summary
+        @session_data[:positions] = positions_summary[:positions].values
+        @session_data[:symbols_traded] = @session_data[:symbols_traded].to_a
+
         show_final_summary
         @position_tracker.save_session_data
+
+        # Generate comprehensive session report
+        generate_session_report
       end
     end
 
@@ -279,8 +330,11 @@ module DhanScalper
       # Wait a moment for subscription to establish
       sleep(0.1)
 
+      # Use NSE_FNO segment for options
+      option_segment = "NSE_FNO"
+
       # Get real market price for the option
-      option_price = DhanScalper::TickCache.ltp(symbol_config["seg_opt"], option_sid)&.to_f
+      option_price = DhanScalper::TickCache.ltp(option_segment, option_sid)&.to_f
 
       # Fallback to mock price for testing when market is closed
       unless option_price&.positive?
@@ -303,7 +357,6 @@ module DhanScalper
       end
 
       # Calculate position size
-      lots = @quantity_sizer.calculate_lots(symbol, option_price, side: "BUY")
       quantity = @quantity_sizer.calculate_quantity(symbol, option_price, side: "BUY")
 
       puts "[#{symbol}] Executing #{direction} trade: #{option_type} #{quantity} lots at ₹#{option_price} (Strike: #{actual_strike})"
@@ -328,9 +381,41 @@ module DhanScalper
           option_sid, quantity, option_price
         )
 
+        # Track trade in session data
+        @session_data[:total_trades] += 1
+        @session_data[:successful_trades] += 1
+        @session_data[:symbols_traded].add(symbol)
+        @session_data[:trades] << {
+          timestamp: Time.now.strftime("%H:%M:%S"),
+          symbol: symbol,
+          side: "BUY",
+          quantity: quantity,
+          price: option_price,
+          order_id: order_result[:order_id],
+          status: "SUCCESS",
+          option_type: option_type,
+          strike: actual_strike
+        }
+
         puts "[#{symbol}] Position added to tracker: #{position_key}"
       else
         puts "[#{symbol}] Order failed: #{order_result[:error]}"
+
+        # Track failed trade
+        @session_data[:total_trades] += 1
+        @session_data[:failed_trades] += 1
+        @session_data[:trades] << {
+          timestamp: Time.now.strftime("%H:%M:%S"),
+          symbol: symbol,
+          side: "BUY",
+          quantity: quantity,
+          price: option_price,
+          order_id: nil,
+          status: "FAILED",
+          error: order_result[:error],
+          option_type: option_type,
+          strike: actual_strike
+        }
       end
     end
 
@@ -357,11 +442,18 @@ module DhanScalper
       summary = @position_tracker.get_positions_summary
       underlying_summary = @position_tracker.get_underlying_summary
 
+      # Update session P&L tracking
+      current_pnl = summary[:total_pnl]
+      @session_data[:max_pnl] = [@session_data[:max_pnl], current_pnl].max
+      @session_data[:min_pnl] = [@session_data[:min_pnl], current_pnl].min
+
       puts "\n" + ("=" * 60)
       puts "[POSITION SUMMARY]"
       puts "Total Positions: #{summary[:total_positions]}"
       puts "Total P&L: ₹#{summary[:total_pnl].round(2)}"
       puts "Available Balance: ₹#{@balance_provider.available_balance.round(0)}"
+      puts "Session Max P&L: ₹#{@session_data[:max_pnl].round(2)}"
+      puts "Session Min P&L: ₹#{@session_data[:min_pnl].round(2)}"
 
       if underlying_summary.any?
         puts "\n[UNDERLYING PRICES]"
@@ -410,12 +502,9 @@ module DhanScalper
             puts "[ATM MONITOR] TickCache contents: #{cache_data.keys}"
           end
 
-          # Try different key formats
-          spot_price = DhanScalper::TickCache.ltp("IDX_I", symbol_config["idx_sid"])&.to_f
-          if spot_price.nil? || spot_price.zero?
-            # Try alternative key format
-            spot_price = DhanScalper::TickCache.ltp("NSE_FNO", symbol_config["idx_sid"])&.to_f
-          end
+          # Use IDX_I segment for underlying indices
+          underlying_segment = "IDX_I"
+          spot_price = DhanScalper::TickCache.ltp(underlying_segment, symbol_config["idx_sid"])&.to_f
           puts "[ATM MONITOR] #{symbol} spot price attempt #{attempt + 1}: #{spot_price}"
           break if spot_price&.positive?
 
@@ -517,7 +606,6 @@ module DhanScalper
             if strike_info
               strike = strike_info[:strike]
               type = strike_info[:type]
-              symbol = strike_info[:symbol]
               options_by_strike[strike] ||= {}
               options_by_strike[strike][type] = { tick: tick, security_id: security_id }
             else
@@ -581,6 +669,29 @@ module DhanScalper
 
     def sym_cfg(sym)
       @cfg["SYMBOLS"][sym] || {}
+    end
+
+    def generate_session_report
+      puts "\n[REPORT] Generating comprehensive session report..."
+
+      # Add risk metrics
+      @session_data[:risk_metrics] = {
+        max_drawdown: @session_data[:min_pnl],
+        max_profit: @session_data[:max_pnl],
+        risk_reward_ratio: @session_data[:max_profit] > 0 ? (@session_data[:max_profit] / @session_data[:min_pnl].abs).round(2) : 0.0
+      }
+
+      # Generate the report
+      report_result = @session_reporter.generate_session_report(@session_data)
+
+      if report_result
+        puts "\n[REPORT] Session report generated successfully!"
+        puts "[REPORT] Session ID: #{report_result[:session_id]}"
+        puts "[REPORT] JSON Report: #{report_result[:json_file]}"
+        puts "[REPORT] CSV Report: #{report_result[:csv_file]}"
+      else
+        puts "\n[REPORT] Failed to generate session report"
+      end
     end
   end
 end

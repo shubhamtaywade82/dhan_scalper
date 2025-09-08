@@ -65,8 +65,7 @@ module DhanScalper
 
       # Generic place_order method for compatibility with PaperApp
       def place_order(symbol:, instrument_id:, side:, quantity:, price:, order_type: "MARKET")
-        # Determine segment based on instrument type (simplified)
-        segment = "NSE_FO" # Default to options segment
+        # Determine segment based on instrument type (simplified) # Default to options segment
 
         # Calculate total cost including charges
         charge_per_order = 20

@@ -12,12 +12,12 @@ module DhanScalper
       # Unified place_order for compatibility with services/order_manager
       def place_order(symbol:, instrument_id:, side:, quantity:, price:, order_type: "MARKET")
         segment = "NSE_FO" # default to options segment; adjust if instrument metadata available
-        case side.to_s.upcase
-        when "BUY"
-          order = buy_market(segment: segment, security_id: instrument_id, quantity: quantity)
-        else
-          order = sell_market(segment: segment, security_id: instrument_id, quantity: quantity)
-        end
+        order = case side.to_s.upcase
+                when "BUY"
+                  buy_market(segment: segment, security_id: instrument_id, quantity: quantity)
+                else
+                  sell_market(segment: segment, security_id: instrument_id, quantity: quantity)
+                end
 
         {
           success: !order.nil?,

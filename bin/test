@@ -36,7 +36,7 @@ end.parse!
 ENV["RUN_SLOW_TESTS"] = "1" if options[:slow]
 
 # Build RSpec command
-rspec_cmd = ["bundle", "exec", "rspec"]
+rspec_cmd = %w[bundle exec rspec]
 
 if options[:integration]
   rspec_cmd << "spec/integration/"
@@ -48,7 +48,7 @@ end
 rspec_cmd += ["--format", "progress", "--color"]
 
 puts "Running tests with options: #{options.inspect}"
-puts "Command: #{rspec_cmd.join(' ')}"
+puts "Command: #{rspec_cmd.join(" ")}"
 puts
 
 # Execute the command

@@ -199,15 +199,11 @@ class CandleSeries
     series
   end
 
-    # ---------- Historical Data Fetching ----------
+  # ---------- Historical Data Fetching ----------
   def self.fetch_historical_data(seg, sid, interval)
-
     # Check cache first
-    cache_key = "#{seg}_#{sid}_#{interval}"
     cached_data = DhanScalper::Services::HistoricalDataCache.get(seg, sid, interval)
-    if cached_data
-      return cached_data
-    end
+    return cached_data if cached_data
 
     # Apply rate limiting
     DhanScalper::Services::RateLimiter.wait_if_needed("historical_data")
@@ -276,12 +272,12 @@ class CandleSeries
       close_price = low_price + (rand * (high_price - low_price))
 
       candles << {
-        timestamp: (current_time - (count - i) * 60).to_i, # 1 minute intervals
+        timestamp: (current_time - ((count - i) * 60)).to_i, # 1 minute intervals
         open: open_price.round(2),
         high: high_price.round(2),
         low: low_price.round(2),
         close: close_price.round(2),
-        volume: rand(1000..10000)
+        volume: rand(1000..10_000)
       }
 
       # Update base price for next candle
@@ -314,17 +310,11 @@ class CandleSeries
   end
 
   def normalise_candles(resp)
-    if resp.nil?
-      return []
-    end
+    return [] if resp.nil?
 
-    if resp.respond_to?(:empty?) && resp.empty?
-      return []
-    end
+    return [] if resp.respond_to?(:empty?) && resp.empty?
 
-    if resp.is_a?(Array)
-      return resp.map { |c| slice_candle(c) }
-    end
+    return resp.map { |c| slice_candle(c) } if resp.is_a?(Array)
 
     # Columnar hash: { "open"=>[], "high"=>[], ... }
     unless resp.is_a?(Hash) && resp["high"].is_a?(Array)

@@ -50,8 +50,8 @@ module DhanScalper
     def start
       DhanHQ.configure_with_env
       # DhanHQ.logger.level = (@cfg.dig("global", "log_level") == "DEBUG" ? Logger::DEBUG : Logger::INFO)
-      DhanHQ.logger.level = Logger::WARN      # or Logger::ERROR
-      DhanHQ.logger = Logger.new($stderr)      # never stdout
+      DhanHQ.logger.level = Logger::WARN # or Logger::ERROR
+      DhanHQ.logger = Logger.new($stderr) # never stdout
 
       # Ensure global WebSocket cleanup is registered
       DhanScalper::Services::WebSocketCleanup.register_cleanup

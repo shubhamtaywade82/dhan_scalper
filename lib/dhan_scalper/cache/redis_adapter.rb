@@ -15,6 +15,7 @@ module DhanScalper
 
       def initialize(url: nil, logger: nil)
         raise LoadError, "redis gem not available" unless defined?(Redis)
+
         @redis = Redis.new(url: url || ENV["REDIS_URL"] || "redis://localhost:6379/0")
         @logger = logger || Logger.new($stdout)
         @lua_scripts = {}
@@ -115,6 +116,7 @@ module DhanScalper
             keys.each do |key|
               position_data = @redis.hgetall(key)
               next if position_data.empty?
+
               security_id = key.split(":").last
               positions[security_id] = position_data.transform_values { |v| v.include?(".") ? v.to_f : v }
             end

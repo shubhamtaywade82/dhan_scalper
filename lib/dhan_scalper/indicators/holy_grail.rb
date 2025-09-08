@@ -21,7 +21,7 @@ module DhanScalper
       Result = Struct.new(
         :bias, :adx, :momentum, :proceed?,
         :sma50, :ema200, :rsi14, :atr14, :macd, :trend,
-        :options_signal, :signal_strength,
+        :options_signal, :signal_strength, :adx_threshold,
         keyword_init: true
       ) do
         def to_h = members.zip(values).to_h
@@ -77,7 +77,8 @@ module DhanScalper
         Result.new(
           bias: bias, adx: adx14, momentum: momentum, proceed?: proceed,
           sma50: sma50, ema200: ema200, rsi14: rsi14, atr14: atr14, macd: macd_h, trend: trend,
-          options_signal: options_signal, signal_strength: signal_strength
+          options_signal: options_signal, signal_strength: signal_strength,
+          adx_threshold: adx_threshold
         )
       end
 
@@ -274,58 +275,58 @@ module DhanScalper
 
         # RSI momentum (0-1)
         rsi_strength = case bias
-                      when :bullish
-                        [(rsi.to_f - 50.0) / 50.0, 1.0].min
-                      when :bearish
-                        [(50.0 - rsi.to_f) / 50.0, 1.0].min
-                      else
-                        0.0
-                      end
+                       when :bullish
+                         [(rsi.to_f - 50.0) / 50.0, 1.0].min
+                       when :bearish
+                         [(50.0 - rsi.to_f) / 50.0, 1.0].min
+                       else
+                         0.0
+                       end
         signal_strength += rsi_strength * 0.2
 
         # MACD momentum (0-1)
         macd_strength = case bias
-                       when :bullish
-                         macd[:macd].to_f > macd[:signal].to_f ? 0.3 : 0.0
-                       when :bearish
-                         macd[:macd].to_f < macd[:signal].to_f ? 0.3 : 0.0
-                       else
-                         0.0
-                       end
+                        when :bullish
+                          macd[:macd].to_f > macd[:signal].to_f ? 0.3 : 0.0
+                        when :bearish
+                          macd[:macd].to_f < macd[:signal].to_f ? 0.3 : 0.0
+                        else
+                          0.0
+                        end
         signal_strength += macd_strength
 
         # Momentum alignment (0-1)
         momentum_strength = case bias
-                           when :bullish
-                             momentum == :up ? 0.2 : 0.0
-                           when :bearish
-                             momentum == :down ? 0.2 : 0.0
-                           else
-                             0.0
-                           end
+                            when :bullish
+                              momentum == :up ? 0.2 : 0.0
+                            when :bearish
+                              momentum == :down ? 0.2 : 0.0
+                            else
+                              0.0
+                            end
         signal_strength += momentum_strength
 
         # Determine options signal
         options_signal = case bias
-                        when :bullish
-                          if signal_strength >= 0.6
-                            :buy_ce
-                          elsif signal_strength >= 0.4
-                            :buy_ce_weak
-                          else
-                            :none
-                          end
-                        when :bearish
-                          if signal_strength >= 0.6
-                            :buy_pe
-                          elsif signal_strength >= 0.4
-                            :buy_pe_weak
-                          else
-                            :none
-                          end
-                        else
-                          :none
-                        end
+                         when :bullish
+                           if signal_strength >= 0.6
+                             :buy_ce
+                           elsif signal_strength >= 0.4
+                             :buy_ce_weak
+                           else
+                             :none
+                           end
+                         when :bearish
+                           if signal_strength >= 0.6
+                             :buy_pe
+                           elsif signal_strength >= 0.4
+                             :buy_pe_weak
+                           else
+                             :none
+                           end
+                         else
+                           :none
+                         end
 
         [options_signal, signal_strength]
       end
@@ -341,9 +342,7 @@ module DhanScalper
           case minutes
           when 0.5..1.5    # 1-minute timeframe
             10.0
-          when 2.5..3.5    # 3-minute timeframe
-            15.0
-          when 4.5..5.5    # 5-minute timeframe
+          when 2.5..5.5    # 3-5 minute timeframes
             15.0
           else
             # Default for higher timeframes

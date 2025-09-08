@@ -74,7 +74,58 @@ module DhanScalper
               puts "[TrendEnhanced] Holy Grail: Mixed signals (1m: bias=#{hg_1m.bias}, momentum=#{hg_1m.momentum}) (#{@secondary_timeframe}m: bias=#{hg_tf.bias}, momentum=#{hg_tf.momentum})"
             end
           else
-            puts "[TrendEnhanced] Holy Grail: Not proceeding (1m: proceed=#{hg_1m&.proceed?}, #{@secondary_timeframe}m: proceed=#{hg_tf&.proceed?})"
+            # Enhanced logging for multi-timeframe
+            reasons = []
+
+            if hg_1m
+              reasons << "1m_proceed=#{hg_1m.proceed?}"
+              unless hg_1m.proceed?
+                hg_1m_reasons = []
+                hg_1m_reasons << "bias=#{hg_1m.bias}" if hg_1m.bias
+                hg_1m_reasons << "momentum=#{hg_1m.momentum}" if hg_1m.momentum
+                hg_1m_reasons << "adx=#{hg_1m.adx.round(1)}" if hg_1m.adx
+                if hg_1m.bias == :neutral
+                  hg_1m_reasons << "bias_neutral"
+                elsif hg_1m.bias == :bullish && hg_1m.momentum != :up
+                  hg_1m_reasons << "bullish_but_momentum_not_up"
+                elsif hg_1m.bias == :bearish && hg_1m.momentum != :down
+                  hg_1m_reasons << "bearish_but_momentum_not_down"
+                end
+                adx_threshold = hg_1m.adx_threshold || 15.0
+                if hg_1m.adx && hg_1m.adx < adx_threshold
+                  hg_1m_reasons << "adx_weak(#{hg_1m.adx.round(1)}<#{adx_threshold})"
+                end
+                reasons << "1m_reasons=[#{hg_1m_reasons.join(", ")}]"
+              end
+            else
+              reasons << "1m=nil"
+            end
+
+            if hg_tf
+              reasons << "#{@secondary_timeframe}m_proceed=#{hg_tf.proceed?}"
+              unless hg_tf.proceed?
+                hg_tf_reasons = []
+                hg_tf_reasons << "bias=#{hg_tf.bias}" if hg_tf.bias
+                hg_tf_reasons << "momentum=#{hg_tf.momentum}" if hg_tf.momentum
+                hg_tf_reasons << "adx=#{hg_tf.adx.round(1)}" if hg_tf.adx
+                if hg_tf.bias == :neutral
+                  hg_tf_reasons << "bias_neutral"
+                elsif hg_tf.bias == :bullish && hg_tf.momentum != :up
+                  hg_tf_reasons << "bullish_but_momentum_not_up"
+                elsif hg_tf.bias == :bearish && hg_tf.momentum != :down
+                  hg_tf_reasons << "bearish_but_momentum_not_down"
+                end
+                adx_threshold = hg_tf.adx_threshold || 15.0
+                if hg_tf.adx && hg_tf.adx < adx_threshold
+                  hg_tf_reasons << "adx_weak(#{hg_tf.adx.round(1)}<#{adx_threshold})"
+                end
+                reasons << "#{@secondary_timeframe}m_reasons=[#{hg_tf_reasons.join(", ")}]"
+              end
+            else
+              reasons << "#{@secondary_timeframe}m=nil"
+            end
+
+            puts "[TrendEnhanced] Holy Grail: Not proceeding (#{reasons.join(", ")})"
           end
         elsif hg_1m&.proceed?
           # Single timeframe analysis
@@ -85,8 +136,31 @@ module DhanScalper
             puts "[TrendEnhanced] Holy Grail: Bearish signal (1m: bias=#{hg_1m.bias}, momentum=#{hg_1m.momentum}, adx=#{hg_1m.adx.round(1)})"
             return :long_pe
           end
+        elsif hg_1m
+          # Enhanced logging for single timeframe
+          reasons = []
+          reasons << "bias=#{hg_1m.bias}" if hg_1m.bias
+          reasons << "momentum=#{hg_1m.momentum}" if hg_1m.momentum
+          reasons << "adx=#{hg_1m.adx.round(1)}" if hg_1m.adx
+          reasons << "sma50=#{hg_1m.sma50.round(2)}" if hg_1m.sma50
+          reasons << "ema200=#{hg_1m.ema200.round(2)}" if hg_1m.ema200
+          reasons << "rsi=#{hg_1m.rsi14.round(1)}" if hg_1m.rsi14
+
+          # Check specific conditions
+          if hg_1m.bias == :neutral
+            reasons << "bias_neutral"
+          elsif hg_1m.bias == :bullish && hg_1m.momentum != :up
+            reasons << "bullish_but_momentum_not_up"
+          elsif hg_1m.bias == :bearish && hg_1m.momentum != :down
+            reasons << "bearish_but_momentum_not_down"
+          end
+
+          adx_threshold = hg_1m.adx_threshold || 15.0
+          reasons << "adx_weak(#{hg_1m.adx.round(1)}<#{adx_threshold})" if hg_1m.adx && hg_1m.adx < adx_threshold
+
+          puts "[TrendEnhanced] Holy Grail: Not proceeding (1m: proceed=#{hg_1m.proceed?}, #{reasons.join(", ")})"
         else
-          puts "[TrendEnhanced] Holy Grail: Not proceeding (1m: proceed=#{hg_1m&.proceed?})"
+          puts "[TrendEnhanced] Holy Grail: Not proceeding (1m: hg_1m=nil)"
         end
 
         # Fallback to combined signal
@@ -192,7 +266,7 @@ module DhanScalper
 
     def validate_interval(interval)
       unless VALID_INTERVALS.include?(interval)
-        puts "[WARNING] Invalid interval #{interval}, falling back to 5 minutes. Valid intervals: #{VALID_INTERVALS.join(', ')}"
+        puts "[WARNING] Invalid interval #{interval}, falling back to 5 minutes. Valid intervals: #{VALID_INTERVALS.join(", ")}"
         return 5
       end
       interval

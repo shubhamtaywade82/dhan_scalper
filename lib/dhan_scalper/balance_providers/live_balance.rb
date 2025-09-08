@@ -54,10 +54,10 @@ module DhanScalper
         funds = DhanHQ::Models::Funds.fetch
         puts "[DEBUG] Funds object: #{funds.inspect}"
 
-        if funds && funds.respond_to?(:available_balance) && funds.respond_to?(:total_balance)
-          total = funds.total_balance.to_f
+        if funds && funds.respond_to?(:available_balance) && funds.respond_to?(:utilized_amount)
           available = funds.available_balance.to_f
-          used = (total - available).to_f
+          used = funds.utilized_amount.to_f
+          total = (available + used).to_f
 
           @cache = { available: available, used: used, total: total }
         else
@@ -71,9 +71,7 @@ module DhanScalper
         puts "Warning: Failed to fetch live balance: #{e.message}"
         puts "Backtrace: #{e.backtrace.first(3).join("\n")}"
         # Keep existing cache if available, otherwise use defaults
-        unless @cache_time
-          @cache = { available: 100_000.0, used: 0.0, total: 100_000.0 }
-        end
+        @cache = { available: 100_000.0, used: 0.0, total: 100_000.0 } unless @cache_time
       end
     end
   end

@@ -194,6 +194,20 @@ module DhanScalper
       app.start
     end
 
+    desc "enhanced", "Start enhanced trading mode with No-Loss Trend Rider"
+    option :config, type: :string, aliases: "-c", desc: "Path to enhanced_scalper.yml",
+                    default: "config/enhanced_scalper.yml"
+    def enhanced
+      require_relative "enhanced_app"
+
+      puts "[ENHANCED] Starting enhanced trading mode"
+      puts "[ENHANCED] Config: #{options[:config]}"
+      puts "[ENHANCED] Features: No-Loss Trend Rider, Advanced Risk Management, Telegram Notifications"
+
+      app = EnhancedApp.new(config_path: options[:config])
+      app.start
+    end
+
     desc "report", "Generate session report from CSV data"
     option :session_id, type: :string, desc: "Specific session ID to report on"
     option :latest, type: :boolean, aliases: "-l", desc: "Generate report for latest session", default: false

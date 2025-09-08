@@ -50,6 +50,18 @@ require "dhan_scalper/ohlc_fetcher"
 require "dhan_scalper/enhanced_position_tracker"
 require "dhan_scalper/session_reporter"
 require "dhan_scalper/headless_app"
+require "dhan_scalper/enhanced_app"
+
+# Enhanced components
+require "dhan_scalper/analyzers/position_analyzer"
+require "dhan_scalper/risk/no_loss_trend_rider"
+require "dhan_scalper/managers/entry_manager"
+require "dhan_scalper/managers/exit_manager"
+require "dhan_scalper/guards/session_guard"
+require "dhan_scalper/notifications/telegram_notifier"
+require "dhan_scalper/cache/redis_adapter"
+require "dhan_scalper/cache/memory_adapter"
+
 require "ruby-technical-analysis"
 require "technical-analysis"
 

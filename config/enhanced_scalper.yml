@@ -1,0 +1,92 @@
+# Enhanced DhanScalper Configuration
+# Implements the full specification with No-Loss Trend Rider
+
+mode: "paper" # paper, live
+place_order: false # true for live trading, false for dry-run
+
+# Global settings
+global:
+  allocation_pct: 0.30 # 30% of available balance per position
+  slippage_buffer_pct: 0.01 # 1% slippage buffer
+  max_concurrent_positions: 5 # Maximum open positions
+  max_day_loss_rupees: 5000 # Daily loss limit
+  decision_interval: 10 # Seconds between signal checks
+  log_level: "INFO"
+
+# Risk Management (No-Loss Trend Rider)
+risk:
+  emergency_floor_rupees: 1000 # Hard exit if P&L <= -1000
+  initial_sl_pct: 0.02 # 2% initial stop loss
+  breakeven_threshold_pct: 0.15 # 15% profit to arm breakeven
+  trail_pct: 0.05 # 5% trailing stop
+  rupee_step: 3.0 # ₹3 increments for stop adjustments
+
+# Trend Analysis
+trend:
+  streak_window_minutes: 5 # Trend must be ON for 5 minutes
+  supertrend_period: 10
+  supertrend_multiplier: 2.0
+  adx_period: 14
+  adx_threshold: 25
+
+# Market Data
+market_data:
+  cache_type: "memory" # memory, redis
+  redis_url: "redis://localhost:6379/0"
+  heartbeat_interval: 60 # seconds
+  feed_timeout: 120 # seconds
+
+# Notifications
+notifications:
+  telegram_enabled: false
+  telegram_bot_token: "" # Set via TELEGRAM_BOT_TOKEN env var
+  telegram_chat_id: "" # Set via TELEGRAM_CHAT_ID env var
+
+# Paper Trading
+paper:
+  starting_balance: 200000 # Starting virtual balance
+
+# Symbols Configuration
+SYMBOLS:
+  NIFTY:
+    idx_sid: "13"
+    seg_idx: "IDX_I"
+    seg_opt: "NSE_FNO"
+    strike_step: 50
+    lot_size: 75
+    qty_multiplier: 1
+    expiry_wday: 4 # Thursday
+    atm_window_pct: 0.02 # 2% ATM window
+    entry_window_minutes: 30 # Entry window in minutes
+
+  BANKNIFTY:
+    idx_sid: "25"
+    seg_idx: "IDX_I"
+    seg_opt: "NSE_FNO"
+    strike_step: 100
+    lot_size: 25
+    qty_multiplier: 1
+    expiry_wday: 4
+    atm_window_pct: 0.02
+    entry_window_minutes: 30
+
+# Session Management
+session:
+  market_start: "09:15"
+  market_end: "15:30"
+  grace_period_minutes: 5
+  force_exit_on_close: true
+
+# Order Management
+orders:
+  default_type: "MARKET"
+  retry_attempts: 3
+  retry_delay: 1 # seconds
+  timeout: 30 # seconds
+
+# Reporting
+reporting:
+  csv_enabled: true
+  json_enabled: true
+  eod_report: true
+  detailed_logging: false

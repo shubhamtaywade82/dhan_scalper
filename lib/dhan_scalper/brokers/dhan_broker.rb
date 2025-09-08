@@ -3,9 +3,30 @@
 module DhanScalper
   module Brokers
     class DhanBroker < Base
-      def initialize(virtual_data_manager: nil, balance_provider: nil)
+      def initialize(virtual_data_manager: nil, balance_provider: nil, logger: Logger.new($stdout))
         super(virtual_data_manager: virtual_data_manager)
         @balance_provider = balance_provider
+        @logger = logger
+      end
+
+      # Unified place_order for compatibility with services/order_manager
+      def place_order(symbol:, instrument_id:, side:, quantity:, price:, order_type: "MARKET")
+        segment = "NSE_FO" # default to options segment; adjust if instrument metadata available
+        case side.to_s.upcase
+        when "BUY"
+          order = buy_market(segment: segment, security_id: instrument_id, quantity: quantity)
+        else
+          order = sell_market(segment: segment, security_id: instrument_id, quantity: quantity)
+        end
+
+        {
+          success: !order.nil?,
+          order_id: order&.id,
+          order: order,
+          position: nil
+        }
+      rescue StandardError => e
+        { success: false, error: e.message }
       end
 
       def buy_market(segment:, security_id:, quantity:, charge_per_order: nil)
@@ -101,51 +122,51 @@ module DhanScalper
       def create_order_via_models(params)
         # Try DhanHQ::Models::Order.new
 
-        puts "[DEBUG] Attempting to create order via DhanHQ::Models::Order.new"
+        @logger.debug "[DHAN] Attempting create via DhanHQ::Models::Order.new"
         order = DhanHQ::Models::Order.new(params)
-        puts "[DEBUG] Order object created: #{order.inspect}"
+        @logger.debug "[DHAN] Order object: #{order.inspect}"
         order.save
-        puts "[DEBUG] Order save result: persisted=#{order.persisted?}, errors=#{order.errors.full_messages}"
+        @logger.debug "[DHAN] Save: persisted=#{order.persisted?} errors=#{order.errors.full_messages}"
         return { order_id: order.order_id, error: nil } if order.persisted?
 
         { error: order.errors.full_messages.join(", ") }
       rescue StandardError => e
-        puts "[DEBUG] Error in create_order_via_models: #{e.message}"
+        @logger.debug "[DHAN] create_order_via_models error: #{e.message}"
         { error: e.message }
       end
 
       def create_order_via_direct(params)
         # Try DhanHQ::Order.new
 
-        puts "[DEBUG] Attempting to create order via DhanHQ::Order.new"
+        @logger.debug "[DHAN] Attempting create via DhanHQ::Order.new"
         order = DhanHQ::Order.new(params)
-        puts "[DEBUG] Order object created: #{order.inspect}"
+        @logger.debug "[DHAN] Order object: #{order.inspect}"
         order.save
-        puts "[DEBUG] Order save result: persisted=#{order.persisted?}, errors=#{order.errors.full_messages}"
+        @logger.debug "[DHAN] Save: persisted=#{order.persisted?} errors=#{order.errors.full_messages}"
         return { order_id: order.order_id, error: nil } if order.persisted?
 
         { error: order.errors.full_messages.join(", ") }
       rescue StandardError => e
-        puts "[DEBUG] Error in create_order_via_direct: #{e.message}"
+        @logger.debug "[DHAN] create_order_via_direct error: #{e.message}"
         { error: e.message }
       end
 
       def create_order_via_orders(params)
         # Try DhanHQ::Orders.create
 
-        puts "[DEBUG] Attempting to create order via DhanHQ::Orders.create"
+        @logger.debug "[DHAN] Attempting create via DhanHQ::Orders.create"
         order = DhanHQ::Orders.create(params)
-        puts "[DEBUG] Order object created: #{order.inspect}"
+        @logger.debug "[DHAN] Order response: #{order.inspect}"
         return { order_id: order.order_id || order.id, error: nil } if order
 
         { error: "Failed to create order" }
       rescue StandardError => e
-        puts "[DEBUG] Error in create_order_via_orders: #{e.message}"
+        @logger.debug "[DHAN] create_order_via_orders error: #{e.message}"
         { error: e.message }
       end
 
       def fetch_trade_price(order_id)
-        puts "[DEBUG] Attempting to fetch trade price for order_id: #{order_id}"
+        @logger.debug "[DHAN] Fetch trade price for order_id=#{order_id}"
         # Try multiple methods to fetch trade price
         methods_to_try = [
           -> { DhanHQ::Models::Trade.find_by_order_id(order_id)&.avg_price },
@@ -157,16 +178,16 @@ module DhanScalper
         ]
 
         methods_to_try.each_with_index do |method, index|
-          puts "[DEBUG] Trying method #{index + 1} to fetch trade price"
+          @logger.debug "[DHAN] Price method #{index + 1}"
           result = method.call
-          puts "[DEBUG] Method #{index + 1} result: #{result.inspect}"
+          @logger.debug "[DHAN] Price result: #{result.inspect}"
           return result.to_f if result
         rescue StandardError => e
-          puts "[DEBUG] Method #{index + 1} failed: #{e.message}"
+          @logger.debug "[DHAN] Price method error: #{e.message}"
           next
         end
 
-        puts "[DEBUG] All methods failed to fetch trade price"
+        @logger.debug "[DHAN] All price methods failed"
         nil
       end
 

@@ -1,6 +1,11 @@
 # frozen_string_literal: true
 
-require "redis"
+begin
+  require "redis"
+rescue LoadError
+  # Redis gem is optional; EnhancedApp defaults to memory cache.
+  # Initialization will fail fast if this adapter is used without the gem.
+end
 
 module DhanScalper
   module Cache
@@ -9,6 +14,7 @@ module DhanScalper
       attr_reader :redis, :logger
 
       def initialize(url: nil, logger: nil)
+        raise LoadError, "redis gem not available" unless defined?(Redis)
         @redis = Redis.new(url: url || ENV["REDIS_URL"] || "redis://localhost:6379/0")
         @logger = logger || Logger.new($stdout)
         @lua_scripts = {}
@@ -101,22 +107,23 @@ module DhanScalper
       end
 
       def get_all_positions
-        keys = @redis.keys("position:*")
-        return {} if keys.empty?
-
+        cursor = "0"
         positions = {}
-        keys.each do |key|
-          position_data = @redis.hgetall(key)
-          next if position_data.empty?
-
-          security_id = key.split(":").last
-          positions[security_id] = position_data.transform_values { |v| v.include?(".") ? v.to_f : v }
+        begin
+          loop do
+            cursor, keys = @redis.scan(cursor, match: "position:*", count: 100)
+            keys.each do |key|
+              position_data = @redis.hgetall(key)
+              next if position_data.empty?
+              security_id = key.split(":").last
+              positions[security_id] = position_data.transform_values { |v| v.include?(".") ? v.to_f : v }
+            end
+            break if cursor == "0"
+          end
+        rescue Redis::BaseError => e
+          @logger.error "[REDIS] Get all positions error: #{e.message}"
         end
-
         positions
-      rescue Redis::BaseError => e
-        @logger.error "[REDIS] Get all positions error: #{e.message}"
-        {}
       end
 
       def set_position(security_id, position_data)

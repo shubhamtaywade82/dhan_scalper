@@ -3,9 +3,10 @@
 module DhanScalper
   module Brokers
     class PaperBroker < Base
-      def initialize(virtual_data_manager: nil, balance_provider: nil)
+      def initialize(virtual_data_manager: nil, balance_provider: nil, logger: Logger.new($stdout))
         super(virtual_data_manager: virtual_data_manager)
         @balance_provider = balance_provider
+        @logger = logger
       end
 
       def buy_market(segment:, security_id:, quantity:, charge_per_order: 20)
@@ -17,7 +18,7 @@ module DhanScalper
 
         # Check if we can afford this position
         if @balance_provider && @balance_provider.available_balance < total_cost
-          puts "Warning: Insufficient balance for paper trade. Required: ₹#{total_cost.round(2)}, Available: ₹#{@balance_provider.available_balance.round(2)}"
+          @logger.warn("[PAPER] Insufficient balance. Need ₹#{total_cost.round(2)}, have ₹#{@balance_provider.available_balance.round(2)}")
           return nil
         end
 

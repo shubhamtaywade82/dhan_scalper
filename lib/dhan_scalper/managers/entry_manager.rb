@@ -8,12 +8,14 @@ module DhanScalper
     class EntryManager < DhanScalper::ApplicationService
       attr_reader :config, :trend_filter, :sizing_calculator, :order_manager, :position_tracker
 
-      def initialize(config:, trend_filter:, sizing_calculator:, order_manager:, position_tracker:)
+      def initialize(config:, trend_filter:, sizing_calculator:, order_manager:, position_tracker:, csv_master: nil, logger: Logger.new($stdout))
         @config = config
         @trend_filter = trend_filter
         @sizing_calculator = sizing_calculator
         @order_manager = order_manager
         @position_tracker = position_tracker
+        @csv_master = csv_master
+        @logger = logger
       end
 
       def call(symbol, spot_price)
@@ -38,7 +40,7 @@ module DhanScalper
           premium: strike_info[:premium],
           side: signal == :long ? "BUY" : "SELL"
         )
-        return :insufficient_size unless size_info[:quantity] >= 1
+        return :insufficient_size unless size_info[:quantity].to_i >= 1
 
         # Place entry order
         place_entry_order(symbol, signal, strike_info, size_info)
@@ -47,15 +49,15 @@ module DhanScalper
       private
 
       def market_open?
-        current_time = Time.now
-        market_start = Time.parse("09:15")
-        market_end = Time.parse("15:30")
+        now = Time.now
+        start_h, start_m = 9, 15
+        end_h, end_m = 15, 30
+        grace_seconds = 5 * 60
 
-        # Add grace period
-        grace_start = market_start - 5.minutes
-        grace_end = market_end + 5.minutes
+        start_ts = Time.new(now.year, now.month, now.day, start_h, start_m, 0, now.utc_offset)
+        end_ts   = Time.new(now.year, now.month, now.day, end_h, end_m, 0, now.utc_offset)
 
-        current_time >= grace_start && current_time <= grace_end
+        (now >= (start_ts - grace_seconds)) && (now <= (end_ts + grace_seconds))
       end
 
       def max_positions_reached?
@@ -118,21 +120,22 @@ module DhanScalper
       end
 
       def get_available_strikes(symbol, atm_strike, strike_range)
-        # This would integrate with CSV master to get available strikes
-        # For now, return a simple range
-        min_strike = atm_strike - strike_range
-        max_strike = atm_strike + strike_range
+        return simple_strikes(atm_strike, strike_range) unless @csv_master
 
-        strikes = []
-        strike_step = 50
+        begin
+          expiry = @csv_master.get_expiry_dates(symbol)&.first
+          return simple_strikes(atm_strike, strike_range) unless expiry
 
-        current = (min_strike / strike_step).ceil * strike_step
-        while current <= max_strike
-          strikes << current
-          current += strike_step
+          strikes = @csv_master.get_available_strikes(symbol, expiry)
+          return simple_strikes(atm_strike, strike_range) if strikes.nil? || strikes.empty?
+
+          window_min = atm_strike - strike_range
+          window_max = atm_strike + strike_range
+          strikes.select { |s| s >= window_min && s <= window_max }
+        rescue StandardError => e
+          @logger.warn("[ENTRY] CSV master unavailable (#{e.message}); using simple ATM window")
+          simple_strikes(atm_strike, strike_range)
         end
-
-        strikes
       end
 
       def select_best_strike(strikes, spot_price, signal)
@@ -156,9 +159,34 @@ module DhanScalper
       end
 
       def get_security_id(symbol, strike, option_type)
-        # This would integrate with CSV master
-        # For now, return a mock ID
-        "#{symbol}_#{strike}_#{option_type}_#{Time.now.to_i}"
+        return "#{symbol}_#{strike}_#{option_type}_#{Time.now.to_i}" unless @csv_master
+
+        expiry = begin
+          list = @csv_master.get_expiry_dates(symbol)
+          list&.first
+        rescue StandardError
+          nil
+        end
+        begin
+          sid = expiry ? @csv_master.get_security_id(symbol, expiry, strike, option_type) : nil
+        rescue StandardError => e
+          @logger.warn("[ENTRY] CSV master SID lookup failed: #{e.message}; using mock ID")
+          sid = nil
+        end
+        sid || "#{symbol}_#{strike}_#{option_type}_#{Time.now.to_i}"
+      end
+
+      def simple_strikes(atm_strike, strike_range)
+        min_strike = atm_strike - strike_range
+        max_strike = atm_strike + strike_range
+        strikes = []
+        step = 50
+        current = (min_strike / step).ceil * step
+        while current <= max_strike
+          strikes << current
+          current += step
+        end
+        strikes
       end
 
       def place_entry_order(symbol, signal, strike_info, size_info)
@@ -176,10 +204,10 @@ module DhanScalper
         result = @order_manager.place_order(order_data)
 
         if result[:success]
-          puts "[ENTRY] Placed #{signal} order: #{symbol} #{strike_info[:option_type]} #{strike_info[:strike]} @ ₹#{strike_info[:premium].round(2)}"
+          @logger.info("[ENTRY] Placed #{signal} order: #{symbol} #{strike_info[:option_type]} #{strike_info[:strike]} @ ₹#{strike_info[:premium].round(2)}")
           :success
         else
-          puts "[ENTRY] Failed to place order: #{result[:error]}"
+          @logger.error("[ENTRY] Failed to place order: #{result[:error]}")
           :order_failed
         end
       end

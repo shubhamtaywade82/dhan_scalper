@@ -11,6 +11,9 @@ require_relative "guards/session_guard"
 require_relative "notifications/telegram_notifier"
 require_relative "services/websocket_manager"
 require_relative "services/paper_position_tracker"
+require_relative "services/trend_filter"
+require_relative "services/sizing_calculator"
+require_relative "services/order_manager"
 
 module DhanScalper
   # Enhanced application implementing the full specification
@@ -93,20 +96,58 @@ module DhanScalper
         cache: @cache
       )
 
+      # Initialize services
+      series_loader = lambda do |seg:, sid:, interval:|
+        CandleSeries.load_from_dhan_intraday(seg: seg, sid: sid, interval: interval, symbol: "INDEX")
+      end
+
+      trend_filter = Services::TrendFilter.new(
+        logger: @logger,
+        cache: @cache,
+        config: @config,
+        series_loader: series_loader,
+        streak_window_minutes: @config.dig("trend", "streak_window_minutes") || 3
+      )
+
+      sizing_calculator = Services::SizingCalculator.new(
+        config: @config,
+        logger: @logger
+      )
+
+      # Build brokers
+      paper_broker = Brokers::PaperBroker.new(
+        virtual_data_manager: nil,
+        balance_provider: BalanceProviders::PaperWallet.new(starting_balance: (@config.dig("global", "paper_wallet_rupees") || 200_000).to_f),
+        logger: @logger
+      )
+
+      live_broker = Brokers::DhanBroker.new(logger: @logger) # assumes credentials via env/config
+
+      order_manager = Services::OrderManager.new(
+        config: @config,
+        cache: @cache,
+        broker_paper: paper_broker,
+        broker_live: live_broker,
+        logger: @logger
+      )
+
       # Initialize managers
       @entry_manager = Managers::EntryManager.new(
         config: @config,
-        trend_filter: nil, # TODO: Implement trend filter
-        sizing_calculator: nil, # TODO: Implement sizing calculator
-        order_manager: nil, # TODO: Implement order manager
-        position_tracker: @position_tracker
+        trend_filter: trend_filter,
+        sizing_calculator: sizing_calculator,
+        order_manager: order_manager,
+        position_tracker: @position_tracker,
+        csv_master: CsvMaster.new,
+        logger: @logger
       )
 
       @exit_manager = Managers::ExitManager.new(
         config: @config,
         no_loss_trend_rider: no_loss_trend_rider,
-        order_manager: nil, # TODO: Implement order manager
-        position_tracker: @position_tracker
+        order_manager: order_manager,
+        position_tracker: @position_tracker,
+        logger: @logger
       )
 
       # Initialize WebSocket manager

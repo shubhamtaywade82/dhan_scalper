@@ -8,11 +8,12 @@ module DhanScalper
     class ExitManager < DhanScalper::ApplicationService
       attr_reader :config, :no_loss_trend_rider, :order_manager, :position_tracker
 
-      def initialize(config:, no_loss_trend_rider:, order_manager:, position_tracker:)
+      def initialize(config:, no_loss_trend_rider:, order_manager:, position_tracker:, logger: Logger.new($stdout))
         @config = config
         @no_loss_trend_rider = no_loss_trend_rider
         @order_manager = order_manager
         @position_tracker = position_tracker
+        @logger = logger
       end
 
       def call
@@ -71,10 +72,10 @@ module DhanScalper
         result = @order_manager.place_order(order_data)
 
         if result[:success]
-          puts "[EXIT] #{action[:type].to_s.upcase}: #{action[:reason]} - P&L: ₹#{action[:pnl].round(2)}"
+          @logger.info("[EXIT] #{action[:type].to_s.upcase}: #{action[:reason]} - P&L: ₹#{action[:pnl].round(2)}")
           :exit_placed
         else
-          puts "[EXIT] Failed to place exit order: #{result[:error]}"
+          @logger.error("[EXIT] Failed to place exit order: #{result[:error]}")
           :exit_failed
         end
       end
@@ -82,10 +83,7 @@ module DhanScalper
       def adjust_stop_loss(position, action)
         # This would modify the existing stop loss order
         # For now, just log the adjustment
-        puts "[ADJUST] #{action[:reason]}"
-        puts "  Old trigger: ₹#{action[:old_trigger]&.round(2)}"
-        puts "  New trigger: ₹#{action[:new_trigger]&.round(2)}"
-        puts "  Peak price: ₹#{action[:peak_price]&.round(2)}"
+        @logger.info("[ADJUST] #{action[:reason]} | old=#{action[:old_trigger]&.round(2)} new=#{action[:new_trigger]&.round(2)} peak=#{action[:peak_price]&.round(2)}")
 
         :stop_adjusted
       end

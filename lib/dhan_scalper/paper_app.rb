@@ -676,9 +676,13 @@ module DhanScalper
 
       # Add risk metrics
       @session_data[:risk_metrics] = {
-        max_drawdown: @session_data[:min_pnl],
-        max_profit: @session_data[:max_pnl],
-        risk_reward_ratio: @session_data[:max_profit] > 0 ? (@session_data[:max_profit] / @session_data[:min_pnl].abs).round(2) : 0.0
+        max_drawdown: @session_data[:min_pnl] || 0.0,
+        max_profit: @session_data[:max_pnl] || 0.0,
+        risk_reward_ratio: if @session_data[:max_pnl] && @session_data[:max_pnl] > 0 && @session_data[:min_pnl] && @session_data[:min_pnl] < 0
+                             (@session_data[:max_pnl] / @session_data[:min_pnl].abs).round(2)
+                           else
+                             0.0
+                           end
       }
 
       # Generate the report

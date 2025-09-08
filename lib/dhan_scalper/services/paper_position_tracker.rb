@@ -8,17 +8,18 @@ module DhanScalper
     class PaperPositionTracker
       attr_reader :positions, :underlying_prices, :websocket_manager
 
-      def initialize(websocket_manager:, logger: nil)
+      def initialize(websocket_manager:, logger: nil, memory_only: true)
         @websocket_manager = websocket_manager
         @logger = logger || Logger.new($stdout)
+        @memory_only = memory_only
         @positions = {}
         @underlying_prices = {}
         @position_file = "data/paper_positions.json"
         @price_file = "data/underlying_prices.json"
 
-        # Load existing positions and prices
-        load_positions
-        load_underlying_prices
+        # Load existing positions and prices only if not memory-only
+        load_positions unless @memory_only
+        load_underlying_prices unless @memory_only
 
         # Setup WebSocket handlers
         setup_websocket_handlers
@@ -37,7 +38,7 @@ module DhanScalper
             last_update: nil,
             subscribed: true
           }
-          save_underlying_prices
+          save_underlying_prices unless @memory_only
           @logger.info "[PositionTracker] Now tracking #{symbol} at #{instrument_id}"
         else
           @logger.error "[PositionTracker] Failed to subscribe to #{symbol}"
@@ -162,6 +163,13 @@ module DhanScalper
         summary
       end
 
+      # Save all data at end of session (even in memory-only mode)
+      def save_session_data
+        save_positions
+        save_underlying_prices
+        @logger.info "[PositionTracker] Session data saved"
+      end
+
       private
 
       def setup_websocket_handlers
@@ -177,27 +185,27 @@ module DhanScalper
 
         # Update underlying prices
         @underlying_prices.each do |symbol, data|
-          if data[:instrument_id] == instrument_id
-            data[:last_price] = last_price
-            data[:last_update] = timestamp
-            # @logger.debug "[PositionTracker] Updated #{symbol} price: #{last_price}"
-            break
-          end
+          next unless data[:instrument_id] == instrument_id
+
+          data[:last_price] = last_price
+          data[:last_update] = timestamp
+          # @logger.debug "[PositionTracker] Updated #{symbol} price: #{last_price}"
+          break
         end
 
         # Update position prices
         @positions.each do |position_key, position|
-          if position[:instrument_id] == instrument_id
-            position[:current_price] = last_price
-            position[:last_update] = timestamp
-            position[:pnl] = (last_price - position[:entry_price]) * position[:quantity]
-            # @logger.debug "[PositionTracker] Updated #{position_key} price: #{last_price}, PnL: #{position[:pnl]}"
-          end
+          next unless position[:instrument_id] == instrument_id
+
+          position[:current_price] = last_price
+          position[:last_update] = timestamp
+          position[:pnl] = (last_price - position[:entry_price]) * position[:quantity]
+          # @logger.debug "[PositionTracker] Updated #{position_key} price: #{last_price}, PnL: #{position[:pnl]}"
         end
 
-        # Save updated data
-        save_underlying_prices
-        save_positions
+        # Save updated data only if not memory-only
+        save_underlying_prices unless @memory_only
+        save_positions unless @memory_only
       end
 
       def load_positions

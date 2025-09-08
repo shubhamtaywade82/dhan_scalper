@@ -6,8 +6,9 @@ require "fileutils"
 
 module DhanScalper
   class VirtualDataManager
-    def initialize(data_dir: "data")
+    def initialize(data_dir: "data", memory_only: false)
       @data_dir = data_dir
+      @memory_only = memory_only
       @orders_file = File.join(@data_dir, "orders.csv")
       @positions_file = File.join(@data_dir, "positions.csv")
       @balance_file = File.join(@data_dir, "balance.json")
@@ -17,8 +18,8 @@ module DhanScalper
       @positions_cache = []
       @balance_cache = { available: 100_000.0, used: 0.0, total: 100_000.0 }
 
-      ensure_data_directory
-      load_existing_data
+      ensure_data_directory unless @memory_only
+      load_existing_data unless @memory_only
     end
 
     # Orders management
@@ -34,7 +35,7 @@ module DhanScalper
       }
 
       @orders_cache << order_data
-      save_orders_to_csv
+      save_orders_to_csv unless @memory_only
       order_data
     end
 
@@ -62,7 +63,7 @@ module DhanScalper
       # Remove existing position for same security_id if exists
       @positions_cache.reject! { |p| p[:security_id] == position.security_id }
       @positions_cache << position_data
-      save_positions_to_csv
+      save_positions_to_csv unless @memory_only
       position_data
     end
 
@@ -72,13 +73,13 @@ module DhanScalper
 
       updates.each { |key, value| position[key] = value }
       position[:timestamp] = Time.now.iso8601
-      save_positions_to_csv
+      save_positions_to_csv unless @memory_only
       position
     end
 
     def remove_position(security_id)
       @positions_cache.reject! { |p| p[:security_id] == security_id }
-      save_positions_to_csv
+      save_positions_to_csv unless @memory_only
     end
 
     def get_positions
@@ -101,7 +102,7 @@ module DhanScalper
       end
 
       @balance_cache[:total] = @balance_cache[:available] + @balance_cache[:used]
-      save_balance_to_json
+      save_balance_to_json unless @memory_only
       @balance_cache
     end
 
@@ -111,7 +112,7 @@ module DhanScalper
 
     def set_initial_balance(amount)
       @balance_cache = { available: amount, used: 0.0, total: amount }
-      save_balance_to_json
+      save_balance_to_json unless @memory_only
       @balance_cache
     end
 

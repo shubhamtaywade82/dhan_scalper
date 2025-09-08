@@ -22,7 +22,7 @@ module DhanScalper
       Signal.trap("TERM") { @stop = true }
       @state = State.new(symbols: cfg["SYMBOLS"]&.keys || [], session_target: cfg.dig("global", "min_profit_target").to_f,
                          max_day_loss: cfg.dig("global", "max_day_loss").to_f)
-      @virtual_data_manager = VirtualDataManager.new
+      @virtual_data_manager = VirtualDataManager.new(memory_only: true)
 
       # Initialize balance provider (always paper for dryrun)
       starting_balance = cfg.dig("paper", "starting_balance") || 200_000.0
@@ -87,7 +87,6 @@ module DhanScalper
               last_status_update = Time.now
               simple_logger&.update_status({})
             end
-
           rescue StandardError => e
             puts "\n[ERR] #{e.class}: #{e.message}"
             puts e.backtrace.first(5).join("\n") if @cfg.dig("global", "log_level") == "DEBUG"
@@ -145,7 +144,6 @@ module DhanScalper
 
           # Analyze what would happen (reuse cached picker if available)
           analyze_signal_impact(sym, direction, spot, s)
-
         rescue StandardError => e
           puts "[#{sym}] Error analyzing signals: #{e.message}"
           puts e.backtrace.first(3).join("\n") if @cfg.dig("global", "log_level") == "DEBUG"

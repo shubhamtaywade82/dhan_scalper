@@ -6,15 +6,20 @@ RSpec.describe DhanScalper::CsvMaster do
   let(:csv_master) { described_class.new }
   let(:mock_csv_data) do
     <<~CSV
-      UNDERLYING_SYMBOL,INSTRUMENT,SECURITY_ID,SM_EXPIRY_DATE,STRIKE_PRICE,OPTION_TYPE,LOT_SIZE
-      NIFTY,OPTIDX,NIFTY25SEP19000CE,2025-09-25,19000,CE,50
-      NIFTY,OPTIDX,NIFTY25SEP19000PE,2025-09-25,19000,PE,50
-      NIFTY,OPTIDX,NIFTY25SEP19100CE,2025-09-25,19100,CE,50
-      NIFTY,OPTIDX,NIFTY25SEP19100PE,2025-09-25,19100,PE,50
-      BANKNIFTY,OPTIDX,BANKNIFTY25SEP45000CE,2025-09-25,45000,CE,25
-      BANKNIFTY,OPTIDX,BANKNIFTY25SEP45000PE,2025-09-25,45000,PE,25
-      GOLD,OPTFUT,GOLD25SEP65000CE,2025-09-25,65000,CE,100
-      GOLD,OPTFUT,GOLD25SEP65000PE,2025-09-25,65000,PE,100
+      EXCH_ID,SEGMENT,SECURITY_ID,ISIN,INSTRUMENT,UNDERLYING_SECURITY_ID,UNDERLYING_SYMBOL,SYMBOL_NAME,DISPLAY_NAME,INSTRUMENT_TYPE,SERIES,LOT_SIZE,SM_EXPIRY_DATE,STRIKE_PRICE,OPTION_TYPE
+      NSE,I,13,NA,IDX,13,NIFTY,NIFTY,NIFTY,IDX,NA,1,NA,NA,NA
+      NSE,I,14,NA,IDX,14,BANKNIFTY,BANKNIFTY,BANKNIFTY,IDX,NA,1,NA,NA,NA
+      NSE,D,NIFTY25SEP19000CE,NA,OPTIDX,13,NIFTY,NIFTY25SEP19000CE,NIFTY 19000 CE,OPTIDX,NA,50,2025-09-25,19000,CE
+      NSE,D,NIFTY25SEP19000PE,NA,OPTIDX,13,NIFTY,NIFTY25SEP19000PE,NIFTY 19000 PE,OPTIDX,NA,50,2025-09-25,19000,PE
+      NSE,D,NIFTY25SEP19100CE,NA,OPTIDX,13,NIFTY,NIFTY25SEP19100CE,NIFTY 19100 CE,OPTIDX,NA,50,2025-09-25,19100,CE
+      NSE,D,NIFTY25SEP19100PE,NA,OPTIDX,13,NIFTY,NIFTY25SEP19100PE,NIFTY 19100 PE,OPTIDX,NA,50,2025-09-25,19100,PE
+      NSE,D,BANKNIFTY25SEP45000CE,NA,OPTIDX,14,BANKNIFTY,BANKNIFTY25SEP45000CE,BANKNIFTY 45000 CE,OPTIDX,NA,25,2025-09-25,45000,CE
+      NSE,D,BANKNIFTY25SEP45000PE,NA,OPTIDX,14,BANKNIFTY,BANKNIFTY25SEP45000PE,BANKNIFTY 45000 PE,OPTIDX,NA,25,2025-09-25,45000,PE
+      MCX,M,GOLD25SEP65000CE,NA,OPTFUT,15,GOLD,GOLD25SEP65000CE,GOLD 65000 CE,OPTFUT,NA,100,2025-09-25,65000,CE
+      MCX,M,GOLD25SEP65000PE,NA,OPTFUT,15,GOLD,GOLD25SEP65000PE,GOLD 65000 PE,OPTFUT,NA,100,2025-09-25,65000,PE
+      NSE,E,RELIANCE,NA,EQ,16,RELIANCE,RELIANCE,RELIANCE,EQ,NA,1,NA,NA,NA
+      BSE,E,TCS,NA,EQ,17,TCS,TCS,TCS,EQ,NA,1,NA,NA,NA
+      NSE,C,USDINR,NA,FUTCUR,18,USDINR,USDINR,USDINR,FUTCUR,NA,1000,NA,NA,NA
     CSV
   end
   let(:mock_http_response) do
@@ -41,6 +46,105 @@ RSpec.describe DhanScalper::CsvMaster do
     it "initializes with default values" do
       expect(csv_master.instance_variable_get(:@data)).to be_nil
       expect(csv_master.instance_variable_get(:@last_download)).to be_nil
+    end
+  end
+
+  describe "#get_exchange_segment" do
+    it "returns correct exchange segment for NSE index" do
+      expect(csv_master.get_exchange_segment("13")).to eq("IDX_I")
+    end
+
+    it "returns correct exchange segment for NSE derivatives" do
+      expect(csv_master.get_exchange_segment("NIFTY25SEP19000CE")).to eq("NSE_FNO")
+    end
+
+    it "returns correct exchange segment for MCX commodity" do
+      expect(csv_master.get_exchange_segment("GOLD25SEP65000CE")).to eq("MCX_COMM")
+    end
+
+    it "returns correct exchange segment for NSE equity" do
+      expect(csv_master.get_exchange_segment("RELIANCE")).to eq("NSE_EQ")
+    end
+
+    it "returns correct exchange segment for BSE equity" do
+      expect(csv_master.get_exchange_segment("TCS")).to eq("BSE_EQ")
+    end
+
+    it "returns correct exchange segment for NSE currency" do
+      expect(csv_master.get_exchange_segment("USDINR")).to eq("NSE_CURRENCY")
+    end
+
+    it "returns nil for non-existent security ID" do
+      expect(csv_master.get_exchange_segment("NONEXISTENT")).to be_nil
+    end
+  end
+
+  describe "#get_exchange_segment_by_symbol" do
+    it "returns correct exchange segment for NIFTY index" do
+      expect(csv_master.get_exchange_segment_by_symbol("NIFTY", "IDX")).to eq("IDX_I")
+    end
+
+    it "returns correct exchange segment for NIFTY options" do
+      expect(csv_master.get_exchange_segment_by_symbol("NIFTY", "OPTIDX")).to eq("NSE_FNO")
+    end
+
+    it "returns correct exchange segment for GOLD futures" do
+      expect(csv_master.get_exchange_segment_by_symbol("GOLD", "OPTFUT")).to eq("MCX_COMM")
+    end
+
+    it "returns nil for non-existent symbol" do
+      expect(csv_master.get_exchange_segment_by_symbol("NONEXISTENT", "OPTIDX")).to be_nil
+    end
+  end
+
+  describe "#get_instruments_with_segments" do
+    it "returns all instruments with exchange segments" do
+      instruments = csv_master.get_instruments_with_segments
+      expect(instruments.length).to eq(13)
+
+      nifty_instrument = instruments.find { |i| i[:underlying_symbol] == "NIFTY" && i[:instrument] == "OPTIDX" }
+      expect(nifty_instrument).to include(
+        security_id: "NIFTY25SEP19000CE",
+        underlying_symbol: "NIFTY",
+        exchange: "NSE",
+        segment: "D",
+        exchange_segment: "NSE_FNO",
+        lot_size: 50
+      )
+    end
+
+    it "filters by underlying symbol" do
+      instruments = csv_master.get_instruments_with_segments("NIFTY")
+      expect(instruments.length).to eq(5) # 1 index + 4 options
+      expect(instruments.all? { |i| i[:underlying_symbol] == "NIFTY" }).to be true
+    end
+  end
+
+  describe "#get_exchange_info" do
+    it "returns complete exchange info for NSE index" do
+      info = csv_master.get_exchange_info("13")
+      expect(info).to include(
+        exchange: "NSE",
+        segment: "I",
+        exchange_name: "National Stock Exchange",
+        segment_name: "Index",
+        exchange_segment: "IDX_I"
+      )
+    end
+
+    it "returns complete exchange info for MCX commodity" do
+      info = csv_master.get_exchange_info("GOLD25SEP65000CE")
+      expect(info).to include(
+        exchange: "MCX",
+        segment: "M",
+        exchange_name: "Multi Commodity Exchange",
+        segment_name: "Commodity",
+        exchange_segment: "MCX_COMM"
+      )
+    end
+
+    it "returns nil for non-existent security ID" do
+      expect(csv_master.get_exchange_info("NONEXISTENT")).to be_nil
     end
   end
 

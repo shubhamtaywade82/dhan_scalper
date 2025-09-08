@@ -2,7 +2,7 @@ symbols: ["NIFTY"] # later: ["NIFTY","BANKNIFTY","SENSEX"]
 
 global:
   min_profit_target: 1000 # session target (₹)
-  max_day_loss: 1500 # cutoff (₹)
+  max_day_loss: 5000 # cutoff (₹)
   charge_per_order: 20 # flat per order (entry & exit both)
   allocation_pct: 0.30 # 30% of available balance per new position
   slippage_buffer_pct: 0.01 # cushion for sizing on premium

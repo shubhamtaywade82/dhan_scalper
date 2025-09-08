@@ -37,7 +37,9 @@ module DhanScalper
       # Get all cached ticks
       # @return [Hash] All cached ticks
       def all
-        MAP.to_h
+        result = {}
+        MAP.each { |key, value| result[key] = value }
+        result
       end
 
       # Clear all cached data

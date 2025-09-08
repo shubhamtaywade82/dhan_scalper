@@ -30,7 +30,7 @@ module DhanScalper
         max_day_loss: cfg.dig("global", "max_day_loss").to_f
       )
 
-      @virtual_data_manager = VirtualDataManager.new
+      @virtual_data_manager = VirtualDataManager.new(memory_only: true)
 
       # Initialize balance provider
       starting_balance = cfg.dig("paper", "starting_balance") || 200_000.0
@@ -51,7 +51,8 @@ module DhanScalper
       # Initialize position tracker
       @position_tracker = Services::PaperPositionTracker.new(
         websocket_manager: @websocket_manager,
-        logger: @logger
+        logger: @logger,
+        memory_only: true
       )
 
       # Initialize logger
@@ -61,6 +62,9 @@ module DhanScalper
       # Cache for trend objects and option pickers
       @cached_trends = {}
       @cached_pickers = {}
+
+      # Cache for security ID to strike mapping
+      @security_to_strike = {}
     end
 
     def start
@@ -85,12 +89,35 @@ module DhanScalper
         # Connect to WebSocket
         @websocket_manager.connect
 
+        # Setup tick handler to store data in TickCache
+        @websocket_manager.on_price_update do |price_data|
+          # Convert price_data to tick format for TickCache
+          tick_data = {
+            segment: price_data[:segment] || "NSE_FNO",
+            security_id: price_data[:instrument_id],
+            ltp: price_data[:last_price],
+            open: price_data[:open],
+            high: price_data[:high],
+            low: price_data[:low],
+            close: price_data[:close],
+            volume: price_data[:volume],
+            ts: price_data[:timestamp]
+          }
+          DhanScalper::TickCache.put(tick_data)
+        end
+
         # Start tracking underlying instruments
         start_tracking_underlyings
+
+        # Subscribe to ATM options for monitoring (even without trading signals)
+        # Wait a bit for spot price to be available
+        sleep(2)
+        subscribe_to_atm_options_for_monitoring
 
         # Main trading loop
         last_decision = Time.at(0)
         last_status_update = Time.at(0)
+        last_ltp_update = Time.at(0)
         decision_interval = @cfg.dig("global", "decision_interval").to_i
         status_interval = 30
 
@@ -135,6 +162,11 @@ module DhanScalper
               last_status_update = Time.now
             end
 
+            # Show LTPs every 30 seconds
+            if Time.now - last_ltp_update >= 30 # Every 30 seconds
+              print_subscribed_ltps
+              last_ltp_update = Time.now
+            end
           rescue StandardError => e
             puts "\n[ERR] #{e.class}: #{e.message}"
             puts e.backtrace.first(5).join("\n") if @cfg.dig("global", "log_level") == "DEBUG"
@@ -142,12 +174,12 @@ module DhanScalper
             sleep 0.5
           end
         end
-
       ensure
         @state.set_status(:stopped)
         @websocket_manager.disconnect
         puts "\n[PAPER] Trading stopped"
         show_final_summary
+        @position_tracker.save_session_data
       end
     end
 
@@ -199,7 +231,6 @@ module DhanScalper
 
           # Execute trades based on signals
           execute_trade(sym, direction, spot_price, s) if direction != :none
-
         rescue StandardError => e
           puts "[#{sym}] Error in analysis: #{e.message}"
           puts e.backtrace.first(3).join("\n") if @cfg.dig("global", "log_level") == "DEBUG"
@@ -220,6 +251,9 @@ module DhanScalper
       strike_step = symbol_config["strike_step"] || 50
       actual_strike = picker.nearest_strike(spot_price, strike_step)
 
+      # Subscribe to ATM and ATM+/- options for LTP monitoring
+      subscribe_to_atm_options(symbol, spot_price, actual_strike, strike_step, pick)
+
       # Determine which option to trade
       option_sid = case direction
                    when :bullish, :long_ce
@@ -239,8 +273,36 @@ module DhanScalper
                       "PE"
                     end
 
+      # Subscribe to option instrument first
+      @websocket_manager.subscribe_to_instrument(option_sid, "OPTION")
+
+      # Wait a moment for subscription to establish
+      sleep(0.1)
+
+      # Get real market price for the option
+      option_price = DhanScalper::TickCache.ltp(symbol_config["seg_opt"], option_sid)&.to_f
+
+      # Fallback to mock price for testing when market is closed
+      unless option_price&.positive?
+        # Calculate mock price based on spot price and strike
+        spot_price = spot_price.to_f
+        strike = actual_strike.to_f
+        option_type_for_price = option_type == "CE" ? "CE" : "PE"
+
+        # Simple mock pricing: ITM options have higher value
+        option_price = if option_type_for_price == "CE"
+                         ([spot_price - strike, 0].max * 0.01) + 10.0
+                       else
+                         ([strike - spot_price, 0].max * 0.01) + 10.0
+                       end
+
+        # Ensure minimum price
+        option_price = [option_price, 5.0].max
+
+        puts "[#{symbol}] Using mock price for testing: ₹#{option_price.round(2)} (market closed)"
+      end
+
       # Calculate position size
-      option_price = 50.0 # Mock option price for now
       lots = @quantity_sizer.calculate_lots(symbol, option_price, side: "BUY")
       quantity = @quantity_sizer.calculate_quantity(symbol, option_price, side: "BUY")
 
@@ -285,17 +347,17 @@ module DhanScalper
 
       # Check position limits
       max_positions = @cfg.dig("global", "max_positions").to_i
-      if max_positions > 0 && @position_tracker.positions.size >= max_positions
-        puts "[RISK] Maximum positions reached: #{@position_tracker.positions.size}"
-        puts "[RISK] No new positions will be opened"
-      end
+      return unless max_positions > 0 && @position_tracker.positions.size >= max_positions
+
+      puts "[RISK] Maximum positions reached: #{@position_tracker.positions.size}"
+      puts "[RISK] No new positions will be opened"
     end
 
     def show_position_summary
       summary = @position_tracker.get_positions_summary
       underlying_summary = @position_tracker.get_underlying_summary
 
-      puts "\n" + "="*60
+      puts "\n" + ("=" * 60)
       puts "[POSITION SUMMARY]"
       puts "Total Positions: #{summary[:total_positions]}"
       puts "Total P&L: ₹#{summary[:total_pnl].round(2)}"
@@ -316,18 +378,173 @@ module DhanScalper
         end
       end
 
-      puts "="*60
+      puts "=" * 60
     end
 
     def show_final_summary
       summary = @position_tracker.get_positions_summary
 
-      puts "\n" + "="*60
+      puts "\n" + ("=" * 60)
       puts "[FINAL SUMMARY]"
       puts "Session P&L: ₹#{summary[:total_pnl].round(2)}"
       puts "Final Balance: ₹#{@balance_provider.available_balance.round(0)}"
       puts "Positions Closed: #{summary[:total_positions]}"
-      puts "="*60
+      puts "=" * 60
+    end
+
+    def subscribe_to_atm_options_for_monitoring
+      puts "\n[ATM MONITOR] Setting up ATM options subscription for monitoring..."
+
+      @cfg["SYMBOLS"]&.each_key do |symbol|
+        next unless symbol
+
+        symbol_config = sym_cfg(symbol)
+        next if symbol_config["idx_sid"].to_s.empty?
+
+        # Try to get spot price with retries
+        spot_price = nil
+        5.times do |attempt|
+          # Debug: Show what's in TickCache
+          if attempt == 0
+            cache_data = DhanScalper::TickCache.all
+            puts "[ATM MONITOR] TickCache contents: #{cache_data.keys}"
+          end
+
+          # Try different key formats
+          spot_price = DhanScalper::TickCache.ltp("IDX_I", symbol_config["idx_sid"])&.to_f
+          if spot_price.nil? || spot_price.zero?
+            # Try alternative key format
+            spot_price = DhanScalper::TickCache.ltp("NSE_FNO", symbol_config["idx_sid"])&.to_f
+          end
+          puts "[ATM MONITOR] #{symbol} spot price attempt #{attempt + 1}: #{spot_price}"
+          break if spot_price&.positive?
+
+          sleep(1) if attempt < 4
+        end
+
+        next unless spot_price&.positive?
+
+        # Get option picker and pick options
+        picker = get_cached_picker(symbol, symbol_config)
+        pick = picker.pick(current_spot: spot_price)
+        next unless pick[:ce_sid] && pick[:pe_sid]
+
+        # Calculate ATM strike
+        strike_step = symbol_config["strike_step"] || 50
+        atm_strike = picker.nearest_strike(spot_price, strike_step)
+
+        # Subscribe to ATM options
+        subscribe_to_atm_options(symbol, spot_price, atm_strike, strike_step, pick)
+      end
+    end
+
+    def subscribe_to_atm_options(symbol, spot_price, atm_strike, strike_step, pick)
+      # Subscribe to ATM, ATM+1, ATM-1 strikes for both CE and PE
+      strikes_to_subscribe = [
+        atm_strike - strike_step,  # ATM-1
+        atm_strike,                # ATM
+        atm_strike + strike_step   # ATM+1
+      ]
+
+      puts "\n[#{symbol}] Subscribing to ATM options around #{atm_strike}:"
+
+      strikes_to_subscribe.each do |strike|
+        # Subscribe to CE
+        if pick[:ce_sid][strike]
+          security_id = pick[:ce_sid][strike]
+          @websocket_manager.subscribe_to_instrument(security_id, "OPTION")
+          @security_to_strike[security_id] = { strike: strike, type: "CE", symbol: symbol }
+          puts "  ✅ Subscribed to #{strike} CE (#{security_id})"
+        end
+
+        # Subscribe to PE
+        next unless pick[:pe_sid][strike]
+
+        security_id = pick[:pe_sid][strike]
+        @websocket_manager.subscribe_to_instrument(security_id, "OPTION")
+        @security_to_strike[security_id] = { strike: strike, type: "PE", symbol: symbol }
+        puts "  ✅ Subscribed to #{strike} PE (#{security_id})"
+      end
+
+      puts "  📊 Spot: ₹#{spot_price.round(2)} | ATM: #{atm_strike}"
+    end
+
+    def print_subscribed_ltps
+      puts "\n" + ("=" * 60)
+      puts "[LTP MONITOR] - #{Time.now.strftime("%H:%M:%S")}"
+      puts "=" * 60
+
+      cache_data = DhanScalper::TickCache.all
+
+      if cache_data && !cache_data.empty?
+        puts "\n📊 SUBSCRIBED INSTRUMENTS:"
+
+        # Group by instrument type for better display
+        index_instruments = {}
+        option_instruments = {}
+
+        cache_data.each do |key, tick|
+          if key.include?("IDX_I")
+            index_instruments[key] = tick
+          else
+            option_instruments[key] = tick
+          end
+        end
+
+        # Display index instruments
+        if index_instruments.any?
+          puts "\n  📈 INDEX INSTRUMENTS:"
+          index_instruments.each do |key, tick|
+            ltp = tick[:ltp]
+            timestamp = tick[:timestamp]
+            age = timestamp ? (Time.now - timestamp).round(1) : "N/A"
+            display_key = key.gsub(":", " - ")
+            puts "    #{display_key}: LTP=₹#{ltp || "N/A"} (#{age}s ago)"
+          end
+        end
+
+        # Display option instruments grouped by strike
+        if option_instruments.any?
+          puts "\n  📊 OPTION INSTRUMENTS:"
+
+          # Group options by strike for better display
+          options_by_strike = {}
+          option_instruments.each do |key, tick|
+            # Extract security ID from key (format: "NSE_FNO:40583")
+            security_id = key.split(":").last
+            strike_info = @security_to_strike[security_id]
+
+            if strike_info
+              strike = strike_info[:strike]
+              type = strike_info[:type]
+              symbol = strike_info[:symbol]
+              options_by_strike[strike] ||= {}
+              options_by_strike[strike][type] = { tick: tick, security_id: security_id }
+            else
+              # Fallback for unknown security IDs
+              options_by_strike["Unknown"] ||= {}
+              options_by_strike["Unknown"][key] = { tick: tick, security_id: security_id }
+            end
+          end
+
+          # Display options grouped by strike
+          options_by_strike.sort_by { |strike, _| strike.to_s }.each do |strike, types|
+            puts "\n    Strike #{strike}:"
+            types.each do |type, data|
+              tick = data[:tick]
+              security_id = data[:security_id]
+              ltp = tick[:ltp]
+              timestamp = tick[:timestamp]
+              age = timestamp ? (Time.now - timestamp).round(1) : "N/A"
+              puts "      #{type}: LTP=₹#{ltp || "N/A"} (#{age}s ago) [#{security_id}]"
+            end
+          end
+        end
+      else
+        puts "❌ No instruments subscribed or no data available"
+      end
+
+      puts "=" * 60
     end
 
     def get_cached_trend(symbol, symbol_config)
@@ -357,9 +574,7 @@ module DhanScalper
     def get_cached_picker(symbol, symbol_config)
       picker_key = "#{symbol}_picker"
 
-      unless @cached_pickers[picker_key]
-        @cached_pickers[picker_key] = OptionPicker.new(symbol_config, mode: :paper)
-      end
+      @cached_pickers[picker_key] = OptionPicker.new(symbol_config, mode: :paper) unless @cached_pickers[picker_key]
 
       @cached_pickers[picker_key]
     end

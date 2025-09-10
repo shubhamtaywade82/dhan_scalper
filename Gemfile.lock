@@ -163,6 +163,10 @@ GEM
     rdoc (6.14.2)
       erb
       psych (>= 4.0.0)
+    redis (5.4.1)
+      redis-client (>= 0.22.0)
+    redis-client (0.25.3)
+      connection_pool
     regexp_parser (2.11.2)
     reline (0.6.2)
       io-console (~> 0.5)
@@ -261,11 +265,13 @@ PLATFORMS
 DEPENDENCIES
   DhanHQ!
   concurrent-ruby
+  connection_pool (>= 2.4)
   dhan_scalper!
   dotenv
   irb
   pastel
   rake (~> 13.0, >= 13.0)
+  redis (~> 5.1)
   rspec (~> 3.0, >= 3.12)
   rubocop (~> 1.21)
   rubocop-performance

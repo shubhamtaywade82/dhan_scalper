@@ -32,3 +32,7 @@ gem "tty-reader"
 gem "tty-screen"
 gem "tty-table"
 gem "webmock", group: :test
+
+# Redis optional runtime (used when TICK_CACHE_BACKEND=redis)
+gem "redis", "~> 5.1"
+gem "connection_pool", ">= 2.4"

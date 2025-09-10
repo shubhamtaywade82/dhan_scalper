@@ -3,6 +3,9 @@
 require "spec_helper"
 
 RSpec.describe DhanScalper::TickCache do
+  before do
+    described_class.clear
+  end
   describe ".put" do
     it "stores tick data in the cache" do
       tick_data = {

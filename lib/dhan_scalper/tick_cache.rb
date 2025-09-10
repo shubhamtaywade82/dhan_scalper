@@ -1,10 +1,21 @@
 # frozen_string_literal: true
 
 require "concurrent"
+begin
+  require "redis"
+  require "connection_pool"
+rescue LoadError
+  # optional; fallback to memory
+end
 
 module DhanScalper
   class TickCache
     MAP = Concurrent::Map.new
+    REDIS_POOL = if ENV["TICK_CACHE_BACKEND"] == "redis" && defined?(Redis) && defined?(ConnectionPool)
+                   ConnectionPool.new(size: ENV.fetch("REDIS_POOL", "5").to_i, timeout: 1) do
+                     Redis.new(url: ENV.fetch("REDIS_URL", "redis://127.0.0.1:6379/0"))
+                   end
+                 end
 
     class << self
       # Store a tick in the cache
@@ -12,8 +23,16 @@ module DhanScalper
       def put(tick)
         return unless tick.is_a?(Hash) && tick[:segment] && tick[:security_id]
 
-        key = "#{tick[:segment]}:#{tick[:security_id]}"
-        MAP[key] = tick.merge(timestamp: Time.now)
+        if REDIS_POOL
+          key = tick_key(tick[:segment], tick[:security_id])
+          REDIS_POOL.with do |r|
+            r.hset(key, tick.transform_keys(&:to_s))
+            r.expire(key, 60)
+          end
+        else
+          key = "#{tick[:segment]}:#{tick[:security_id]}"
+          MAP[key] = tick.merge(timestamp: Time.now)
+        end
       end
 
       # Get a tick from the cache
@@ -21,8 +40,18 @@ module DhanScalper
       # @param security_id [String] Security ID
       # @return [Hash, nil] The tick data or nil if not found
       def get(segment, security_id)
-        key = "#{segment}:#{security_id}"
-        MAP[key]
+        if REDIS_POOL
+          key = tick_key(segment, security_id)
+          h = REDIS_POOL.with { |r| r.hgetall(key) }
+          return nil if h.nil? || h.empty?
+          # coerce numeric fields if present
+          h = h.transform_keys(&:to_sym)
+          h[:ltp] = (h[:ltp].include?(".") ? h[:ltp].to_f : h[:ltp].to_i) rescue h[:ltp]
+          h
+        else
+          key = "#{segment}:#{security_id}"
+          MAP[key]
+        end
       end
 
       # Get the LTP (Last Traded Price) for a specific instrument
@@ -30,21 +59,39 @@ module DhanScalper
       # @param security_id [String] Security ID
       # @return [Float, nil] The LTP or nil if not found
       def ltp(segment, security_id)
-        tick = get(segment, security_id)
-        tick&.dig(:ltp)
+        if REDIS_POOL
+          key = tick_key(segment, security_id)
+          v = REDIS_POOL.with { |r| r.hget(key, "ltp") }
+          return nil if v.nil?
+          return v if v.is_a?(String) && v.match?(/[^0-9.]/)
+          v.include?(".") ? v.to_f : v.to_i rescue v
+        else
+          tick = get(segment, security_id)
+          tick&.dig(:ltp)
+        end
       end
 
       # Get all cached ticks
       # @return [Hash] All cached ticks
       def all
-        result = {}
-        MAP.each { |key, value| result[key] = value }
-        result
+        if REDIS_POOL
+          # lightweight: only return counts when using redis
+          { total_ticks: stats[:total_ticks] }
+        else
+          result = {}
+          MAP.each { |key, value| result[key] = value }
+          result
+        end
       end
 
       # Clear all cached data
       def clear
-        MAP.clear
+        if REDIS_POOL
+          # best-effort: do nothing to avoid wild-card deletes; tests use memory backend
+          true
+        else
+          MAP.clear
+        end
       end
 
       # Get tick data for multiple instruments
@@ -67,22 +114,48 @@ module DhanScalper
       # @param max_age [Integer] Maximum age in seconds (default: 30)
       # @return [Boolean] True if tick is fresh, false otherwise
       def fresh?(segment, security_id, max_age: 30)
-        tick = get(segment, security_id)
-        return false unless tick&.dig(:timestamp)
+        if REDIS_POOL
+          # use TTL as freshness proxy
+          key = tick_key(segment, security_id)
+          ttl = REDIS_POOL.with { |r| r.ttl(key) }
+          return ttl && ttl > 0 && ttl <= 60
+        else
+          tick = get(segment, security_id)
+          return false unless tick&.dig(:timestamp)
 
-        (Time.now - tick[:timestamp]) <= max_age
+          (Time.now - tick[:timestamp]) <= max_age
+        end
       end
 
       # Get statistics about the cache
       # @return [Hash] Cache statistics
       def stats
-        {
-          total_ticks: MAP.size,
-          segments: MAP.values.map { |t| t[:segment] }.uniq,
-          oldest_tick: MAP.values.map { |t| t[:timestamp] }.compact.min,
-          newest_tick: MAP.values.map { |t| t[:timestamp] }.compact.max
-        }
+        if REDIS_POOL
+          # Approximate: count keys by scan
+          total = 0
+          cursor = "0"
+          begin
+            loop do
+              res = REDIS_POOL.with { |r| r.scan(cursor, match: "ticks:*", count: 100) }
+              cursor, keys = res
+              total += keys.size
+              break if cursor == "0"
+            end
+          rescue StandardError
+            total = 0
+          end
+          { total_ticks: total, segments: [] }
+        else
+          {
+            total_ticks: MAP.size,
+            segments: MAP.values.map { |t| t[:segment] }.uniq,
+            oldest_tick: MAP.values.map { |t| t[:timestamp] }.compact.min,
+            newest_tick: MAP.values.map { |t| t[:timestamp] }.compact.max
+          }
+        end
       end
+
+      def tick_key(seg, sid) = "ticks:#{seg}:#{sid}"
     end
   end
 end

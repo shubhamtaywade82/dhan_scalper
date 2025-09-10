@@ -16,6 +16,7 @@ module DhanScalper
                      Redis.new(url: ENV.fetch("REDIS_URL", "redis://127.0.0.1:6379/0"))
                    end
                  end
+    NAMESPACE = ENV.fetch("REDIS_NAMESPACE", nil)
 
     class << self
       # Store a tick in the cache
@@ -24,7 +25,7 @@ module DhanScalper
         return unless tick.is_a?(Hash) && tick[:segment] && tick[:security_id]
 
         if REDIS_POOL
-          key = tick_key(tick[:segment], tick[:security_id])
+          key = namespaced(tick_key(tick[:segment], tick[:security_id]))
           REDIS_POOL.with do |r|
             r.hset(key, tick.transform_keys(&:to_s))
             r.expire(key, 60)
@@ -41,7 +42,7 @@ module DhanScalper
       # @return [Hash, nil] The tick data or nil if not found
       def get(segment, security_id)
         if REDIS_POOL
-          key = tick_key(segment, security_id)
+          key = namespaced(tick_key(segment, security_id))
           h = REDIS_POOL.with { |r| r.hgetall(key) }
           return nil if h.nil? || h.empty?
           # coerce numeric fields if present
@@ -60,7 +61,7 @@ module DhanScalper
       # @return [Float, nil] The LTP or nil if not found
       def ltp(segment, security_id)
         if REDIS_POOL
-          key = tick_key(segment, security_id)
+          key = namespaced(tick_key(segment, security_id))
           v = REDIS_POOL.with { |r| r.hget(key, "ltp") }
           return nil if v.nil?
           return v if v.is_a?(String) && v.match?(/[^0-9.]/)
@@ -116,7 +117,7 @@ module DhanScalper
       def fresh?(segment, security_id, max_age: 30)
         if REDIS_POOL
           # use TTL as freshness proxy
-          key = tick_key(segment, security_id)
+          key = namespaced(tick_key(segment, security_id))
           ttl = REDIS_POOL.with { |r| r.ttl(key) }
           return ttl && ttl > 0 && ttl <= 60
         else
@@ -136,7 +137,7 @@ module DhanScalper
           cursor = "0"
           begin
             loop do
-              res = REDIS_POOL.with { |r| r.scan(cursor, match: "ticks:*", count: 100) }
+              res = REDIS_POOL.with { |r| r.scan(cursor, match: namespaced("ticks:*"), count: 100) }
               cursor, keys = res
               total += keys.size
               break if cursor == "0"
@@ -156,6 +157,10 @@ module DhanScalper
       end
 
       def tick_key(seg, sid) = "ticks:#{seg}:#{sid}"
+      def namespaced(key)
+        return key unless NAMESPACE && !NAMESPACE.empty?
+        "#{NAMESPACE}:#{key}"
+      end
     end
   end
 end

@@ -90,8 +90,9 @@ module DhanScalper
 
       last_decision = Time.at(0)
       last_status_update = Time.at(0)
-      decision_interval = @cfg.dig("global", "decision_interval").to_i
-      status_interval = 60 # Update status every 60 seconds in quiet mode
+      decision_interval = (@cfg.dig("global", "decision_interval_sec") || @cfg.dig("global", "decision_interval") || 60).to_i
+      status_interval = (@cfg.dig("global", "log_status_every") || 60).to_i
+      risk_loop_interval = (@cfg.dig("global", "risk_loop_interval_sec") || 1).to_f
       max_dd = @cfg.dig("global", "max_day_loss").to_f
       charge = @cfg.dig("global", "charge_per_order").to_f
       tp_pct = (@cfg.dig("global", "tp_pct") || 0.35).to_f
@@ -155,7 +156,7 @@ module DhanScalper
         rescue StandardError => e
           puts "\n[ERR] #{e.class}: #{e.message}"
         ensure
-          sleep 0.5
+          sleep risk_loop_interval
         end
       end
     ensure

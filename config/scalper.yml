@@ -1,13 +1,21 @@
 symbols: ["NIFTY"] # later: ["NIFTY","BANKNIFTY","SENSEX"]
 
 global:
+  session_hours: ["09:20","15:25"]
   min_profit_target: 1000 # session target (₹)
-  max_day_loss: 5000 # cutoff (₹)
+  max_day_loss: 1500 # cutoff (₹)
   charge_per_order: 20 # flat per order (entry & exit both)
   allocation_pct: 0.30 # 30% of available balance per new position
   slippage_buffer_pct: 0.01 # cushion for sizing on premium
   max_lots_per_trade: 10
   decision_interval: 10 # seconds between signal checks
+  # new structured intervals
+  decision_interval_sec: 60 # run strategy once per minute per symbol
+  risk_loop_interval_sec: 1 # manage SL/TP/Trail each second
+  ohlc_poll_minutes: 3      # pull minute OHLC every 3 mins
+  log_throttle_sec: 60      # per component throttling
+  redis_namespace: "dhan_scalper:v1"
+  historical_stagger_sec: 4 # spread requests per symbol
   tp_pct: 0.35 # take profit
   sl_pct: 0.18 # stop loss
   trail_pct: 0.12 # trailing trigger %
@@ -15,6 +23,7 @@ global:
   use_multi_timeframe: false # true for 1m+3m/5m, false for 1m only
   secondary_timeframe: 5 # 3 or 5 minutes for secondary timeframe
   min_premium_price: 1.0 # minimum premium price to avoid very low value orders
+  log_status_every: 60 # seconds
 
   # Headless bot specific settings
   min_signal_strength: 0.6 # minimum signal strength to execute trades (0.0-1.0)

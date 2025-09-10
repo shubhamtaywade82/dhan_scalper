@@ -49,9 +49,7 @@ module DhanScalper
 
     def start
       DhanHQ.configure_with_env
-      # DhanHQ.logger.level = (@cfg.dig("global", "log_level") == "DEBUG" ? Logger::DEBUG : Logger::INFO)
-      DhanHQ.logger.level = Logger::WARN # or Logger::ERROR
-      DhanHQ.logger = Logger.new($stderr) # never stdout
+      # Respect logger configured by CLI; do not override level or destination here
 
       # Ensure global WebSocket cleanup is registered
       DhanScalper::Services::WebSocketCleanup.register_cleanup
@@ -72,7 +70,6 @@ module DhanScalper
 
       # prepare traders
       traders, ce_map, pe_map = setup_traders(ws)
-      puts "[DEBUG] traders class: #{traders.class}, traders: #{traders.inspect}"
 
       # UI loop (only if not in quiet mode)
       ui = nil
@@ -94,7 +91,7 @@ module DhanScalper
       last_decision = Time.at(0)
       last_status_update = Time.at(0)
       decision_interval = @cfg.dig("global", "decision_interval").to_i
-      status_interval = 30 # Update status every 30 seconds in quiet mode
+      status_interval = 60 # Update status every 60 seconds in quiet mode
       max_dd = @cfg.dig("global", "max_day_loss").to_f
       charge = @cfg.dig("global", "charge_per_order").to_f
       tp_pct = (@cfg.dig("global", "tp_pct") || 0.35).to_f

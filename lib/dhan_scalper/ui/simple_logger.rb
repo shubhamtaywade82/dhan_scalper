@@ -14,7 +14,7 @@ module DhanScalper
           "[#{datetime.strftime("%H:%M:%S")}] #{msg}\n"
         end
         @last_update = Time.at(0)
-        @update_interval = 10 # Update every 10 seconds
+        @update_interval = 60 # Update every 60 seconds
       end
 
       def run

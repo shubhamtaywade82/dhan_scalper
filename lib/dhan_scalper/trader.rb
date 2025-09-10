@@ -190,7 +190,12 @@ module DhanScalper
       return close!("TRAIL", ltp, charge_per_order) if @open.trail_anchor && ltp <= @open.trail_anchor
       return close!("TECH_INVALID", ltp, charge_per_order) if opposite_signal?
 
-      print "\r[#{@symbol}] OPEN side=#{@open.side} ltp=#{ltp.round(2)} net=#{net.round(0)} best=#{@open.best.round(0)} session=#{@session_pnl.round(0)}"
+      # Rate-limit open position prints to once per minute to avoid noisy output
+      @last_open_print_at ||= Time.at(0)
+      if Time.now - @last_open_print_at >= 60
+        print "\r[#{@symbol}] OPEN side=#{@open.side} ltp=#{ltp.round(2)} net=#{net.round(0)} best=#{@open.best.round(0)} session=#{@session_pnl.round(0)}"
+        @last_open_print_at = Time.now
+      end
       publish_open_snapshot!
     end
 

@@ -156,7 +156,7 @@ module DhanScalper
       cfg = Config.load
       starting_balance = cfg.dig("paper", "starting_balance") || 200_000.0
       balance_provider = BalanceProviders::PaperWallet.new(starting_balance: starting_balance)
-      
+
       puts "\nVirtual Balance:"
       puts "=" * 40
       puts "Available: ₹#{balance_provider.available_balance.round(2)}"

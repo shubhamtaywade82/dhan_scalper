@@ -167,7 +167,8 @@ module IndicatorsGate
   end
 end
 
-class CandleSeries
+module DhanScalper
+  class CandleSeries
   include Enumerable
 
   attr_reader :symbol, :interval, :candles
@@ -601,4 +602,5 @@ class CandleSeries
   private
 
   def to_time(x) = DhanScalper::TimeZone.parse(x)
+  end
 end

@@ -1,0 +1,57 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "bundler/setup"
+
+# RSpec runner for DhanScalper
+# Usage:
+#   bin/rspec                    # Run all specs
+#   bin/rspec spec/unit/         # Run unit tests only
+#   bin/rspec spec/integration/  # Run integration tests only
+#   bin/rspec --format documentation  # Verbose output
+
+require "rspec/core"
+
+# Set up RSpec configuration
+RSpec.configure do |config|
+  # Set default format
+  config.default_formatter = "progress"
+
+  # Enable color output
+  config.color = true
+
+  # Set up test environment
+  config.before(:suite) do
+    # Ensure test data directory exists
+    FileUtils.mkdir_p("data") unless Dir.exist?("data")
+  end
+
+  # Clean up after tests
+  config.after(:suite) do
+    # Clean up test data if needed
+    if ENV["CLEANUP_TEST_DATA"] == "true"
+      FileUtils.rm_rf("data/test_*") if Dir.exist?("data")
+    end
+  end
+end
+
+# Parse command line arguments
+args = ARGV.dup
+
+# Add default options if none provided
+if args.empty?
+  args = ["spec/"]
+end
+
+# Add format option if not specified
+unless args.include?("--format") || args.include?("-f")
+  args += ["--format", "progress"]
+end
+
+# Add color option if not specified
+unless args.include?("--no-color")
+  args += ["--color"]
+end
+
+# Run RSpec
+exit RSpec::Core::Runner.run(args)

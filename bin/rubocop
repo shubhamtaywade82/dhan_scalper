@@ -1,0 +1,39 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "bundler/setup"
+
+# RuboCop runner for DhanScalper
+# Usage:
+#   bin/rubocop                    # Check all files
+#   bin/rubocop --auto-correct     # Auto-correct safe offenses
+#   bin/rubocop lib/               # Check specific directory
+#   bin/rubocop --format simple    # Simple output format
+
+require "rubocop"
+
+# Parse command line arguments
+args = ARGV.dup
+
+# Add default options if none provided
+if args.empty?
+  args = ["."]
+end
+
+# Add format option if not specified
+unless args.include?("--format") || args.include?("-f")
+  args += ["--format", "simple"]
+end
+
+# Add color option if not specified
+unless args.include?("--no-color")
+  args += ["--color"]
+end
+
+# Add config file if not specified
+unless args.include?("--config") || args.include?("-c")
+  args += ["--config", ".rubocop.yml"]
+end
+
+# Run RuboCop
+exit RuboCop::CLI.new.run(args)

@@ -7,9 +7,207 @@ AllCops:
   Enabled: true
   NewCops: enable
   TargetRubyVersion: 3.2
+  Exclude:
+    - "bin/**/*"
+    - "exe/**/*"
+    - "vendor/**/*"
+    - "tmp/**/*"
+    - "data/**/*"
+    - "*.gem"
+    - "Gemfile.lock"
 
+# String literals
 Style/StringLiterals:
   EnforcedStyle: double_quotes
 
 Style/StringLiteralsInInterpolation:
   EnforcedStyle: double_quotes
+
+# BigDecimal-friendly configurations
+Style/NumericLiterals:
+  MinDigits: 4
+
+# Disable cops that conflict with BigDecimal usage
+Style/FloatDivision:
+  Enabled: false
+
+Style/RedundantSelf:
+  Enabled: false
+
+# Performance cops that work well with BigDecimal
+Performance/BigDecimalWithNumericArgument:
+  Enabled: true
+
+# RSpec configuration
+RSpec/ExampleLength:
+  Max: 20
+
+RSpec/MultipleExpectations:
+  Max: 5
+
+RSpec/NestedGroups:
+  Max: 4
+
+# Layout
+Layout/LineLength:
+  Max: 120
+  Exclude:
+    - "spec/**/*"
+
+Layout/EmptyLinesAroundBlockBody:
+  Enabled: true
+
+Layout/EmptyLinesAroundClassBody:
+  Enabled: true
+
+Layout/EmptyLinesAroundModuleBody:
+  Enabled: true
+
+# Metrics
+Metrics/AbcSize:
+  Max: 20
+
+Metrics/CyclomaticComplexity:
+  Max: 10
+
+Metrics/MethodLength:
+  Max: 20
+  Exclude:
+    - "spec/**/*"
+
+Metrics/BlockLength:
+  Max: 30
+  Exclude:
+    - "spec/**/*"
+
+# Lint
+Lint/UnusedMethodArgument:
+  AllowUnusedKeywordArguments: true
+
+Lint/UnusedBlockArgument:
+  AllowUnusedKeywordArguments: true
+
+# Style
+Style/Documentation:
+  Enabled: false
+
+Style/FrozenStringLiteralComment:
+  Enabled: true
+
+Style/GuardClause:
+  Enabled: true
+
+Style/IfUnlessModifier:
+  Enabled: true
+
+Style/RedundantReturn:
+  Enabled: true
+
+Style/RedundantAssignment:
+  Enabled: true
+
+Style/RedundantParentheses:
+  Enabled: true
+
+Style/RescueModifier:
+  Enabled: true
+
+Style/SafeNavigation:
+  Enabled: true
+
+Style/Semicolon:
+  Enabled: true
+
+Style/SingleLineMethods:
+  Enabled: true
+
+Style/StderrPuts:
+  Enabled: true
+
+Style/StringHashKeys:
+  Enabled: true
+
+Style/SymbolArray:
+  Enabled: true
+
+Style/TrailingCommaInArguments:
+  Enabled: true
+  EnforcedStyleForMultiline: comma
+
+Style/TrailingCommaInArrayLiteral:
+  Enabled: true
+  EnforcedStyleForMultiline: comma
+
+Style/TrailingCommaInHashLiteral:
+  Enabled: true
+  EnforcedStyleForMultiline: comma
+
+Style/RedundantCapitalW:
+  Enabled: true
+
+Style/RedundantCondition:
+  Enabled: true
+
+Style/RedundantInterpolation:
+  Enabled: true
+
+Style/RedundantPercentQ:
+  Enabled: true
+
+Style/VariableInterpolation:
+  Enabled: true
+
+Style/WhenThen:
+  Enabled: true
+
+Style/WhileUntilModifier:
+  Enabled: true
+
+Style/WordArray:
+  Enabled: true
+
+# Performance
+Performance/UnfreezeString:
+  Enabled: true
+
+Performance/UriDefaultParser:
+  Enabled: true
+
+Performance/StartWith:
+  Enabled: true
+
+Performance/EndWith:
+  Enabled: true
+
+Performance/RegexpMatch:
+  Enabled: true
+
+Performance/StringReplacement:
+  Enabled: true
+
+Performance/RedundantMerge:
+  Enabled: true
+
+Performance/RedundantBlockCall:
+  Enabled: true
+
+Performance/RedundantMatch:
+  Enabled: true
+
+Performance/RedundantSortBlock:
+  Enabled: true
+
+Performance/RedundantStringChars:
+  Enabled: true
+
+Performance/ReverseEach:
+  Enabled: true
+
+Performance/SortReverse:
+  Enabled: true
+
+Performance/Squeeze:
+  Enabled: true
+
+Performance/Sum:
+  Enabled: true

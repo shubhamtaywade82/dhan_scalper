@@ -2,7 +2,7 @@
 
 require "spec_helper"
 
-RSpec.describe CandleSeries do
+RSpec.describe DhanScalper::CandleSeries do
   let(:series) { described_class.new(symbol: "NIFTY", interval: "5") }
 
   before do

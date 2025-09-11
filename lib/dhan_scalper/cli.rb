@@ -33,6 +33,8 @@ module DhanScalper
       puts "  live            - Show live LTP dashboard with WebSocket feed"
       puts "                    Use --simple for basic terminal output"
       puts "  report          - Generate session report from CSV data"
+      puts "  status          - Show key runtime health from Redis"
+      puts "  export          - Export CSV data from Redis history"
       puts "  config          - Show DhanHQ configuration status"
       puts "  help            - Show this help"
       puts
@@ -275,6 +277,142 @@ module DhanScalper
         puts
         puts "Use: dhan_scalper report --session-id SESSION_ID"
         puts "Or: dhan_scalper report --latest"
+      end
+    end
+
+    desc "status", "Show key runtime health from Redis"
+    def status
+      require_relative "stores/redis_store"
+
+      # Initialize Redis store
+      redis_store = DhanScalper::Stores::RedisStore.new(
+        namespace: "dhan_scalper:v1",
+        logger: Logger.new($stdout)
+      )
+
+      begin
+        redis_store.connect
+
+        # Get subscription count
+        subs_count = redis_store.redis.keys("#{redis_store.namespace}:ticks:*").size
+
+        # Get open positions count
+        open_positions = redis_store.get_open_positions
+        positions_count = open_positions.size
+
+        # Get session PnL
+        session_pnl = redis_store.get_session_pnl
+        total_pnl = session_pnl&.dig("total_pnl") || 0.0
+
+        # Get heartbeat status
+        heartbeat = redis_store.get_heartbeat
+        heartbeat_status = heartbeat ? "✓ Active" : "✗ Inactive"
+
+        # Get Redis connection status
+        redis_status = redis_store.redis.ping == "PONG" ? "✓ Connected" : "✗ Disconnected"
+
+        puts "DhanScalper Runtime Health:"
+        puts "=========================="
+        puts "Redis Status: #{redis_status}"
+        puts "Subscriptions: #{subs_count} active"
+        puts "Open Positions: #{positions_count}"
+        puts "Session PnL: ₹#{total_pnl.round(2)}"
+        puts "Heartbeat: #{heartbeat_status}"
+        puts "Timestamp: #{Time.now.strftime("%Y-%m-%d %H:%M:%S")}"
+      rescue StandardError => e
+        puts "Error retrieving status: #{e.message}"
+        exit 1
+      ensure
+        redis_store.disconnect
+      end
+    end
+
+    desc "export", "Export CSV data from Redis history"
+    option :since, type: :string, desc: "Export data since date (YYYY-MM-DD format)", required: true
+    def export
+      require_relative "stores/redis_store"
+      require "csv"
+      require "date"
+
+      # Parse since date
+      begin
+        since_date = Date.parse(options[:since])
+        since_timestamp = since_date.to_time.to_i
+      rescue ArgumentError
+        puts "Error: Invalid date format. Use YYYY-MM-DD"
+        exit 1
+      end
+
+      # Initialize Redis store
+      redis_store = DhanScalper::Stores::RedisStore.new(
+        namespace: "dhan_scalper:v1",
+        logger: Logger.new($stdout)
+      )
+
+      begin
+        redis_store.connect
+
+        # Get all tick data since the specified date
+        tick_keys = redis_store.redis.keys("#{redis_store.namespace}:ticks:*")
+        tick_data = []
+
+        tick_keys.each do |key|
+          tick_info = redis_store.redis.hgetall(key)
+          next if tick_info.empty?
+
+          # Check if tick is after since_date
+          tick_timestamp = tick_info["ts"]&.to_i
+          next unless tick_timestamp && tick_timestamp >= since_timestamp
+
+          # Parse key to get segment and security_id
+          key_parts = key.split(":")
+          segment = key_parts[-2]
+          security_id = key_parts[-1]
+
+          tick_data << {
+            timestamp: Time.at(tick_timestamp).strftime("%Y-%m-%d %H:%M:%S"),
+            segment: segment,
+            security_id: security_id,
+            ltp: tick_info["ltp"],
+            day_high: tick_info["day_high"],
+            day_low: tick_info["day_low"],
+            atp: tick_info["atp"],
+            volume: tick_info["vol"]
+          }
+        end
+
+        # Sort by timestamp
+        tick_data.sort_by! { |tick| tick[:timestamp] }
+
+        # Generate CSV
+        csv_filename = "export_#{since_date.strftime("%Y%m%d")}_#{Time.now.strftime("%H%M%S")}.csv"
+
+        CSV.open(csv_filename, "w") do |csv|
+          csv << ["Timestamp", "Segment", "Security ID", "LTP", "Day High", "Day Low", "ATP", "Volume"]
+          tick_data.each do |tick|
+            csv << [
+              tick[:timestamp],
+              tick[:segment],
+              tick[:security_id],
+              tick[:ltp],
+              tick[:day_high],
+              tick[:day_low],
+              tick[:atp],
+              tick[:volume]
+            ]
+          end
+        end
+
+        puts "Export completed:"
+        puts "  File: #{csv_filename}"
+        puts "  Records: #{tick_data.size}"
+        puts "  Since: #{since_date.strftime("%Y-%m-%d")}"
+        puts "  Period: #{tick_data.first&.dig(:timestamp)} to #{tick_data.last&.dig(:timestamp)}"
+      rescue StandardError => e
+        puts "Error during export: #{e.message}"
+        exit 1
+      ensure
+        redis_store.disconnect
       end
     end
 

@@ -29,6 +29,10 @@ module DhanScalper
         @logger.info "[WebSocket] Connecting to DhanHQ WebSocket..."
 
         begin
+          # Configure DhanHQ before connecting
+          DhanScalper::Services::DhanHQConfig.validate!
+          DhanScalper::Services::DhanHQConfig.configure
+
           # Disconnect any existing connection first
           disconnect if @connection
 

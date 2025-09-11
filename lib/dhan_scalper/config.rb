@@ -6,7 +6,7 @@ module DhanScalper
     DEFAULT = {
       "symbols" => ["NIFTY"],
       "global" => {
-        "session_hours" => ["09:20","15:25"],
+        "session_hours" => ["09:20", "15:25"],
         "min_profit_target" => 1000.0,
         "max_day_loss" => 1500.0,
         "charge_per_order" => 20.0,
@@ -43,7 +43,7 @@ module DhanScalper
       }
     }.freeze
 
-    def self.load(path: ENV["SCALPER_CONFIG"])
+    def self.load(path: ENV["SCALPER_CONFIG"] || "config/scalper.yml")
       cfg = deep_dup(DEFAULT)
 
       if path && File.exist?(path)
@@ -61,6 +61,7 @@ module DhanScalper
       if cfg["SYMBOLS"].is_a?(Hash)
         cfg["SYMBOLS"].each do |sym_name, sym_cfg|
           next unless sym_cfg.is_a?(Hash)
+
           env_key = "#{sym_name}_IDX_SID"
           default_sid = sym_cfg["idx_sid"] || "13"
           begin
@@ -102,19 +103,19 @@ module DhanScalper
           dv = defaults[key]
           yv = yml.key?(key) ? yml[key] : :__missing__
 
-          if yv == :__missing__
-            acc[key] = deep_dup(dv)
-          else
-            case [dv, yv]
-            in [Hash, Hash]
-              # If provided empty hash, keep empty; else merge recursively
-              acc[key] = yv.empty? ? {} : deep_merge_defaults(dv, yv)
-            in [Array, Array]
-              acc[key] = yv # take as-is, even if empty
-            else
-              acc[key] = yv.nil? ? deep_dup(dv) : yv
-            end
-          end
+          acc[key] = if yv == :__missing__
+                       deep_dup(dv)
+                     else
+                       case [dv, yv]
+                       in [Hash, Hash]
+                         # If provided empty hash, keep empty; else merge recursively
+                         yv.empty? ? {} : deep_merge_defaults(dv, yv)
+                       in [Array, Array]
+                         yv # take as-is, even if empty
+                       else
+                         yv.nil? ? deep_dup(dv) : yv
+                       end
+                     end
         end
       else
         yml.nil? ? deep_dup(defaults) : yml

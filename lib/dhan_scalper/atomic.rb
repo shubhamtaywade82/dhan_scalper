@@ -17,7 +17,7 @@ module DhanScalper
       end
 
       # Atomic buy operation
-      def buy!(exchange_segment:, security_id:, side: "LONG", quantity:, price:, fee: 20)
+      def buy!(exchange_segment:, security_id:, side: "LONG", quantity:, price:, fee: nil)
         ensure_initialized!
         @atomic_ops.buy!(
           exchange_segment: exchange_segment,
@@ -30,7 +30,7 @@ module DhanScalper
       end
 
       # Atomic sell operation
-      def sell!(exchange_segment:, security_id:, side: "LONG", quantity:, price:, fee: 20)
+      def sell!(exchange_segment:, security_id:, side: "LONG", quantity:, price:, fee: nil)
         ensure_initialized!
         @atomic_ops.sell!(
           exchange_segment: exchange_segment,

@@ -1,12 +1,14 @@
 # frozen_string_literal: true
 
-require "simplecov"
-SimpleCov.start do
-  add_filter "/spec/"
-  add_filter "/bin/"
-  add_filter "/exe/"
-  add_filter "/.github/"
-  minimum_coverage 90
+unless ["false", "0"].include?(ENV["COVERAGE"]&.downcase)
+  require "simplecov"
+  SimpleCov.start do
+    add_filter "/spec/"
+    add_filter "/bin/"
+    add_filter "/exe/"
+    add_filter "/.github/"
+    minimum_coverage 90
+  end
 end
 
 require "webmock/rspec"

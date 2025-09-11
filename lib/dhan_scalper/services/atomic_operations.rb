@@ -14,10 +14,10 @@ module DhanScalper
       end
 
       # Atomic buy operation
-      def buy!(exchange_segment:, security_id:, side:, quantity:, price:, fee: 20)
+      def buy!(exchange_segment:, security_id:, side:, quantity:, price:, fee: nil)
         price_bd = DhanScalper::Support::Money.bd(price)
         quantity_bd = DhanScalper::Support::Money.bd(quantity)
-        fee_bd = DhanScalper::Support::Money.bd(fee)
+        fee_bd = DhanScalper::Support::Money.bd(fee || DhanScalper::Config.fee)
 
         # Calculate total cost
         total_cost = DhanScalper::Support::Money.add(
@@ -50,10 +50,10 @@ module DhanScalper
       end
 
       # Atomic sell operation
-      def sell!(exchange_segment:, security_id:, side:, quantity:, price:, fee: 20)
+      def sell!(exchange_segment:, security_id:, side:, quantity:, price:, fee: nil)
         price_bd = DhanScalper::Support::Money.bd(price)
         quantity_bd = DhanScalper::Support::Money.bd(quantity)
-        fee_bd = DhanScalper::Support::Money.bd(fee)
+        fee_bd = DhanScalper::Support::Money.bd(fee || DhanScalper::Config.fee)
 
         # Get current position
         position = @position_tracker.get_position(

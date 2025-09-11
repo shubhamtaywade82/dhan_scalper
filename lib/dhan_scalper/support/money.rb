@@ -97,6 +97,22 @@ module DhanScalper
         bd(a) < bd(b)
       end
 
+      # Check if first value is greater than or equal to second
+      # @param a [BigDecimal, Numeric] First value
+      # @param b [BigDecimal, Numeric] Second value
+      # @return [Boolean] True if a >= b
+      def greater_than_or_equal?(a, b)
+        bd(a) >= bd(b)
+      end
+
+      # Check if first value is less than or equal to second
+      # @param a [BigDecimal, Numeric] First value
+      # @param b [BigDecimal, Numeric] Second value
+      # @return [Boolean] True if a <= b
+      def less_than_or_equal?(a, b)
+        bd(a) <= bd(b)
+      end
+
       # Get absolute value of monetary amount
       # @param value [BigDecimal, Numeric] The value
       # @return [BigDecimal] Absolute value

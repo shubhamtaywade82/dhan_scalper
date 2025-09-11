@@ -1,8 +1,11 @@
 # frozen_string_literal: true
 
 require "yaml"
+require_relative "support/money"
+
 module DhanScalper
   class Config
+    class ValidationError < StandardError; end
     DEFAULT = {
       "symbols" => ["NIFTY"],
       "global" => {
@@ -25,7 +28,14 @@ module DhanScalper
         "sl_pct" => 0.18,
         "trail_pct" => 0.12,
         "min_premium_price" => 1.0,
-        "log_status_every" => 60
+        "log_status_every" => 60,
+        # Risk manager hardening
+        "time_stop_seconds" => 300, # 5 minutes default
+        "max_daily_loss_rs" => 2000.0, # Max daily loss in rupees
+        "cooldown_after_loss_seconds" => 180, # 3 minutes default
+        "enable_time_stop" => true,
+        "enable_daily_loss_cap" => true,
+        "enable_cooldown" => true
       },
       "paper" => {
         "starting_balance" => 200_000.0
@@ -73,7 +83,163 @@ module DhanScalper
         end
       end
 
+      # Validate the loaded configuration
+      validate_config!(cfg)
+
       cfg
+    end
+
+    # Validate configuration and raise ValidationError if invalid
+    def self.validate_config!(config)
+      errors = []
+
+      # Validate fee_per_order_rs
+      fee = config.dig("global", "charge_per_order")
+      if fee.nil? || !fee.is_a?(Numeric) || fee <= 0
+        errors << "Invalid fee_per_order_rs: must be a positive number, got #{fee.inspect}"
+      end
+
+      # Validate starting_balance
+      balance = config.dig("paper", "starting_balance")
+      if balance.nil? || !balance.is_a?(Numeric) || balance <= 0
+        errors << "Invalid starting_balance: must be a positive number, got #{balance.inspect}"
+      end
+
+      # Validate trading windows (session_hours)
+      session_hours = config.dig("global", "session_hours")
+      if session_hours.nil? || !session_hours.is_a?(Array) || session_hours.length != 2
+        errors << "Invalid session_hours: must be an array with 2 time strings, got #{session_hours.inspect}"
+      elsif session_hours.any? { |h| !h.is_a?(String) || !h.match?(/\A\d{2}:\d{2}\z/) }
+        errors << "Invalid session_hours format: must be in HH:MM format, got #{session_hours.inspect}"
+      end
+
+      # Validate trading window times are logical
+      if session_hours.is_a?(Array) && session_hours.length == 2
+        begin
+          start_time = Time.parse(session_hours[0])
+          end_time = Time.parse(session_hours[1])
+          if start_time >= end_time
+            errors << "Invalid session_hours: start time must be before end time, got #{session_hours.inspect}"
+          end
+        rescue ArgumentError
+          errors << "Invalid session_hours: unable to parse time format, got #{session_hours.inspect}"
+        end
+      end
+
+      # Validate symbols array
+      symbols = config["symbols"]
+      if symbols.nil? || !symbols.is_a?(Array) || symbols.empty?
+        errors << "Invalid symbols: must be a non-empty array, got #{symbols.inspect}"
+      end
+
+      # Validate SYMBOLS configuration for each symbol
+      if symbols.is_a?(Array)
+        symbols.each do |symbol|
+          symbol_config = config.dig("SYMBOLS", symbol)
+          if symbol_config.nil? || !symbol_config.is_a?(Hash)
+            errors << "Missing or invalid SYMBOLS configuration for #{symbol}"
+          else
+            # Validate required symbol fields
+            required_fields = %w[idx_sid seg_idx seg_opt strike_step lot_size]
+            required_fields.each do |field|
+              if symbol_config[field].nil?
+                errors << "Missing required field '#{field}' for symbol #{symbol}"
+              end
+            end
+
+            # Validate lot_size is positive
+            lot_size = symbol_config["lot_size"]
+            if lot_size && (!lot_size.is_a?(Numeric) || lot_size <= 0)
+              errors << "Invalid lot_size for #{symbol}: must be a positive number, got #{lot_size.inspect}"
+            end
+          end
+        end
+      end
+
+      # Validate risk manager settings
+      validate_risk_manager_config!(config, errors)
+
+      # Raise validation error if any issues found
+      if errors.any?
+        raise ValidationError, "Configuration validation failed:\n" + errors.map { |e| "  - #{e}" }.join("\n")
+      end
+    end
+
+    # Validate risk manager configuration
+    def self.validate_risk_manager_config!(config, errors)
+      global = config["global"] || {}
+
+      # Validate time stop settings
+      if global["enable_time_stop"]
+        time_stop = global["time_stop_seconds"]
+        if time_stop.nil? || !time_stop.is_a?(Numeric) || time_stop <= 0
+          errors << "Invalid time_stop_seconds: must be a positive number, got #{time_stop.inspect}"
+        end
+      end
+
+      # Validate daily loss cap settings
+      if global["enable_daily_loss_cap"]
+        max_loss = global["max_daily_loss_rs"]
+        if max_loss.nil? || !max_loss.is_a?(Numeric) || max_loss <= 0
+          errors << "Invalid max_daily_loss_rs: must be a positive number, got #{max_loss.inspect}"
+        end
+      end
+
+      # Validate cooldown settings
+      if global["enable_cooldown"]
+        cooldown = global["cooldown_after_loss_seconds"]
+        if cooldown.nil? || !cooldown.is_a?(Numeric) || cooldown <= 0
+          errors << "Invalid cooldown_after_loss_seconds: must be a positive number, got #{cooldown.inspect}"
+        end
+      end
+
+      # Validate boolean flags
+      boolean_flags = %w[enable_time_stop enable_daily_loss_cap enable_cooldown]
+      boolean_flags.each do |flag|
+        value = global[flag]
+        if !value.nil? && !value.is_a?(TrueClass) && !value.is_a?(FalseClass)
+          errors << "Invalid #{flag}: must be true or false, got #{value.inspect}"
+        end
+      end
+    end
+
+    # Expose commonly used configuration values
+    def self.fee
+      @fee ||= DhanScalper::Support::Money.bd(load.dig("global", "charge_per_order") || 20.0)
+    end
+
+    def self.paper_start_balance
+      @paper_start_balance ||= DhanScalper::Support::Money.bd(load.dig("paper", "starting_balance") || 200_000.0)
+    end
+
+    def self.trading_session_hours
+      @trading_session_hours ||= load.dig("global", "session_hours") || ["09:20", "15:25"]
+    end
+
+    def self.symbols
+      @symbols ||= load["symbols"] || ["NIFTY"]
+    end
+
+    def self.symbol_config(symbol)
+      load.dig("SYMBOLS", symbol) || {}
+    end
+
+    def self.global_config
+      @global_config ||= load["global"] || {}
+    end
+
+    def self.paper_config
+      @paper_config ||= load["paper"] || {}
+    end
+
+    # Reset cached values (useful for testing)
+    def self.reset_cache!
+      @fee = nil
+      @paper_start_balance = nil
+      @trading_session_hours = nil
+      @symbols = nil
+      @global_config = nil
+      @paper_config = nil
     end
 
     def self.deep_dup(obj)

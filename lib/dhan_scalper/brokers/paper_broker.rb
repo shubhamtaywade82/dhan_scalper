@@ -13,7 +13,7 @@ module DhanScalper
         @position_tracker = DhanScalper::Services::EnhancedPositionTracker.new
       end
 
-      def buy_market(segment:, security_id:, quantity:, charge_per_order: 20)
+      def buy_market(segment:, security_id:, quantity:, charge_per_order: nil)
         price = DhanScalper::TickCache.ltp(segment, security_id)
         return nil unless price&.positive?
 

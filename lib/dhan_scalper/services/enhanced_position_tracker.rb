@@ -12,11 +12,11 @@ module DhanScalper
       end
 
       # Add or update a position with weighted averaging
-      def add_position(exchange_segment:, security_id:, side:, quantity:, price:, fee: 20)
+      def add_position(exchange_segment:, security_id:, side:, quantity:, price:, fee: nil)
         key = position_key(exchange_segment, security_id, side)
         price_bd = DhanScalper::Support::Money.bd(price)
         quantity_bd = DhanScalper::Support::Money.bd(quantity)
-        fee_bd = DhanScalper::Support::Money.bd(fee)
+        fee_bd = DhanScalper::Support::Money.bd(fee || DhanScalper::Config.fee)
 
         if @positions[key]
           # Update existing position with weighted average
@@ -30,14 +30,14 @@ module DhanScalper
       end
 
       # Partial exit from a position
-      def partial_exit(exchange_segment:, security_id:, side:, quantity:, price:, fee: 20)
+      def partial_exit(exchange_segment:, security_id:, side:, quantity:, price:, fee: nil)
         key = position_key(exchange_segment, security_id, side)
         position = @positions[key]
         return nil unless position
 
         price_bd = DhanScalper::Support::Money.bd(price)
         quantity_bd = DhanScalper::Support::Money.bd(quantity)
-        fee_bd = DhanScalper::Support::Money.bd(fee)
+        fee_bd = DhanScalper::Support::Money.bd(fee || DhanScalper::Config.fee)
 
         # Calculate how much we can actually sell
         sellable_quantity = DhanScalper::Support::Money.min(quantity_bd, position[:net_qty])

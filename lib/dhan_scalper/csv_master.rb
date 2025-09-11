@@ -4,6 +4,7 @@ require "csv"
 require "net/http"
 require "uri"
 require "fileutils"
+require "timeout"
 require_relative "exchange_segment_mapper"
 
 module DhanScalper
@@ -146,15 +147,44 @@ module DhanScalper
 
     # Get all instruments with their exchange segments
     # @param underlying_symbol [String, nil] Filter by underlying symbol (optional)
+    # @param symbols [Array<String>, nil] Filter by multiple symbols (optional)
     # @return [Array<Hash>] Array of hashes with security info and exchange segment
-    def get_instruments_with_segments(underlying_symbol = nil)
+    def get_instruments_with_segments(underlying_symbol = nil, symbols = nil)
       ensure_data_loaded
       return [] unless @data
 
-      instruments = @data
-      instruments = instruments.select { |row| row["UNDERLYING_SYMBOL"] == underlying_symbol } if underlying_symbol
+      puts "[CSV_MASTER] Processing #{@data.length} records..."
 
-      instruments.map do |row|
+      # Filter symbols if provided
+      target_symbols = if symbols && !symbols.empty?
+                         symbols
+                       elsif underlying_symbol
+                         [underlying_symbol]
+                       else
+                         nil
+                       end
+
+      instruments = []
+      processed = 0
+      total = @data.length
+      last_progress = Time.now
+
+      @data.each do |row|
+        processed += 1
+
+        # Show progress every 10,000 records or every 5 seconds
+        if processed % 10_000 == 0 || Time.now - last_progress > 5
+          progress = (processed.to_f / total * 100).round(1)
+          puts "[CSV_MASTER] Progress: #{processed}/#{total} (#{progress}%)"
+          last_progress = Time.now
+        end
+
+        # Skip if filtering by symbol and this row doesn't match
+        next if target_symbols && !target_symbols.include?(row["UNDERLYING_SYMBOL"])
+
+        # Skip if filtering by single symbol and this row doesn't match
+        next if underlying_symbol && row["UNDERLYING_SYMBOL"] != underlying_symbol
+
         exchange = row["EXCH_ID"]
         segment = row["SEGMENT"]
 
@@ -164,7 +194,7 @@ module DhanScalper
           nil
         end
 
-        {
+        instruments << {
           security_id: row["SECURITY_ID"],
           underlying_symbol: row["UNDERLYING_SYMBOL"],
           symbol_name: row["SYMBOL_NAME"],
@@ -178,6 +208,48 @@ module DhanScalper
           expiry_date: row["SM_EXPIRY_DATE"]
         }
       end
+
+      puts "[CSV_MASTER] Processed #{processed} records, found #{instruments.length} matching instruments"
+      instruments
+    end
+
+    # Get instruments for specific symbols with caching
+    # @param symbols [Array<String>] Array of symbol names to filter
+    # @param redis_store [DhanScalper::Stores::RedisStore, nil] Optional Redis store for caching
+    # @return [Hash] Hash with symbol as key and array of instruments as value
+    def get_instruments_for_symbols(symbols, redis_store = nil)
+      return {} if symbols.empty?
+
+      # Check cache first if Redis store is available
+      if redis_store
+        cached_result = redis_store.get_cached_instruments(symbols)
+        if cached_result
+          puts "[CSV_MASTER] Using cached instruments for #{symbols.join(", ")}"
+          return cached_result
+        end
+      end
+
+      puts "[CSV_MASTER] Loading instruments for symbols: #{symbols.join(", ")}"
+
+      # Use optimized filtering
+      instruments = get_instruments_with_segments(nil, symbols)
+
+      # Group by symbol
+      result = {}
+      symbols.each { |symbol| result[symbol] = [] }
+
+      instruments.each do |instrument|
+        symbol = instrument[:underlying_symbol]
+        result[symbol] << instrument if result[symbol]
+      end
+
+      # Cache the result if Redis store is available
+      if redis_store
+        redis_store.cache_instruments(symbols, result)
+        puts "[CSV_MASTER] Cached instruments for #{symbols.join(", ")}"
+      end
+
+      result
     end
 
     # Get exchange and segment info for a security
@@ -227,9 +299,16 @@ module DhanScalper
 
     def load_from_cache
       puts "[CSV_MASTER] Loading data from cache: #{CACHE_FILE}"
-      @data = CSV.read(CACHE_FILE, headers: true)
-      @last_fetch = File.mtime(CACHE_FILE)
-      puts "[CSV_MASTER] Loaded #{@data.length} records from cache"
+
+      # Add timeout for CSV loading
+      Timeout.timeout(30) do
+        @data = CSV.read(CACHE_FILE, headers: true)
+        @last_fetch = File.mtime(CACHE_FILE)
+        puts "[CSV_MASTER] Loaded #{@data.length} records from cache"
+      end
+    rescue Timeout::Error
+      puts "[CSV_MASTER] Timeout loading CSV from cache, fetching fresh data"
+      fetch_and_cache
     rescue StandardError => e
       puts "[CSV_MASTER] Failed to load from cache: #{e.message}"
       fetch_and_cache

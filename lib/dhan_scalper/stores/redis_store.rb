@@ -450,6 +450,70 @@ module DhanScalper
           keys: @hot_cache.keys
         }
       end
+
+      # Cache instruments for symbols
+      # @param symbols [Array<String>] Array of symbol names
+      # @param instruments [Hash] Hash with symbol as key and array of instruments as value
+      def cache_instruments(symbols, instruments)
+        return if symbols.empty? || instruments.empty?
+
+        symbols.each do |symbol|
+          symbol_instruments = instruments[symbol] || []
+          key = "#{@namespace}:instruments:#{symbol.downcase}"
+
+          # Store as JSON array
+          @redis.setex(key, 3600, JSON.generate(symbol_instruments)) # 1 hour TTL
+        end
+
+        # Store cache metadata
+        cache_key = "#{@namespace}:instruments:cache"
+        @redis.hset(cache_key, {
+                      "symbols" => symbols.join(","),
+                      "timestamp" => Time.now.to_i,
+                      "count" => instruments.values.sum(&:size)
+                    })
+      end
+
+      # Get cached instruments for symbols
+      # @param symbols [Array<String>] Array of symbol names
+      # @return [Hash, nil] Cached instruments or nil if not found
+      def get_cached_instruments(symbols)
+        return nil if symbols.empty?
+
+        # Check cache metadata
+        cache_key = "#{@namespace}:instruments:cache"
+        cache_data = @redis.hgetall(cache_key)
+        return nil if cache_data.empty?
+
+        cached_symbols = cache_data["symbols"]&.split(",") || []
+        return nil unless (symbols - cached_symbols).empty?
+
+        # Check if cache is still valid (less than 1 hour old)
+        cache_timestamp = cache_data["timestamp"]&.to_i
+        return nil unless cache_timestamp && (Time.now.to_i - cache_timestamp) < 3600
+
+        # Load cached instruments
+        result = {}
+        symbols.each do |symbol|
+          key = "#{@namespace}:instruments:#{symbol.downcase}"
+          cached_data = @redis.get(key)
+          return nil unless cached_data
+
+          result[symbol] = JSON.parse(cached_data, symbolize_names: true)
+
+          # Cache incomplete
+        end
+
+        result
+      end
+
+      # Clear instruments cache
+      def clear_instruments_cache
+        # Get all instrument cache keys
+        pattern = "#{@namespace}:instruments:*"
+        keys = @redis.keys(pattern)
+        @redis.del(*keys) if keys.any?
+      end
     end
   end
 end

@@ -372,30 +372,32 @@ module DhanScalper
       allowed_symbols = @cfg["SYMBOLS"]&.keys || []
       puts "[APP] Filtering instruments for symbols: #{allowed_symbols.join(", ")}"
 
-      # Get all instruments with segments
-      all_instruments = @csv_master.get_instruments_with_segments
+      # Use optimized symbol-specific loading with caching
+      @filtered_instruments = @csv_master.get_instruments_for_symbols(allowed_symbols, @redis_store)
 
-      # Filter for OPTIDX and OPTFUT instruments
-      @filtered_instruments = {}
+      # Filter for OPTIDX and OPTFUT instruments only
       @universe_sids = Set.new
 
-      all_instruments.each do |instrument|
-        next unless allowed_symbols.include?(instrument[:underlying_symbol])
-        next unless %w[OPTIDX OPTFUT].include?(instrument[:instrument])
+      @filtered_instruments.each do |symbol, instruments|
+        @filtered_instruments[symbol] = instruments.select do |instrument|
+          next false unless %w[OPTIDX OPTFUT].include?(instrument[:instrument])
 
-        symbol = instrument[:underlying_symbol]
-        @filtered_instruments[symbol] ||= []
-        @filtered_instruments[symbol] << {
-          security_id: instrument[:security_id],
-          underlying_symbol: instrument[:underlying_symbol],
-          strike_price: instrument[:strike_price].to_f,
-          option_type: instrument[:option_type],
-          expiry_date: instrument[:expiry_date],
-          lot_size: instrument[:lot_size],
-          exchange_segment: instrument[:exchange_segment]
-        }
+          # Add to universe SIDs
+          @universe_sids.add(instrument[:security_id])
 
-        @universe_sids.add(instrument[:security_id])
+          # Transform to expected format
+          true
+        end.map do |instrument|
+          {
+            security_id: instrument[:security_id],
+            underlying_symbol: instrument[:underlying_symbol],
+            strike_price: instrument[:strike_price].to_f,
+            option_type: instrument[:option_type],
+            expiry_date: instrument[:expiry_date],
+            lot_size: instrument[:lot_size],
+            exchange_segment: instrument[:exchange_segment]
+          }
+        end
       end
 
       # Cache in Redis if available
@@ -417,7 +419,9 @@ module DhanScalper
         end
       end
 
-      puts "[APP] Filtered #{@universe_sids.size} instruments for #{allowed_symbols.size} symbols"
+      total_instruments = @filtered_instruments.values.sum(&:size)
+      puts "[APP] Filtered #{total_instruments} instruments for #{allowed_symbols.size} symbols"
+      puts "[APP] Instruments per symbol: #{@filtered_instruments.transform_values(&:size)}"
     end
 
     # Get instruments for a symbol

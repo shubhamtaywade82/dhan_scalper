@@ -18,7 +18,7 @@ module DhanScalper
       end
 
       # Returns :long, :short, or :none
-      def get_signal(symbol, spot_price)
+      def get_signal(symbol, _spot_price)
         cfg = yield_config(symbol)
         return :none unless cfg
 
@@ -84,8 +84,9 @@ module DhanScalper
         e5f = c5.ema(20).last
         e5s = c5.ema(50).last
         r5 = c5.rsi(14).last
-        return :long if (e1f > e1s && r1 > 55 && e5f > e5s && r5 > 52)
-        return :short if (e1f < e1s && r1 < 45 && e5f < e5s && r5 < 48)
+        return :long if e1f > e1s && r1 > 55 && e5f > e5s && r5 > 52
+        return :short if e1f < e1s && r1 < 45 && e5f < e5s && r5 < 48
+
         :none
       end
 
@@ -99,14 +100,14 @@ module DhanScalper
         key_on = "trend_streak_on:#{symbol}"
         key_ts = "trend_streak_start:#{symbol}"
 
-        if signal == :long || signal == :short
+        if %i[long short].include?(signal)
           # If streak not already on, set start.
-          unless @cache.exists?(key_on)
-            @cache.set(key_on, "1", ttl: @streak_window_seconds)
-            @cache.set(key_ts, Time.now.iso8601, ttl: @streak_window_seconds)
-          else
+          if @cache.exists?(key_on)
             # Refresh TTL while trend remains ON
             @cache.set(key_on, "1", ttl: @streak_window_seconds)
+          else
+            @cache.set(key_on, "1", ttl: @streak_window_seconds)
+            @cache.set(key_ts, Time.now.iso8601, ttl: @streak_window_seconds)
           end
         else
           @cache.del(key_on)

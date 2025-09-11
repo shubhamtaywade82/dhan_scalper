@@ -8,7 +8,8 @@ module DhanScalper
     class EntryManager < DhanScalper::ApplicationService
       attr_reader :config, :trend_filter, :sizing_calculator, :order_manager, :position_tracker
 
-      def initialize(config:, trend_filter:, sizing_calculator:, order_manager:, position_tracker:, csv_master: nil, logger: Logger.new($stdout))
+      def initialize(config:, trend_filter:, sizing_calculator:, order_manager:, position_tracker:, csv_master: nil,
+                     logger: Logger.new($stdout))
         @config = config
         @trend_filter = trend_filter
         @sizing_calculator = sizing_calculator
@@ -50,8 +51,10 @@ module DhanScalper
 
       def market_open?
         now = Time.now
-        start_h, start_m = 9, 15
-        end_h, end_m = 15, 30
+        start_h = 9
+        start_m = 15
+        end_h = 15
+        end_m = 30
         grace_seconds = 5 * 60
 
         start_ts = Time.new(now.year, now.month, now.day, start_h, start_m, 0, now.utc_offset)
@@ -76,7 +79,6 @@ module DhanScalper
         streak_window = @config.dig("trend", "streak_window_minutes")&.to_i || 5
 
         # Check if trend has been ON for the required duration
-        trend_key = "trend_streak:#{symbol}"
         streak_start = @trend_filter.get_streak_start(symbol)
 
         return false unless streak_start
@@ -138,7 +140,7 @@ module DhanScalper
         end
       end
 
-      def select_best_strike(strikes, spot_price, signal)
+      def select_best_strike(strikes, spot_price, _signal)
         # Simple selection: closest to ATM
         strikes.min_by { |strike| (strike - spot_price).abs }
       end

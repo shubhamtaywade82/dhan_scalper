@@ -41,11 +41,11 @@ module DhanScalper
         closed_positions: session_stats[:closed_positions],
 
         # Balance information
-        starting_balance: config[:starting_balance] || balance_provider.total_balance - session_stats[:total_pnl],
+        starting_balance: config[:starting_balance] || (balance_provider.total_balance - session_stats[:total_pnl]),
         final_balance: balance_provider.total_balance,
         balance_change: session_stats[:total_pnl],
         balance_change_pct: calculate_balance_change_pct(
-          config[:starting_balance] || balance_provider.total_balance - session_stats[:total_pnl],
+          config[:starting_balance] || (balance_provider.total_balance - session_stats[:total_pnl]),
           balance_provider.total_balance
         ),
 
@@ -96,7 +96,7 @@ module DhanScalper
       session_files = Dir.glob(File.join(@data_dir, "session_*.csv"))
       return [] if session_files.empty?
 
-      sessions = session_files.map do |file|
+      session_files.map do |file|
         session_id = File.basename(file, ".csv").gsub("session_", "")
         {
           session_id: session_id,
@@ -105,8 +105,6 @@ module DhanScalper
           size: File.size(file)
         }
       end.sort_by { |s| s[:created] }.reverse
-
-      sessions
     end
 
     private
@@ -171,10 +169,10 @@ module DhanScalper
 
       # Save closed positions
       closed_positions = position_tracker.get_closed_positions
-      if closed_positions.any?
-        csv_file = File.join(@data_dir, "session_#{@session_id}_closed_positions.csv")
-        save_positions_to_csv(closed_positions, csv_file, "closed")
-      end
+      return unless closed_positions.any?
+
+      csv_file = File.join(@data_dir, "session_#{@session_id}_closed_positions.csv")
+      save_positions_to_csv(closed_positions, csv_file, "closed")
     end
 
     def save_positions_to_csv(positions, csv_file, position_type)
@@ -182,9 +180,7 @@ module DhanScalper
         headers = %w[symbol security_id side entry_price quantity current_price pnl pnl_percentage
                      option_type strike expiry timestamp]
 
-        if position_type == "closed"
-          headers += %w[exit_price exit_reason exit_timestamp]
-        end
+        headers += %w[exit_price exit_reason exit_timestamp] if position_type == "closed"
 
         csv << headers
 
@@ -220,9 +216,9 @@ module DhanScalper
     end
 
     def print_console_summary(report_data)
-      puts "\n" + "="*60
+      puts "\n" + ("=" * 60)
       puts "DHAN SCALPER - SESSION REPORT"
-      puts "="*60
+      puts "=" * 60
 
       # Session information
       puts "Session ID: #{report_data[:session_id]}"
@@ -260,9 +256,9 @@ module DhanScalper
       puts "  Balance Change: #{report_data[:balance_change_pct].round(2)}%"
       puts
 
-      puts "="*60
+      puts "=" * 60
       puts "Report files saved to: #{@data_dir}/"
-      puts "="*60
+      puts "=" * 60
     end
 
     def ensure_data_directory
@@ -270,4 +266,3 @@ module DhanScalper
     end
   end
 end
-

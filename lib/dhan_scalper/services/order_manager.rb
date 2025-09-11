@@ -23,7 +23,9 @@ module DhanScalper
         dedupe_key = dedupe_key_for(data)
 
         if @cache.set_dedupe_key(dedupe_key, ttl: 10)
-          @logger.info("[ORDER] #{mode.upcase} #{dry_run ? '(dry-run)' : ''} #{data[:side]} #{data[:symbol]} #{data[:option_type]}@#{data[:strike]} qty=#{data[:quantity]}")
+          @logger.info("[ORDER] #{mode.upcase} #{if dry_run
+                                                   "(dry-run)"
+                                                 end} #{data[:side]} #{data[:symbol]} #{data[:option_type]}@#{data[:strike]} qty=#{data[:quantity]}")
         else
           @logger.debug("[ORDER] DEDUPED #{data[:side]} #{data[:symbol]} key=#{dedupe_key}")
           return { success: false, error: :duplicate, mode: mode }
@@ -81,9 +83,8 @@ module DhanScalper
 
       def dedupe_key_for(data)
         parts = [data[:symbol], data[:security_id], data[:side], data[:quantity], data[:order_type]]
-        "order:#{parts.join(':')}"
+        "order:#{parts.join(":")}"
       end
     end
   end
 end
-

@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 require "tty/table"
 require "tty/box"
 require "tty/reader"
@@ -12,7 +13,7 @@ module DhanScalper
       REFRESH = 0.5
 
       def initialize(state, balance_provider: nil)
-        @st   = state
+        @st = state
         @balance_provider = balance_provider
         @pd   = Pastel.new
         @rd   = TTY::Reader.new
@@ -57,8 +58,8 @@ module DhanScalper
       end
 
       def trap_signals
-        Signal.trap("INT"){  @alive = false }
-        Signal.trap("TERM"){ @alive = false }
+        Signal.trap("INT") {  @alive = false }
+        Signal.trap("TERM") { @alive = false }
         Signal.trap("WINCH") do
           @width, @height = TTY::Screen.size
         end
@@ -111,9 +112,9 @@ module DhanScalper
           style: { border: { fg: :bright_blue } }
         ) do
           <<~TEXT
-          Status: #{status}   Session PnL: #{pnl_s}   Target: #{tgt}   Max DD: -#{mdd}
-          Symbols: #{syms}
-          Controls: [q]uit  [p]ause  [r]esume  [s]ubscriptions toggle
+            Status: #{status}   Session PnL: #{pnl_s}   Target: #{tgt}   Max DD: -#{mdd}
+            Symbols: #{syms}
+            Controls: [q]uit  [p]ause  [r]esume  [s]ubscriptions toggle
           TEXT
         end
       end
@@ -126,7 +127,7 @@ module DhanScalper
         total = @balance_provider.total_balance.to_f.round(0)
 
         content = <<~TEXT
-        Available: ₹#{available}   Used: ₹#{used}   Total: ₹#{total}
+          Available: ₹#{available}   Used: ₹#{used}   Total: ₹#{total}
         TEXT
 
         boxed(" Balance ", content)
@@ -147,7 +148,7 @@ module DhanScalper
           ]
         end
         table = TTY::Table.new(
-          header: ["Symbol","Side","SID","Lots","Entry","LTP","Net₹","Best₹"],
+          header: ["Symbol", "Side", "SID", "Lots", "Entry", "LTP", "Net₹", "Best₹"],
           rows: rows
         )
         content = rows.empty? ? "No open positions" : table.render(:ascii, resize: true)
@@ -164,7 +165,7 @@ module DhanScalper
           ]
         end
         table = TTY::Table.new(
-          header: ["Symbol","Side","Reason","Entry","Exit","Net₹"],
+          header: ["Symbol", "Side", "Reason", "Entry", "Exit", "Net₹"],
           rows: rows
         )
         content = rows.empty? ? "No recent closed positions" : table.render(:ascii, resize: true)
@@ -174,8 +175,8 @@ module DhanScalper
       def subs_box
         idx_rows = @st.subs_idx.map { |r| [r[:symbol], "#{r[:segment]}:#{r[:security_id]}", fmt(r[:ltp]), age(r[:ts])] }
         opt_rows = @st.subs_opt.map { |r| [r[:symbol], "#{r[:segment]}:#{r[:security_id]}", fmt(r[:ltp]), age(r[:ts])] }
-        idx_tbl = TTY::Table.new(header: ["Index", "Key", "LTP", "Age"], rows: idx_rows)
-        opt_tbl = TTY::Table.new(header: ["Option", "Key", "LTP", "Age"], rows: opt_rows)
+        idx_tbl = TTY::Table.new(header: %w[Index Key LTP Age], rows: idx_rows)
+        opt_tbl = TTY::Table.new(header: %w[Option Key LTP Age], rows: opt_rows)
 
         out  = boxed(" Index Subscriptions ", idx_rows.empty? ? "None" : idx_tbl.render(:ascii, resize: true))
         out << boxed(" Option Subscriptions ", opt_rows.empty? ? "None" : opt_tbl.render(:ascii, resize: true))
@@ -196,8 +197,10 @@ module DhanScalper
       end
 
       def fmt(v) = v.nil? ? "-" : v.to_f.round(2)
+
       def age(ts)
         return "-" unless ts
+
         d = (Time.now.to_i - ts.to_i).abs
         d < 2 ? "1s" : "#{d}s"
       end

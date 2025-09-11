@@ -42,7 +42,6 @@ begin
   puts "  After reset to ₹50,000:"
   puts "    Available: ₹#{wallet.available_balance}"
   puts "    Total: ₹#{wallet.total_balance}"
-
 rescue StandardError => e
   puts "✗ PaperWallet failed: #{e.message}"
   puts e.backtrace.first(3).join("\n")
@@ -84,11 +83,10 @@ begin
   # Test with higher premium
   lots_high = sizer.calculate_lots("NIFTY", 1000.0)
   puts "  Lots for ₹1000 premium: #{lots_high}"
-
 rescue StandardError => e
   puts "✗ QuantitySizer failed: #{e.message}"
   puts e.backtrace.first(3).join("\n")
 end
 
-puts "\n" + "=" * 50
+puts "\n" + ("=" * 50)
 puts "🎯 Balance Providers Testing Completed!"

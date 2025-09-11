@@ -54,7 +54,7 @@ module DhanScalper
         funds = DhanHQ::Models::Funds.fetch
         puts "[DEBUG] Funds object: #{funds.inspect}"
 
-        if funds.respond_to?(:available_balance) && funds.respond_to?(:utilized_amount)
+        if funds && funds.respond_to?(:available_balance) && funds.respond_to?(:utilized_amount)
           available = funds.available_balance.to_f
           used = funds.utilized_amount.to_f
           total = (available + used).to_f

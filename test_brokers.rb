@@ -22,12 +22,12 @@ begin
 
   # Add some test data to TickCache
   DhanScalper::TickCache.put({
-    segment: "NSE_FNO",
-    security_id: "CE123",
-    ltp: 100.0,
-    ts: Time.now.to_i,
-    symbol: "NIFTY"
-  })
+                               segment: "NSE_FNO",
+                               security_id: "CE123",
+                               ltp: 100.0,
+                               ts: Time.now.to_i,
+                               symbol: "NIFTY"
+                             })
 
   # Test buy order
   buy_order = broker.buy_market(
@@ -79,7 +79,7 @@ begin
   if place_result[:success]
     puts "✓ Generic place_order successful"
     puts "  Order ID: #{place_result[:order_id]}"
-    puts "  Position created: #{place_result[:position] ? 'Yes' : 'No'}"
+    puts "  Position created: #{place_result[:position] ? "Yes" : "No"}"
   else
     puts "✗ Generic place_order failed: #{place_result[:error]}"
   end
@@ -89,7 +89,6 @@ begin
   positions = vdm.get_positions
   puts "  VDM Orders: #{orders.size}"
   puts "  VDM Positions: #{positions.size}"
-
 rescue StandardError => e
   puts "✗ PaperBroker failed: #{e.message}"
   puts e.backtrace.first(3).join("\n")
@@ -108,7 +107,6 @@ begin
   puts "✓ DhanBroker created successfully"
   puts "  Broker name: #{broker.name}"
   puts "  (Note: Not placing real orders to avoid charges)"
-
 rescue StandardError => e
   puts "✗ DhanBroker failed: #{e.message}"
   puts e.backtrace.first(3).join("\n")
@@ -149,11 +147,10 @@ begin
   balance = vdm.get_balance
   puts "✓ VDM balance management working"
   puts "  Balance: ₹#{balance[:available]}"
-
 rescue StandardError => e
   puts "✗ VDM failed: #{e.message}"
   puts e.backtrace.first(3).join("\n")
 end
 
-puts "\n" + "=" * 50
+puts "\n" + ("=" * 50)
 puts "🎯 Brokers Testing Completed!"

@@ -12,7 +12,7 @@ def load_nifty_data_for_trading_logic
   puts "\n📈 Loading actual NIFTY data for trading logic testing..."
   begin
     # Load configuration
-    config = DhanScalper::Config.load(path: "config/scalper.yml")
+    DhanScalper::Config.load(path: "config/scalper.yml")
 
     # Create CandleSeries and fetch real data
     series = CandleSeries.new(symbol: "NIFTY", interval: "1")
@@ -26,23 +26,22 @@ def load_nifty_data_for_trading_logic
       # Load the data into the series
       series.load_from_raw(historical_data)
       puts "  ✓ Loaded #{series.candles.size} real NIFTY candles"
-      puts "  Date range: #{Time.at(series.candles.first.timestamp).strftime('%Y-%m-%d %H:%M')} to #{Time.at(series.candles.last.timestamp).strftime('%Y-%m-%d %H:%M')}"
+      puts "  Date range: #{Time.at(series.candles.first.timestamp).strftime("%Y-%m-%d %H:%M")} to #{Time.at(series.candles.last.timestamp).strftime("%Y-%m-%d %H:%M")}"
       puts "  Price range: ₹#{series.candles.map(&:low).min.round(2)} - ₹#{series.candles.map(&:high).max.round(2)}"
 
       # Get current LTP from the latest candle
       current_ltp = series.candles.last.close
       puts "  Current NIFTY LTP: ₹#{current_ltp.round(2)}"
 
-      return { series: series, current_ltp: current_ltp }
+      { series: series, current_ltp: current_ltp }
     else
       puts "  ⚠️ No historical data available, using mock data as fallback"
-      return create_fallback_data_for_trading_logic
+      create_fallback_data_for_trading_logic
     end
-
   rescue StandardError => e
     puts "  ⚠️ Failed to load real data: #{e.message}"
     puts "  Using mock data as fallback"
-    return create_fallback_data_for_trading_logic
+    create_fallback_data_for_trading_logic
   end
 end
 
@@ -52,7 +51,7 @@ def create_fallback_data_for_trading_logic
   series = CandleSeries.new(symbol: "NIFTY", interval: "1")
 
   # Create realistic mock data based on current NIFTY levels
-  base_price = 19500.0
+  base_price = 19_500.0
   candles = []
 
   200.times do |i|
@@ -62,10 +61,10 @@ def create_fallback_data_for_trading_logic
     high = open + rand(30)
     low = open - rand(30)
     close = low + rand(high - low)
-    volume = rand(5000..50000)
+    volume = rand(5000..50_000)
 
     candles << Candle.new(
-      ts: Time.now.to_i - (200 - i) * 60, # 1 minute intervals
+      ts: Time.now.to_i - ((200 - i) * 60), # 1 minute intervals
       open: open,
       high: high,
       low: low,
@@ -92,12 +91,12 @@ current_nifty_ltp = nifty_data[:current_ltp]
 # Test 1: Basic Trend Engine
 puts "\n1. Testing Basic Trend Engine..."
 begin
-  trend = DhanScalper::Trend.new(seg_idx: "IDX_I", sid_idx: "13")
+  DhanScalper::Trend.new(seg_idx: "IDX_I", sid_idx: "13")
   puts "✓ Basic Trend engine created"
   puts "  Segment: IDX_I"
   puts "  Security ID: 13"
 
-  # Note: This will try to fetch real data, so it might fail without API
+  # NOTE: This will try to fetch real data, so it might fail without API
   puts "  (Note: Will attempt to fetch real market data)"
 rescue StandardError => e
   puts "✗ Basic Trend failed: #{e.message}"
@@ -107,7 +106,7 @@ end
 # Test 2: Enhanced Trend Engine with Real Data
 puts "\n2. Testing Enhanced Trend Engine with Real NIFTY Data..."
 begin
-  trend_enhanced = DhanScalper::TrendEnhanced.new(
+  DhanScalper::TrendEnhanced.new(
     seg_idx: "IDX_I",
     sid_idx: "13",
     use_multi_timeframe: true,
@@ -149,9 +148,9 @@ begin
   picker = DhanScalper::OptionPicker.new(nifty_config, mode: :paper)
   puts "✓ Option Picker created"
   puts "  Mode: paper"
-  puts "  Index SID: #{nifty_config['idx_sid']}"
-  puts "  Strike Step: #{nifty_config['strike_step']}"
-  puts "  Lot Size: #{nifty_config['lot_size']}"
+  puts "  Index SID: #{nifty_config["idx_sid"]}"
+  puts "  Strike Step: #{nifty_config["strike_step"]}"
+  puts "  Lot Size: #{nifty_config["lot_size"]}"
 
   # Test picking options with real NIFTY LTP
   puts "  Using real NIFTY LTP: ₹#{current_nifty_ltp.round(2)}"
@@ -160,13 +159,12 @@ begin
   if pick_result
     puts "✓ Option picking successful"
     puts "  Expiry: #{pick_result[:expiry]}"
-    puts "  Strikes: #{pick_result[:strikes].join(', ')}"
+    puts "  Strikes: #{pick_result[:strikes].join(", ")}"
     puts "  CE SID: #{pick_result[:ce_sid]}"
     puts "  PE SID: #{pick_result[:pe_sid]}"
   else
     puts "✗ Option picking failed"
   end
-
 rescue StandardError => e
   puts "✗ Option Picker failed: #{e.message}"
   puts e.backtrace.first(3).join("\n")
@@ -194,12 +192,11 @@ begin
     if strikes.any?
       puts "✓ Available strikes retrieved"
       puts "  Strikes count: #{strikes.size}"
-      puts "  Sample strikes: #{strikes.first(5).join(', ')}"
+      puts "  Sample strikes: #{strikes.first(5).join(", ")}"
     else
       puts "✗ No strikes found"
     end
   end
-
 rescue StandardError => e
   puts "✗ CSV Master failed: #{e.message}"
   puts e.backtrace.first(3).join("\n")
@@ -213,11 +210,11 @@ begin
   entry = current_nifty_ltp
   # Use a price from earlier in the series for realistic LTP simulation
   # Handle case where we don't have enough candles
-  if nifty_series.candles.size >= 2
-    ltp = nifty_series.candles[-2].close # Price from 2 candles ago
-  else
-    ltp = entry * 1.05 # 5% profit simulation
-  end
+  ltp = if nifty_series.candles.size >= 2
+          nifty_series.candles[-2].close # Price from 2 candles ago
+        else
+          entry * 1.05 # 5% profit simulation
+        end
   lot_size = 75
   qty_lots = 1
 
@@ -242,7 +239,6 @@ begin
   # Test round trip charges
   round_trip = DhanScalper::PnL.round_trip_orders(charge_per_order)
   puts "  Round Trip Charges: ₹#{round_trip}"
-
 rescue StandardError => e
   puts "✗ PnL calculations failed: #{e.message}"
   puts e.backtrace.first(3).join("\n")
@@ -258,7 +254,7 @@ begin
   )
 
   puts "✓ State created successfully"
-  puts "  Symbols: #{state.symbols.join(', ')}"
+  puts "  Symbols: #{state.symbols.join(", ")}"
   puts "  Session Target: ₹#{state.session_target}"
   puts "  Max Day Loss: ₹#{state.max_day_loss}"
   puts "  Status: #{state.status}"
@@ -273,11 +269,10 @@ begin
 
   state.set_status(:running)
   puts "  Status after resume: #{state.status}"
-
 rescue StandardError => e
   puts "✗ State management failed: #{e.message}"
   puts e.backtrace.first(3).join("\n")
 end
 
-puts "\n" + "=" * 50
+puts "\n" + ("=" * 50)
 puts "🎯 Trading Logic Testing Completed!"

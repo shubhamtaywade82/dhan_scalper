@@ -12,7 +12,7 @@ def load_nifty_data
   puts "\n📈 Loading actual NIFTY historical data..."
   begin
     # Load configuration
-    config = DhanScalper::Config.load(path: "config/scalper.yml")
+    DhanScalper::Config.load(path: "config/scalper.yml")
 
     # Create CandleSeries and fetch real data
     series = CandleSeries.new(symbol: "NIFTY", interval: "1")
@@ -27,18 +27,17 @@ def load_nifty_data
       series.load_from_raw(historical_data)
       puts "  ✓ Loaded #{series.candles.size} real NIFTY candles"
 
-      puts "  Date range: #{Time.at(series.candles.first.timestamp).strftime('%Y-%m-%d %H:%M')} to #{Time.at(series.candles.last.timestamp).strftime('%Y-%m-%d %H:%M')}"
+      puts "  Date range: #{Time.at(series.candles.first.timestamp).strftime("%Y-%m-%d %H:%M")} to #{Time.at(series.candles.last.timestamp).strftime("%Y-%m-%d %H:%M")}"
       puts "  Price range: ₹#{series.candles.map(&:low).min.round(2)} - ₹#{series.candles.map(&:high).max.round(2)}"
-      return series
+      series
     else
       puts "  ⚠️ No historical data available, using mock data as fallback"
-      return create_fallback_data
+      create_fallback_data
     end
-
   rescue StandardError => e
     puts "  ⚠️ Failed to load real data: #{e.message}"
     puts "  Using mock data as fallback"
-    return create_fallback_data
+    create_fallback_data
   end
 end
 
@@ -48,7 +47,7 @@ def create_fallback_data
   series = CandleSeries.new(symbol: "NIFTY", interval: "1")
 
   # Create realistic mock data based on current NIFTY levels
-  base_price = 19500.0
+  base_price = 19_500.0
   candles = []
 
   200.times do |i|
@@ -58,10 +57,10 @@ def create_fallback_data
     high = open + rand(30)
     low = open - rand(30)
     close = low + rand(high - low)
-    volume = rand(5000..50000)
+    volume = rand(5000..50_000)
 
     candles << Candle.new(
-      ts: Time.now.to_i - (200 - i) * 60, # 1 minute intervals
+      ts: Time.now.to_i - ((200 - i) * 60), # 1 minute intervals
       open: open,
       high: high,
       low: low,
@@ -122,10 +121,7 @@ begin
 
   # Test ATR
   atr = series.atr
-  if atr
-    puts "✓ ATR(14): #{atr.last.round(2)}"
-  end
-
+  puts "✓ ATR(14): #{atr.last.round(2)}" if atr
 rescue StandardError => e
   puts "✗ CandleSeries indicators failed: #{e.message}"
   puts e.backtrace.first(3).join("\n")
@@ -150,7 +146,6 @@ begin
   else
     puts "✗ Holy Grail analysis failed"
   end
-
 rescue StandardError => e
   puts "✗ Holy Grail failed: #{e.message}"
   puts e.backtrace.first(3).join("\n")
@@ -174,7 +169,6 @@ begin
   else
     puts "✗ Supertrend calculation failed"
   end
-
 rescue StandardError => e
   puts "✗ Supertrend failed: #{e.message}"
   puts e.backtrace.first(3).join("\n")
@@ -187,7 +181,6 @@ begin
 
   combined_signal = series.combined_signal
   puts "✓ Combined signal: #{combined_signal}"
-
 rescue StandardError => e
   puts "✗ Combined signal failed: #{e.message}"
   puts e.backtrace.first(3).join("\n")
@@ -208,7 +201,6 @@ begin
   else
     puts "✗ Direct Holy Grail class failed"
   end
-
 rescue StandardError => e
   puts "✗ Direct Holy Grail class failed: #{e.message}"
   puts e.backtrace.first(3).join("\n")
@@ -227,11 +219,10 @@ begin
   else
     puts "✗ Direct Supertrend class failed"
   end
-
 rescue StandardError => e
   puts "✗ Direct Supertrend class failed: #{e.message}"
   puts e.backtrace.first(3).join("\n")
 end
 
-puts "\n" + "=" * 50
+puts "\n" + ("=" * 50)
 puts "🎯 Technical Indicators Testing Completed!"

@@ -117,7 +117,8 @@ module DhanScalper
       # Build brokers
       paper_broker = Brokers::PaperBroker.new(
         virtual_data_manager: nil,
-        balance_provider: BalanceProviders::PaperWallet.new(starting_balance: (@config.dig("global", "paper_wallet_rupees") || 200_000).to_f),
+        balance_provider: BalanceProviders::PaperWallet.new(starting_balance: (@config.dig("global",
+                                                                                           "paper_wallet_rupees") || 200_000).to_f),
         logger: @logger
       )
 

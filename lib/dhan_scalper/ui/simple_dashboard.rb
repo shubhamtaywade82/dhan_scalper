@@ -76,7 +76,7 @@ module DhanScalper
 
       def render_simple_dashboard
         # Clear previous output with simple line clearing
-        print "\r" + " " * 80 + "\r"
+        print "\r" + (" " * 80) + "\r"
 
         # Header
         puts @pastel.cyan.bold("DHAN SCALPER - LIVE MARKET DATA")
@@ -153,9 +153,9 @@ module DhanScalper
         puts "Status: #{status} | Session PnL: #{pnl_s}"
 
         # Open positions
-        if @state.respond_to?(:open) && !@state.open.empty?
-          puts "Open Positions: #{@state.open.size}"
-        end
+        return unless @state.respond_to?(:open) && !@state.open.empty?
+
+        puts "Open Positions: #{@state.open.size}"
       end
 
       def render_status
@@ -166,6 +166,7 @@ module DhanScalper
 
       def fmt_price(v)
         return "---" if v.nil?
+
         format("%0.2f", v)
       end
 

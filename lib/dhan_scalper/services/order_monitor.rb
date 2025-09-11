@@ -122,7 +122,7 @@ module DhanScalper
         remove_pending_order(order_id)
       end
 
-      def handle_failed_order(order_id, order_info, order_status)
+      def handle_failed_order(order_id, _order_info, order_status)
         @logger.warn "[ORDER_MONITOR] Order #{order_id} failed: #{order_status[:status]}"
         @logger.warn "[ORDER_MONITOR] Reason: #{order_status[:reason] || "Unknown"}"
 

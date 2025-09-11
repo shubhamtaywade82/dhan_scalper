@@ -29,7 +29,6 @@ begin
   # Check wait time
   wait_time = rate_limiter.time_until_next_request(key)
   puts "  Time until next request: #{wait_time.round(2)} seconds"
-
 rescue StandardError => e
   puts "✗ Rate Limiter failed: #{e.message}"
   puts e.backtrace.first(3).join("\n")
@@ -58,7 +57,6 @@ begin
   else
     puts "  No data retrieved"
   end
-
 rescue StandardError => e
   puts "✗ Historical Data Cache failed: #{e.message}"
   puts e.backtrace.first(3).join("\n")
@@ -81,20 +79,19 @@ begin
   puts "    - unsubscribe_all"
 
   # Test event handlers
-  ws_manager.on_price_update do |data|
+  ws_manager.on_price_update do |_data|
     puts "  Price update handler registered"
   end
 
-  ws_manager.on_order_update do |data|
+  ws_manager.on_order_update do |_data|
     puts "  Order update handler registered"
   end
 
-  ws_manager.on_position_update do |data|
+  ws_manager.on_position_update do |_data|
     puts "  Position update handler registered"
   end
 
   puts "  Event handlers registered successfully"
-
 rescue StandardError => e
   puts "✗ WebSocket Manager failed: #{e.message}"
   puts e.backtrace.first(3).join("\n")
@@ -105,11 +102,11 @@ puts "\n4. Testing Paper Position Tracker..."
 begin
   # Create a simple mock WebSocket manager
   mock_ws_manager = Object.new
-  def mock_ws_manager.subscribe_to_instrument(*args); true; end
-  def mock_ws_manager.unsubscribe_from_instrument(*args); true; end
-  def mock_ws_manager.on_price_update(&block); @price_handler = block; end
-  def mock_ws_manager.on_order_update(&block); @order_handler = block; end
-  def mock_ws_manager.on_position_update(&block); @position_handler = block; end
+  def mock_ws_manager.subscribe_to_instrument(*_args) = true
+  def mock_ws_manager.unsubscribe_from_instrument(*_args) = true
+  def mock_ws_manager.on_price_update(&block) = @price_handler = block
+  def mock_ws_manager.on_order_update(&block) = @order_handler = block
+  def mock_ws_manager.on_position_update(&block) = @position_handler = block
 
   position_tracker = DhanScalper::Services::PaperPositionTracker.new(
     websocket_manager: mock_ws_manager,
@@ -124,7 +121,7 @@ begin
 
   # Test adding position
   position_tracker.add_position(
-    "NIFTY", "CE", 19500, "2025-09-09", "40056", 75, 100.0
+    "NIFTY", "CE", 19_500, "2025-09-09", "40056", 75, 100.0
   )
   puts "  Position added: NIFTY CE 19500"
 
@@ -140,7 +137,6 @@ begin
   underlying_summary.each do |symbol, data|
     puts "    #{symbol}: #{data[:instrument_id]}"
   end
-
 rescue StandardError => e
   puts "✗ Paper Position Tracker failed: #{e.message}"
   puts e.backtrace.first(3).join("\n")
@@ -164,7 +160,6 @@ begin
     puts "  ⚠ DhanHQ configuration incomplete"
     puts "    Set CLIENT_ID and ACCESS_TOKEN environment variables"
   end
-
 rescue StandardError => e
   puts "✗ DhanHQ Config Service failed: #{e.message}"
   puts e.backtrace.first(3).join("\n")
@@ -185,11 +180,10 @@ begin
   puts "    - register_cleanup"
   puts "    - cleanup_all_websockets"
   puts "    - cleanup_registered?"
-
 rescue StandardError => e
   puts "✗ WebSocket Cleanup Service failed: #{e.message}"
   puts e.backtrace.first(3).join("\n")
 end
 
-puts "\n" + "=" * 50
+puts "\n" + ("=" * 50)
 puts "🎯 Services Testing Completed!"

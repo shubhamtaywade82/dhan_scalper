@@ -42,14 +42,14 @@ module DhanScalper
           ]
 
           methods_to_try.each do |method|
-            begin
-              method.call
-              puts "[WEBSOCKET] Successfully disconnected all connections" if ENV["DHAN_LOG_LEVEL"] == "DEBUG"
-              return
-            rescue StandardError => e
-              puts "[WEBSOCKET] Warning: Failed to disconnect via method: #{e.message}" if ENV["DHAN_LOG_LEVEL"] == "DEBUG"
-              next
+            method.call
+            puts "[WEBSOCKET] Successfully disconnected all connections" if ENV["DHAN_LOG_LEVEL"] == "DEBUG"
+            return
+          rescue StandardError => e
+            if ENV["DHAN_LOG_LEVEL"] == "DEBUG"
+              puts "[WEBSOCKET] Warning: Failed to disconnect via method: #{e.message}"
             end
+            next
           end
 
           puts "[WEBSOCKET] Warning: Could not disconnect all WebSocket connections" if ENV["DHAN_LOG_LEVEL"] == "DEBUG"

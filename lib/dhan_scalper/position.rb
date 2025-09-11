@@ -2,8 +2,8 @@
 
 module DhanScalper
   class Position
-    attr_accessor :symbol, :security_id, :side, :entry_price, :quantity, :current_price, :pnl
-    attr_accessor :option_type, :strike, :expiry, :timestamp, :exit_price, :exit_reason, :exit_timestamp
+    attr_accessor :symbol, :security_id, :side, :entry_price, :quantity, :current_price, :pnl, :option_type, :strike,
+                  :expiry, :timestamp, :exit_price, :exit_reason, :exit_timestamp
 
     def initialize(security_id:, side:, entry_price:, quantity:, symbol: nil, current_price: nil, pnl: 0.0,
                    option_type: nil, strike: nil, expiry: nil, timestamp: nil)
@@ -42,6 +42,7 @@ module DhanScalper
 
     def pnl_percentage
       return 0.0 if @entry_price.zero?
+
       ((@current_price - @entry_price) / @entry_price) * 100
     end
 
@@ -87,7 +88,7 @@ module DhanScalper
       exit_info = closed? ? " (Exit: #{@exit_price}, Reason: #{@exit_reason})" : ""
 
       "#{status}#{option_info}: #{@side} #{@quantity} #{@symbol || @security_id} @ #{@entry_price} " \
-      "(Current: #{@current_price}, P&L: #{@pnl.round(2)}, #{pnl_percentage.round(1)}%)#{exit_info}"
+        "(Current: #{@current_price}, P&L: #{@pnl.round(2)}, #{pnl_percentage.round(1)}%)#{exit_info}"
     end
   end
 end

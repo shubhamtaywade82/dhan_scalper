@@ -27,11 +27,11 @@ module DhanScalper
           return unless last_request_time[key]
 
           time_since_last = Time.now - last_request_time[key]
-          if time_since_last < min_interval
-            wait_time = min_interval - time_since_last
-            puts "[RATE_LIMITER] Waiting #{wait_time.round(1)}s before next request for #{key}"
-            sleep(wait_time)
-          end
+          return unless time_since_last < min_interval
+
+          wait_time = min_interval - time_since_last
+          puts "[RATE_LIMITER] Waiting #{wait_time.round(1)}s before next request for #{key}"
+          sleep(wait_time)
         end
 
         def time_until_next_request(key)

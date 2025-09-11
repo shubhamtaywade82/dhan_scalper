@@ -101,17 +101,11 @@ module DhanScalper
       @websocket_manager = Services::WebSocketManager.new(logger: @logger)
 
       # Initialize order monitor for live trading
-      @order_monitor = if @mode == :live
-                         Services::OrderMonitor.new(@broker, @position_tracker, logger: @logger)
-                       else
-                         nil
-                       end
+      @order_monitor = (Services::OrderMonitor.new(@broker, @position_tracker, logger: @logger) if @mode == :live)
 
       # Initialize position reconciler for live trading
       @position_reconciler = if @mode == :live
                                Services::PositionReconciler.new(@broker, @position_tracker, logger: @logger)
-                             else
-                               nil
                              end
 
       # Trading parameters

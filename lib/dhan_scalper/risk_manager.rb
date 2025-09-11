@@ -131,8 +131,8 @@ module DhanScalper
       @position_highs[security_id] = [current_high, current_price].max
     end
 
-    def determine_exit_reason(position, current_price, pnl, pnl_pct)
-      entry_price = position[:entry_price]
+    def determine_exit_reason(position, current_price, _pnl, pnl_pct)
+      position[:entry_price]
       security_id = position[:security_id]
 
       # Take Profit

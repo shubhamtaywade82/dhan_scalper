@@ -12,7 +12,7 @@ def load_nifty_data_for_integration
   puts "\n📈 Loading actual NIFTY data for integration testing..."
   begin
     # Load configuration
-    config = DhanScalper::Config.load(path: "config/scalper.yml")
+    DhanScalper::Config.load(path: "config/scalper.yml")
 
     # Create CandleSeries and fetch real data
     series = CandleSeries.new(symbol: "NIFTY", interval: "1")
@@ -26,18 +26,17 @@ def load_nifty_data_for_integration
       # Load the data into the series
       series.load_from_raw(historical_data)
       puts "  ✓ Loaded #{series.candles.size} real NIFTY candles"
-      puts "  Date range: #{Time.at(series.candles.first.timestamp).strftime('%Y-%m-%d %H:%M')} to #{Time.at(series.candles.last.timestamp).strftime('%Y-%m-%d %H:%M')}"
+      puts "  Date range: #{Time.at(series.candles.first.timestamp).strftime("%Y-%m-%d %H:%M")} to #{Time.at(series.candles.last.timestamp).strftime("%Y-%m-%d %H:%M")}"
       puts "  Price range: ₹#{series.candles.map(&:low).min.round(2)} - ₹#{series.candles.map(&:high).max.round(2)}"
-      return series
+      series
     else
       puts "  ⚠️ No historical data available, using mock data as fallback"
-      return create_fallback_data_for_integration
+      create_fallback_data_for_integration
     end
-
   rescue StandardError => e
     puts "  ⚠️ Failed to load real data: #{e.message}"
     puts "  Using mock data as fallback"
-    return create_fallback_data_for_integration
+    create_fallback_data_for_integration
   end
 end
 
@@ -47,7 +46,7 @@ def create_fallback_data_for_integration
   series = CandleSeries.new(symbol: "NIFTY", interval: "1")
 
   # Create realistic mock data based on current NIFTY levels
-  base_price = 19500.0
+  base_price = 19_500.0
   candles = []
 
   200.times do |i|
@@ -57,10 +56,10 @@ def create_fallback_data_for_integration
     high = open + rand(30)
     low = open - rand(30)
     close = low + rand(high - low)
-    volume = rand(5000..50000)
+    volume = rand(5000..50_000)
 
     candles << Candle.new(
-      ts: Time.now.to_i - (200 - i) * 60, # 1 minute intervals
+      ts: Time.now.to_i - ((200 - i) * 60), # 1 minute intervals
       open: open,
       high: high,
       low: low,
@@ -107,12 +106,12 @@ begin
   puts "  Current NIFTY price: ₹#{current_nifty_price.round(2)}"
 
   DhanScalper::TickCache.put({
-    segment: "IDX_I",
-    security_id: "13",
-    ltp: current_nifty_price,
-    ts: Time.now.to_i,
-    symbol: "NIFTY"
-  })
+                               segment: "IDX_I",
+                               security_id: "13",
+                               ltp: current_nifty_price,
+                               ts: Time.now.to_i,
+                               symbol: "NIFTY"
+                             })
 
   # 2. Calculate position size using real NIFTY price
   lots = sizer.calculate_lots("NIFTY", current_nifty_price)
@@ -144,12 +143,12 @@ begin
       puts "  Simulating price change: #{price_change}%"
 
       DhanScalper::TickCache.put({
-        segment: "IDX_I",
-        security_id: "13",
-        ltp: simulated_price,
-        ts: Time.now.to_i,
-        symbol: "NIFTY"
-      })
+                                   segment: "IDX_I",
+                                   security_id: "13",
+                                   ltp: simulated_price,
+                                   ts: Time.now.to_i,
+                                   symbol: "NIFTY"
+                                 })
 
       # 6. Close position
       close_order = broker.sell_market(
@@ -175,7 +174,6 @@ begin
       end
     end
   end
-
 rescue StandardError => e
   puts "✗ Paper trading workflow failed: #{e.message}"
   puts e.backtrace.first(3).join("\n")
@@ -215,7 +213,6 @@ begin
       puts "    Lot size for first CE: #{lot_size}"
     end
   end
-
 rescue StandardError => e
   puts "✗ CSV Master integration failed: #{e.message}"
   puts e.backtrace.first(3).join("\n")
@@ -246,7 +243,6 @@ begin
   # Test combined signal
   combined_signal = series.combined_signal
   puts "  Combined signal: #{combined_signal}"
-
 rescue StandardError => e
   puts "✗ Technical analysis integration failed: #{e.message}"
   puts e.backtrace.first(3).join("\n")
@@ -279,15 +275,14 @@ begin
 
   # Test subscription management
   state.upsert_idx_sub({
-    segment: "IDX_I",
-    security_id: "13",
-    ltp: 19500.0,
-    ts: Time.now.to_i,
-    symbol: "NIFTY"
-  })
+                         segment: "IDX_I",
+                         security_id: "13",
+                         ltp: 19_500.0,
+                         ts: Time.now.to_i,
+                         symbol: "NIFTY"
+                       })
 
   puts "  Index subscriptions: #{state.subs_idx.size}"
-
 rescue StandardError => e
   puts "✗ State management integration failed: #{e.message}"
   puts e.backtrace.first(3).join("\n")
@@ -329,11 +324,10 @@ begin
     puts "  Cache integration: working"
     puts "  Cached data: #{retrieved.size} records"
   end
-
 rescue StandardError => e
   puts "✗ Rate limiting integration failed: #{e.message}"
   puts e.backtrace.first(3).join("\n")
 end
 
-puts "\n" + "=" * 50
+puts "\n" + ("=" * 50)
 puts "🎯 Integration Testing Completed!"

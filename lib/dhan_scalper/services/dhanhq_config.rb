@@ -11,8 +11,8 @@ module DhanScalper
         # Configure DhanHQ with environment variables
         def configure
           DhanHQ.configure do |config|
-            config.client_id = ENV["CLIENT_ID"]
-            config.access_token = ENV["ACCESS_TOKEN"]
+            config.client_id = ENV.fetch("CLIENT_ID", nil)
+            config.access_token = ENV.fetch("ACCESS_TOKEN", nil)
             config.base_url = ENV["BASE_URL"] || "https://api.dhan.co/v2"
           end
 
@@ -30,7 +30,7 @@ module DhanScalper
         # Check if configuration is valid
         # @return [Boolean] True if configuration is complete
         def configured?
-          ENV["CLIENT_ID"] && ENV["ACCESS_TOKEN"]
+          ENV.fetch("CLIENT_ID", nil) && ENV.fetch("ACCESS_TOKEN", nil)
         end
 
         # Get configuration status

@@ -80,7 +80,7 @@ module DhanScalper
         end
       end
 
-      def adjust_stop_loss(position, action)
+      def adjust_stop_loss(_position, action)
         # This would modify the existing stop loss order
         # For now, just log the adjustment
         @logger.info("[ADJUST] #{action[:reason]} | old=#{action[:old_trigger]&.round(2)} new=#{action[:new_trigger]&.round(2)} peak=#{action[:peak_price]&.round(2)}")

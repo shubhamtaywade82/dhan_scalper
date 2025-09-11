@@ -125,9 +125,7 @@ module DhanScalper
         content_parts << render_ltp_section(width)
 
         # Trading data section (if available)
-        if @show_trading_data
-          content_parts << render_trading_section(width)
-        end
+        content_parts << render_trading_section(width) if @show_trading_data
 
         # Status info
         content_parts << render_status_section(width)
@@ -151,11 +149,11 @@ module DhanScalper
         subtitle = "LIVE MARKET DASHBOARD"
 
         header_lines = []
-        if width >= 72
-          header_lines << @pastel.cyan.bold(@font.write(title))
-        else
-          header_lines << @pastel.cyan.bold(title)
-        end
+        header_lines << if width >= 72
+                          @pastel.cyan.bold(@font.write(title))
+                        else
+                          @pastel.cyan.bold(title)
+                        end
         header_lines << @pastel.dim(subtitle.center(width))
 
         TTY::Box.frame(
@@ -209,19 +207,13 @@ module DhanScalper
         sections = []
 
         # Balance section
-        if @balance_provider
-          sections << render_balance_section(width)
-        end
+        sections << render_balance_section(width) if @balance_provider
 
         # Positions section
-        if @state && @state.respond_to?(:open)
-          sections << render_positions_section(width)
-        end
+        sections << render_positions_section(width) if @state && @state.respond_to?(:open)
 
         # Closed positions section
-        if @state && @state.respond_to?(:closed)
-          sections << render_closed_section(width)
-        end
+        sections << render_closed_section(width) if @state && @state.respond_to?(:closed)
 
         sections.join("\n")
       end
@@ -232,7 +224,7 @@ module DhanScalper
         total = @balance_provider.total_balance.to_f.round(0)
 
         content = <<~TEXT
-        Available: #{@pastel.green("₹#{available}")}   Used: #{@pastel.red("₹#{used}")}   Total: #{@pastel.blue("₹#{total}")}
+          Available: #{@pastel.green("₹#{available}")}   Used: #{@pastel.red("₹#{used}")}   Total: #{@pastel.blue("₹#{total}")}
         TEXT
 
         TTY::Box.frame(
@@ -261,7 +253,7 @@ module DhanScalper
         end
 
         table = TTY::Table.new(
-          header: ["Symbol","Side","SID","Lots","Entry","LTP","Net₹","Best₹"],
+          header: ["Symbol", "Side", "SID", "Lots", "Entry", "LTP", "Net₹", "Best₹"],
           rows: rows
         )
 
@@ -291,7 +283,7 @@ module DhanScalper
         end
 
         table = TTY::Table.new(
-          header: ["Symbol","Side","Reason","Entry","Exit","Net₹"],
+          header: ["Symbol", "Side", "Reason", "Entry", "Exit", "Net₹"],
           rows: rows
         )
 
@@ -341,6 +333,7 @@ module DhanScalper
 
       def fmt_price(v)
         return "---" if v.nil?
+
         format("%0.2f", v)
       end
 

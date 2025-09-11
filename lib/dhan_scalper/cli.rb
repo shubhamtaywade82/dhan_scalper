@@ -6,7 +6,6 @@ require "logger"
 require "DhanHQ"
 
 require_relative "virtual_data_manager"
-require_relative "ui/live_dashboard"
 
 module DhanScalper
   class CLI < Thor
@@ -22,16 +21,14 @@ module DhanScalper
       puts "Commands:"
       puts "  start           - Start the scalper (Ctrl+C to stop)"
       puts "  paper           - Start paper trading (alias for start -m paper)"
-      puts "  headless        - Run headless options buying bot (no TTY dashboard)"
+      puts "  headless        - Run headless options buying bot"
       puts "  dryrun          - Run signals only, no orders"
       puts "  orders          - Show order history"
       puts "  positions       - Show open positions"
       puts "  balance         - Show current balance"
       puts "  reset-balance   - Reset virtual balance to initial amount"
       puts "  clear-data      - Clear all virtual data (orders, positions, balance)"
-      puts "  dashboard       - Show real-time virtual data dashboard"
-      puts "  live            - Show live LTP dashboard with WebSocket feed"
-      puts "                    Use --simple for basic terminal output"
+      puts "  live            - Show live LTP data with WebSocket feed"
       puts "  report          - Generate session report from CSV data"
       puts "  status          - Show key runtime health from Redis"
       puts "  export          - Export CSV data from Redis history"
@@ -39,7 +36,7 @@ module DhanScalper
       puts "  help            - Show this help"
       puts
       puts "Options:"
-      puts "  -q, --quiet     - Run in quiet mode (no TTY dashboard, better for terminals)"
+      puts "  -q, --quiet     - Run in quiet mode (minimal output)"
       puts "  -e, --enhanced  - Use enhanced indicators (Holy Grail, Supertrend) [default: true]"
       puts "  -c, --config    - Path to configuration file"
       puts "  -m, --mode      - Trading mode (live/paper)"
@@ -196,32 +193,53 @@ module DhanScalper
       puts "All virtual data cleared."
     end
 
-    desc "dashboard", "Show real-time virtual data dashboard"
-    def dashboard
-      require_relative "ui/data_viewer"
-      UI::DataViewer.new.run
-    end
-
-    desc "live", "Show live LTP dashboard with WebSocket feed"
-    option :interval, type: :numeric, default: 0.5, desc: "Refresh interval (seconds)"
+    desc "live", "Show live LTP data with WebSocket feed"
+    option :interval, type: :numeric, default: 1.0, desc: "Refresh interval (seconds)"
     option :instruments, type: :string,
                          desc: "Comma-separated list of instruments (format: name:segment:security_id)"
-    option :simple, type: :boolean, default: false, desc: "Use simple dashboard (no full screen control)"
     def live
       # Ensure global WebSocket cleanup is registered
       DhanScalper::Services::WebSocketCleanup.register_cleanup
 
       instruments = parse_instruments(options[:instruments])
 
-      if options[:simple]
-        require_relative "ui/simple_dashboard"
-        UI::SimpleDashboard.new(refresh: options[:interval], instruments: instruments).run
-      else
-        UI::LiveDashboard.new(refresh: options[:interval], instruments: instruments).run
+      # Simple live data display without TTY
+      require_relative "services/market_feed"
+
+      market_feed = DhanScalper::Services::MarketFeed.new(mode: :quote)
+      market_feed.start(instruments)
+
+      puts "Live LTP Data (Press Ctrl+C to stop)"
+      puts "=" * 50
+
+      begin
+        loop do
+          sleep(options[:interval])
+          clear_screen
+          puts "Live LTP Data - #{Time.now.strftime("%H:%M:%S")}"
+          puts "=" * 50
+
+          instruments.each do |instrument|
+            ltp = market_feed.ltp(instrument[:segment], instrument[:security_id])
+            puts "#{instrument[:name]}: #{ltp ? "₹#{ltp}" : "N/A"}"
+          end
+
+          puts "\nPress Ctrl+C to stop"
+        end
+      rescue Interrupt
+        puts "\nStopping live data feed..."
+      ensure
+        market_feed.stop
       end
     end
 
-    desc "headless", "Run headless options buying bot (no TTY dashboard)"
+    private
+
+    def clear_screen
+      system("clear") || system("cls")
+    end
+
+    desc "headless", "Run headless options buying bot"
     option :config, type: :string, aliases: "-c", desc: "Path to scalper.yml", default: "config/scalper.yml"
     option :mode, aliases: "-m", desc: "Trading mode (live/paper)", default: "paper"
     def headless

@@ -3,8 +3,6 @@
 require "DhanHQ"
 require "ostruct"
 require_relative "state"
-require_relative "ui/dashboard"
-require_relative "ui/simple_logger"
 require_relative "virtual_data_manager"
 require_relative "quantity_sizer"
 require_relative "balance_providers/paper_wallet"
@@ -80,6 +78,8 @@ module DhanScalper
           tick_data = {
             ltp: t[:ltp]&.to_f,
             ts: t[:ts]&.to_i || Time.now.to_i,
+            day_high: t[:day_high]&.to_f,
+            day_low: t[:day_low]&.to_f,
             atp: t[:atp]&.to_f,
             vol: t[:vol]&.to_i,
             segment: t[:segment],
@@ -104,20 +104,12 @@ module DhanScalper
       traders, ce_map, pe_map = setup_traders(ws)
 
       # UI loop (only if not in quiet mode)
-      ui = nil
-      simple_logger = nil
-      if @quiet
-        simple_logger = UI::SimpleLogger.new(@state, balance_provider: @balance_provider)
-      else
-        # Small delay to ensure terminal is ready before starting dashboard
-        sleep 0.3
-        # Use the new live dashboard that shows both trading data and live LTPs
-        ui = Thread.new { UI::LiveDashboard.new(state: @state, balance_provider: @balance_provider).run }
-      end
+      # Simple logging for all modes
+      @logger = Logger.new($stdout)
 
       puts "[READY] Symbols: #{@cfg["SYMBOLS"]&.keys&.join(", ") || "None"}"
       puts "[MODE] #{@mode.upcase} trading with balance: ₹#{@balance_provider.available_balance.round(0)}"
-      puts "[QUIET] Running in quiet mode - no TTY dashboard" if @quiet
+      puts "[QUIET] Running in quiet mode - minimal output" if @quiet
       puts "[CONTROLS] Press Ctrl+C to stop"
 
       last_decision = Time.at(0)
@@ -175,7 +167,8 @@ module DhanScalper
           # Periodic status updates in quiet mode
           if @quiet && Time.now - last_status_update >= status_interval
             last_status_update = Time.now
-            simple_logger&.update_status(traders)
+            # Simple status logging
+            puts "[#{Time.now.strftime("%H:%M:%S")}] Status: #{@state.status} | PnL: ₹#{@state.pnl} | Open: #{@state.open.size} | Balance: ₹#{@balance_provider.available_balance.round(0)} (Used: ₹#{@balance_provider.used_balance.round(0)})"
           end
 
           if gpn <= -max_dd
@@ -204,7 +197,6 @@ module DhanScalper
       rescue StandardError
         nil
       end
-      ui&.join(0.2)
     end
 
     # Preview the global session PnL if a trader were to close with `net` profit/loss.

@@ -167,7 +167,32 @@ module DhanScalper
 
       def handle_tick_data(tick_data)
         instrument_id = tick_data[:security_id]
+        segment = @instrument_segments&.[](instrument_id) || "NSE_FNO"
 
+        # Debug: Log the raw tick data
+        puts "[DEBUG] Raw tick data: #{tick_data.inspect}" if ENV["DHAN_LOG_LEVEL"] == "DEBUG"
+
+        # Create tick data for TickCache with correct field names
+        tick_cache_data = {
+          segment: segment,
+          security_id: instrument_id,
+          ltp: tick_data[:ltp].to_f,
+          open: tick_data[:open].to_f,
+          high: tick_data[:high].to_f,
+          low: tick_data[:low].to_f,
+          close: tick_data[:close].to_f,
+          volume: tick_data[:volume].to_i,
+          timestamp: tick_data[:ts],
+          day_high: tick_data[:high].to_f, # Use high as day_high fallback
+          day_low: tick_data[:low].to_f,   # Use low as day_low fallback
+          atp: tick_data[:ltp].to_f,       # Use ltp as atp fallback
+          vol: tick_data[:volume].to_i
+        }
+
+        # Store in TickCache
+        DhanScalper::TickCache.put(tick_cache_data)
+
+        # Create price data for handlers (keeping original format for compatibility)
         price_data = {
           instrument_id: instrument_id,
           symbol: tick_data[:symbol],
@@ -178,9 +203,12 @@ module DhanScalper
           close: tick_data[:close].to_f,
           volume: tick_data[:volume].to_i,
           timestamp: tick_data[:ts],
-          segment: @instrument_segments&.[](instrument_id) || "NSE_FNO",
+          segment: segment,
           exchange: "NSE" # Default to NSE for now
         }
+
+        # Debug: Log the processed price data
+        puts "[DEBUG] Processed price data: #{price_data.inspect}" if ENV["DHAN_LOG_LEVEL"] == "DEBUG"
 
         @message_handlers[:price_update]&.call(price_data)
       rescue StandardError => e

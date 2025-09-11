@@ -110,12 +110,17 @@ module DhanScalper
 
       def setup_tick_handler
         @ws_client.on(:tick) do |tick|
+          # Enhance tick data with day_high and day_low if not present
+          enhanced_tick = tick.dup
+          enhanced_tick[:day_high] ||= tick[:high] # Use high as day_high if not provided
+          enhanced_tick[:day_low] ||= tick[:low]   # Use low as day_low if not provided
+
           # Store tick in cache
-          TickCache.put(tick)
+          TickCache.put(enhanced_tick)
 
           # Log tick for debugging (can be removed in production)
           if ENV["DHAN_LOG_LEVEL"] == "DEBUG"
-            puts "[TICK] #{tick[:segment]}:#{tick[:security_id]} LTP=#{tick[:ltp]} kind=#{tick[:kind]}"
+            puts "[TICK] #{tick[:segment]}:#{tick[:security_id]} LTP=#{tick[:ltp]} H=#{tick[:day_high]} L=#{tick[:day_low]} kind=#{tick[:kind]}"
           end
         end
       end

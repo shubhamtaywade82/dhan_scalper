@@ -2,7 +2,6 @@
 
 require "DhanHQ"
 require_relative "state"
-require_relative "ui/simple_logger"
 require_relative "virtual_data_manager"
 require_relative "quantity_sizer"
 require_relative "balance_providers/paper_wallet"

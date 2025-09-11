@@ -10,7 +10,6 @@ require_relative "trend_enhanced"
 require_relative "option_picker"
 require_relative "services/websocket_manager"
 require_relative "services/paper_position_tracker"
-require_relative "ui/simple_logger"
 require_relative "exchange_segment_mapper"
 require_relative "csv_master"
 require_relative "services/session_reporter"
@@ -106,8 +105,8 @@ module DhanScalper
       puts "[PAPER] No real money will be used"
       puts "[TIMEOUT] Auto-exit after #{@timeout_minutes} minutes" if @timeout_minutes
 
-      # Initialize simple logger for quiet mode
-      simple_logger = UI::SimpleLogger.new(@state, balance_provider: @balance_provider) if @quiet
+      # Simple logging for quiet mode
+      @logger = Logger.new($stdout) if @quiet
 
       puts "[READY] Symbols: #{@cfg["SYMBOLS"]&.keys&.join(", ") || "None"}"
       puts "[MODE] PAPER with balance: ₹#{@balance_provider.available_balance.round(0)}"
@@ -126,7 +125,7 @@ module DhanScalper
           # Convert price_data to tick format for TickCache
           tick_data = {
             segment: exchange_segment,
-            security_id: price_data[:instrument_id],
+            security_id: price_data[:instrument_id], # This is correct - instrument_id contains security_id
             ltp: price_data[:last_price],
             open: price_data[:open],
             high: price_data[:high],
@@ -135,6 +134,12 @@ module DhanScalper
             volume: price_data[:volume],
             ts: price_data[:timestamp]
           }
+
+          # Debug: Log the tick data being stored
+          if ENV["DHAN_LOG_LEVEL"] == "DEBUG"
+            puts "[DEBUG] Storing tick data: #{tick_data[:segment]}:#{tick_data[:security_id]} LTP=#{tick_data[:ltp]}"
+          end
+
           DhanScalper::TickCache.put(tick_data)
         end
 

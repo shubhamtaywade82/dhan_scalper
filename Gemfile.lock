@@ -232,7 +232,6 @@ GEM
       tty-cursor (~> 0.7)
     tty-color (0.6.0)
     tty-cursor (0.7.1)
-    tty-font (0.5.0)
     tty-reader (0.9.0)
       tty-cursor (~> 0.7)
       tty-screen (~> 0.8)
@@ -279,12 +278,6 @@ DEPENDENCIES
   rubocop-rspec
   simplecov
   thor
-  tty-box
-  tty-cursor
-  tty-font
-  tty-reader
-  tty-screen
-  tty-table
   webmock (>= 3.19, >= 0)
 
 BUNDLED WITH

@@ -87,15 +87,32 @@ module DhanScalper
       symbols = @config["SYMBOLS"]&.keys || []
       return if symbols.empty?
 
-      @logger.debug "[OHLC] Fetching data for #{symbols.size} symbols"
+      @logger.info "[OHLC] Fetching data for #{symbols.size} symbols with staggering"
 
-      symbols.each do |symbol|
-        fetch_symbol_data(symbol)
+      # Implement round-robin staggering: NIFTY at 0s, BANKNIFTY at +10s, etc.
+      symbols.each_with_index do |symbol, index|
+        # Calculate stagger delay (10 seconds between symbols)
+        stagger_delay = index * 10
 
-        # Rate limiting between symbols
-        Services::RateLimiter.wait_if_needed("ohlc_fetch")
-        sleep(1) # Additional delay between symbols
+        if stagger_delay > 0
+          @logger.info "[OHLC] Staggering #{symbol} by #{stagger_delay}s"
+          Thread.new do
+            sleep(stagger_delay)
+            fetch_symbol_data_with_rate_limit(symbol)
+          end
+        else
+          # First symbol (index 0) fetches immediately
+          fetch_symbol_data_with_rate_limit(symbol)
+        end
       end
+    end
+
+    def fetch_symbol_data_with_rate_limit(symbol)
+      fetch_symbol_data(symbol)
+
+      # Rate limiting between symbols
+      Services::RateLimiter.wait_if_needed("ohlc_fetch")
+      sleep(1) # Additional delay between symbols
     end
 
     def fetch_symbol_data(symbol)

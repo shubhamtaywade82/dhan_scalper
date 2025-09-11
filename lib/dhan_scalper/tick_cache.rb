@@ -45,9 +45,14 @@ module DhanScalper
           key = namespaced(tick_key(segment, security_id))
           h = REDIS_POOL.with { |r| r.hgetall(key) }
           return nil if h.nil? || h.empty?
+
           # coerce numeric fields if present
           h = h.transform_keys(&:to_sym)
-          h[:ltp] = (h[:ltp].include?(".") ? h[:ltp].to_f : h[:ltp].to_i) rescue h[:ltp]
+          h[:ltp] = begin
+            (h[:ltp].include?(".") ? h[:ltp].to_f : h[:ltp].to_i)
+          rescue StandardError
+            h[:ltp]
+          end
           h
         else
           key = "#{segment}:#{security_id}"
@@ -59,15 +64,29 @@ module DhanScalper
       # @param segment [String] Exchange segment
       # @param security_id [String] Security ID
       # @return [Float, nil] The LTP or nil if not found
-      def ltp(segment, security_id)
+      def ltp(segment, security_id, use_fallback: true)
         if REDIS_POOL
           key = namespaced(tick_key(segment, security_id))
           v = REDIS_POOL.with { |r| r.hget(key, "ltp") }
+          if v.nil? && use_fallback
+            # Try fallback API
+            return ltp_fallback(segment, security_id)
+          end
           return nil if v.nil?
           return v if v.is_a?(String) && v.match?(/[^0-9.]/)
-          v.include?(".") ? v.to_f : v.to_i rescue v
+
+          begin
+            v.include?(".") ? v.to_f : v.to_i
+          rescue StandardError
+            v
+          end
         else
           tick = get(segment, security_id)
+          if tick.nil? && use_fallback
+            # Try fallback API
+            return ltp_fallback(segment, security_id)
+          end
+
           tick&.dig(:ltp)
         end
       end
@@ -119,7 +138,7 @@ module DhanScalper
           # use TTL as freshness proxy
           key = namespaced(tick_key(segment, security_id))
           ttl = REDIS_POOL.with { |r| r.ttl(key) }
-          return ttl && ttl > 0 && ttl <= 60
+          ttl && ttl > 0 && ttl <= 60
         else
           tick = get(segment, security_id)
           return false unless tick&.dig(:timestamp)
@@ -157,9 +176,36 @@ module DhanScalper
       end
 
       def tick_key(seg, sid) = "ticks:#{seg}:#{sid}"
+
       def namespaced(key)
         return key unless NAMESPACE && !NAMESPACE.empty?
+
         "#{NAMESPACE}:#{key}"
+      end
+
+      # Fallback method to get LTP from DhanHQ API when not cached
+      # @param segment [String] Exchange segment
+      # @param security_id [String] Security ID
+      # @return [Float, nil] The LTP or nil if not found
+      def ltp_fallback(segment, security_id)
+        return nil unless defined?(DhanScalper::Services::LtpFallback)
+
+        begin
+          # Use a singleton instance to avoid creating multiple instances
+          @ltp_fallback ||= DhanScalper::Services::LtpFallback.new
+          tick_data = @ltp_fallback.get_ltp(segment, security_id)
+
+          if tick_data
+            # Store the fetched data in cache
+            put(tick_data)
+            return tick_data[:ltp]
+          end
+
+          nil
+        rescue StandardError => e
+          # Silently fail to avoid disrupting normal operation
+          nil
+        end
       end
     end
   end

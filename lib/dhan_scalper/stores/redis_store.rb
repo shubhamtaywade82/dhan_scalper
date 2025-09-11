@@ -39,7 +39,7 @@ module DhanScalper
 
       # Disconnect from Redis
       def disconnect
-        @redis&.disconnect
+        @redis&.close
         @redis = nil
         @logger.info "[REDIS_STORE] Disconnected from Redis"
       end
@@ -79,6 +79,16 @@ module DhanScalper
           checksum: data["checksum"],
           timestamp: data["timestamp"].to_i
         }
+      end
+
+      # Store CSV raw checksum (alias for store_csv_checksum)
+      def store_csv_raw_checksum(checksum, timestamp = Time.now.to_i)
+        store_csv_checksum(checksum, timestamp)
+      end
+
+      # Get CSV raw checksum (alias for get_csv_checksum)
+      def get_csv_raw_checksum
+        get_csv_checksum
       end
 
       # Store universe SIDs
@@ -278,17 +288,18 @@ module DhanScalper
       end
 
       # Store session PnL
-      def store_session_pnl(realized, unrealized, fees)
+      def store_session_pnl(session_id, pnl_data)
         key = "#{@namespace}:pnl:session"
-        @redis.hset(key, "realized", realized)
-        @redis.hset(key, "unrealized", unrealized)
-        @redis.hset(key, "fees", fees)
-        @redis.hset(key, "timestamp", Time.now.to_i)
+        @redis.hset(key, "realized", pnl_data[:realized] || pnl_data["realized"])
+        @redis.hset(key, "unrealized", pnl_data[:unrealized] || pnl_data["unrealized"])
+        @redis.hset(key, "fees", pnl_data[:fees] || pnl_data["fees"])
+        @redis.hset(key, "total", pnl_data[:total] || pnl_data["total"])
+        @redis.hset(key, "timestamp", pnl_data[:timestamp] || pnl_data["timestamp"] || Time.now.to_i)
         @redis.expire(key, 86_400) # 24 hours TTL
       end
 
       # Get session PnL
-      def get_session_pnl
+      def get_session_pnl(session_id = nil)
         key = "#{@namespace}:pnl:session"
         data = @redis.hgetall(key)
         return nil if data.empty?
@@ -297,16 +308,19 @@ module DhanScalper
           realized: data["realized"].to_f,
           unrealized: data["unrealized"].to_f,
           fees: data["fees"].to_f,
+          total: data["total"].to_f,
           timestamp: data["timestamp"].to_i
         }
       end
 
       # Store report
-      def store_report(session_id, csv_path, json_data)
+      def store_report(session_id, report_data)
         key = "#{@namespace}:reports:#{session_id}"
-        @redis.hset(key, "csv_path", csv_path)
-        @redis.hset(key, "json_data", json_data.to_json)
-        @redis.hset(key, "timestamp", Time.now.to_i)
+        @redis.hset(key, "csv_path", report_data[:csv_path] || report_data["csv_path"])
+        @redis.hset(key, "json_path", report_data[:json_path] || report_data["json_path"])
+        @redis.hset(key, "total_trades", report_data[:total_trades] || report_data["total_trades"])
+        @redis.hset(key, "total_pnl", report_data[:total_pnl] || report_data["total_pnl"])
+        @redis.hset(key, "generated_at", report_data[:generated_at] || report_data["generated_at"] || Time.now.to_i)
         @redis.expire(key, 86_400) # 24 hours TTL
       end
 
@@ -318,8 +332,10 @@ module DhanScalper
 
         {
           csv_path: data["csv_path"],
-          json_data: JSON.parse(data["json_data"], symbolize_names: true),
-          timestamp: data["timestamp"].to_i
+          json_path: data["json_path"],
+          total_trades: data["total_trades"].to_i,
+          total_pnl: data["total_pnl"].to_f,
+          generated_at: data["generated_at"].to_i
         }
       end
 
@@ -330,11 +346,26 @@ module DhanScalper
         @redis.expire(heartbeat_key, 300) # 5 minutes TTL
       end
 
+      # Store heartbeat (alias for setup_heartbeat)
+      def store_heartbeat
+        setup_heartbeat
+      end
+
       # Update heartbeat
       def update_heartbeat
         heartbeat_key = "#{@namespace}:hb"
         @redis.hset(heartbeat_key, @process_id.to_s, Time.now.to_i)
         @redis.expire(heartbeat_key, 300) # 5 minutes TTL
+      end
+
+      # Get heartbeat data
+      def get_heartbeat
+        heartbeat_key = "#{@namespace}:hb"
+        data = @redis.hgetall(heartbeat_key)
+        return nil if data.empty?
+
+        # Convert string keys to integers for timestamps
+        data.transform_values(&:to_i)
       end
 
       # Acquire advisory lock

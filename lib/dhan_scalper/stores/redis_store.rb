@@ -514,6 +514,31 @@ module DhanScalper
         keys = @redis.keys(pattern)
         @redis.del(*keys) if keys.any?
       end
+
+      # Idempotency methods
+      def store_idempotency_key(idempotency_key, order_id)
+        key = "#{@namespace}:idemp:#{idempotency_key}"
+        @redis.setex(key, 86_400, order_id) # 24 hours TTL
+        @logger.debug "[REDIS_STORE] Stored idempotency key: #{idempotency_key} -> #{order_id}"
+      end
+
+      def get_idempotency_key(idempotency_key)
+        key = "#{@namespace}:idemp:#{idempotency_key}"
+        order_id = @redis.get(key)
+        @logger.debug "[REDIS_STORE] Retrieved idempotency key: #{idempotency_key} -> #{order_id}" if order_id
+        order_id
+      end
+
+      def has_idempotency_key?(idempotency_key)
+        key = "#{@namespace}:idemp:#{idempotency_key}"
+        @redis.exists?(key)
+      end
+
+      def delete_idempotency_key(idempotency_key)
+        key = "#{@namespace}:idemp:#{idempotency_key}"
+        @redis.del(key)
+        @logger.debug "[REDIS_STORE] Deleted idempotency key: #{idempotency_key}"
+      end
     end
   end
 end

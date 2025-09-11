@@ -160,6 +160,65 @@ module DhanScalper
       def balance_provider
         @balance_provider
       end
+
+      # Place order with idempotency support
+      def place_order!(symbol:, instrument_id:, side:, quantity:, price:, order_type: "MARKET", idempotency_key: nil, redis_store: nil)
+        # Check for existing order if idempotency key is provided
+        if idempotency_key && redis_store
+          existing_order_id = redis_store.get_idempotency_key(idempotency_key)
+          if existing_order_id
+            @logger.info("[PAPER] Idempotency key found: #{idempotency_key} -> #{existing_order_id}, returning existing order")
+
+            # Get the existing order from virtual data manager
+            existing_order = @virtual_data_manager&.get_order_by_id(existing_order_id)
+            if existing_order
+              return {
+                success: true,
+                order_id: existing_order_id,
+                order: existing_order,
+                position: get_position_for_order(existing_order),
+                idempotent: true
+              }
+            else
+              @logger.warn("[PAPER] Idempotency key found but order not found: #{idempotency_key} -> #{existing_order_id}")
+            end
+          end
+        end
+
+        # Place the order normally
+        result = place_order(
+          symbol: symbol,
+          instrument_id: instrument_id,
+          side: side,
+          quantity: quantity,
+          price: price,
+          order_type: order_type
+        )
+
+        # Store idempotency key if provided and order was successful
+        if result[:success] && idempotency_key && redis_store
+          redis_store.store_idempotency_key(idempotency_key, result[:order_id])
+          @logger.info("[PAPER] Stored idempotency key: #{idempotency_key} -> #{result[:order_id]}")
+        end
+
+        result
+      end
+
+      private
+
+      # Get position for an existing order
+      def get_position_for_order(order)
+        return nil unless order
+
+        # Try to get position from enhanced tracker
+        position = @position_tracker.get_position(
+          exchange_segment: "NSE_EQ",
+          security_id: order[:security_id] || order["security_id"],
+          side: "LONG"
+        )
+
+        position
+      end
     end
   end
 end

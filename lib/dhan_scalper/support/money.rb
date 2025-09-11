@@ -152,6 +152,26 @@ module DhanScalper
         change = subtract(new_value, old_value)
         multiply(divide(change, old_value), 100)
       end
+
+      # Get maximum of two values
+      # @param a [BigDecimal, Numeric] First value
+      # @param b [BigDecimal, Numeric] Second value
+      # @return [BigDecimal] Maximum value
+      def max(a, b)
+        a_bd = bd(a)
+        b_bd = bd(b)
+        a_bd > b_bd ? a_bd : b_bd
+      end
+
+      # Get minimum of two values
+      # @param a [BigDecimal, Numeric] First value
+      # @param b [BigDecimal, Numeric] Second value
+      # @return [BigDecimal] Minimum value
+      def min(a, b)
+        a_bd = bd(a)
+        b_bd = bd(b)
+        a_bd < b_bd ? a_bd : b_bd
+      end
     end
   end
 end

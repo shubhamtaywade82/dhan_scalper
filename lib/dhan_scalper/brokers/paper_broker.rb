@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../support/money"
+
 module DhanScalper
   module Brokers
     class PaperBroker < Base
@@ -10,15 +12,23 @@ module DhanScalper
       end
 
       def buy_market(segment:, security_id:, quantity:, charge_per_order: 20)
-        price = DhanScalper::TickCache.ltp(segment, security_id).to_f
+        price = DhanScalper::TickCache.ltp(segment, security_id)
         return nil unless price&.positive?
 
-        # Calculate total cost including charges
-        total_cost = (price * quantity) + charge_per_order
+        # Convert to BigDecimal for safe money calculations
+        price_bd = DhanScalper::Support::Money.bd(price)
+        quantity_bd = DhanScalper::Support::Money.bd(quantity)
+        charge_bd = DhanScalper::Support::Money.bd(charge_per_order)
+
+        # Calculate total cost including charges: (price * quantity) + fee
+        total_cost = DhanScalper::Support::Money.add(
+          DhanScalper::Support::Money.multiply(price_bd, quantity_bd),
+          charge_bd
+        )
 
         # Check if we can afford this position
         if @balance_provider && @balance_provider.available_balance < total_cost
-          @logger.warn("[PAPER] Insufficient balance. Need ₹#{total_cost.round(2)}, have ₹#{@balance_provider.available_balance.round(2)}")
+          @logger.warn("[PAPER] Insufficient balance. Need ₹#{DhanScalper::Support::Money.dec(total_cost)}, have ₹#{DhanScalper::Support::Money.dec(@balance_provider.available_balance)}")
           return nil
         end
 
@@ -44,8 +54,13 @@ module DhanScalper
       end
 
       def sell_market(segment:, security_id:, quantity:, charge_per_order: 20)
-        price = DhanScalper::TickCache.ltp(segment, security_id).to_f
+        price = DhanScalper::TickCache.ltp(segment, security_id)
         return nil unless price&.positive?
+
+        # Convert to BigDecimal for safe money calculations
+        price_bd = DhanScalper::Support::Money.bd(price)
+        quantity_bd = DhanScalper::Support::Money.bd(quantity)
+        charge_bd = DhanScalper::Support::Money.bd(charge_per_order)
 
         order = Order.new("P-#{Time.now.to_f}", security_id, "SELL", quantity, price)
 
@@ -53,7 +68,7 @@ module DhanScalper
         log_order(order)
 
         # Find and close matching position
-        close_matching_position(security_id, quantity, price)
+        close_matching_position(security_id, quantity, price_bd, charge_bd)
 
         order
       end
@@ -68,15 +83,22 @@ module DhanScalper
 
         case side.upcase
         when "BUY"
-          # Calculate total cost including charges
-          charge_per_order = 20
-          total_cost = (price * quantity) + charge_per_order
+          # Convert to BigDecimal for safe money calculations
+          price_bd = DhanScalper::Support::Money.bd(price)
+          quantity_bd = DhanScalper::Support::Money.bd(quantity)
+          charge_bd = DhanScalper::Support::Money.bd(20)
+
+          # Calculate total cost including charges: (price * quantity) + fee
+          total_cost = DhanScalper::Support::Money.add(
+            DhanScalper::Support::Money.multiply(price_bd, quantity_bd),
+            charge_bd
+          )
 
           # Check if we can afford this position
           if @balance_provider && @balance_provider.available_balance < total_cost
             return {
               success: false,
-              error: "Insufficient balance. Required: ₹#{total_cost.round(2)}, Available: ₹#{@balance_provider.available_balance.round(2)}"
+              error: "Insufficient balance. Required: ₹#{DhanScalper::Support::Money.dec(total_cost)}, Available: ₹#{DhanScalper::Support::Money.dec(@balance_provider.available_balance)}"
             }
           end
 
@@ -101,8 +123,12 @@ module DhanScalper
           }
 
         when "SELL"
+          # Convert to BigDecimal for safe money calculations
+          price_bd = DhanScalper::Support::Money.bd(price)
+          charge_bd = DhanScalper::Support::Money.bd(20)
+
           # Close matching position
-          close_matching_position(instrument_id, quantity, price)
+          close_matching_position(instrument_id, quantity, price_bd, charge_bd)
 
           {
             success: true,
@@ -122,7 +148,7 @@ module DhanScalper
       private
 
       # Close matching position when selling
-      def close_matching_position(security_id, quantity, exit_price)
+      def close_matching_position(security_id, quantity, exit_price_bd, charge_bd)
         positions = @virtual_data_manager.get_positions
 
         # Find matching position
@@ -131,17 +157,32 @@ module DhanScalper
         end
 
         if matching_position
-          # Calculate P&L
-          entry_price = matching_position[:entry_price]
-          pnl = (exit_price - entry_price) * quantity
+          # Convert entry price to BigDecimal
+          entry_price_bd = DhanScalper::Support::Money.bd(matching_position[:entry_price])
+          quantity_bd = DhanScalper::Support::Money.bd(quantity)
 
-          # Update balance with P&L
-          @balance_provider&.add_realized_pnl(pnl)
+          # Calculate gross proceeds: exit_price * quantity
+          gross_proceeds = DhanScalper::Support::Money.multiply(exit_price_bd, quantity_bd)
+
+          # Calculate net proceeds: gross_proceeds - fee
+          net_proceeds = DhanScalper::Support::Money.subtract(gross_proceeds, charge_bd)
+
+          # Calculate realized P&L: (exit_price - entry_price) * quantity
+          realized_pnl = DhanScalper::Support::Money.multiply(
+            DhanScalper::Support::Money.subtract(exit_price_bd, entry_price_bd),
+            quantity_bd
+          )
+
+          # Credit net proceeds to balance (full proceeds minus fees)
+          @balance_provider&.update_balance(net_proceeds, type: :credit)
+
+          # Track realized P&L separately (for reporting only)
+          @balance_provider&.add_realized_pnl(realized_pnl)
 
           # Remove position
           @virtual_data_manager.remove_position(security_id)
 
-          @logger.info "[PAPER] Position closed: #{security_id} | Entry: ₹#{entry_price} | Exit: ₹#{exit_price} | P&L: ₹#{pnl.round(2)}"
+          @logger.info "[PAPER] Position closed: #{security_id} | Entry: ₹#{DhanScalper::Support::Money.dec(entry_price_bd)} | Exit: ₹#{DhanScalper::Support::Money.dec(exit_price_bd)} | Net Proceeds: ₹#{DhanScalper::Support::Money.dec(net_proceeds)} | Realized P&L: ₹#{DhanScalper::Support::Money.dec(realized_pnl)}"
         else
           @logger.warn "[PAPER] No matching position found for #{security_id} (qty: #{quantity})"
         end

@@ -1,7 +1,7 @@
-symbols: ["NIFTY"] # later: ["NIFTY","BANKNIFTY","SENSEX"]
+symbols: ["NIFTY", "BANKNIFTY", "SENSEX"]
 
 global:
-  session_hours: ["09:20","15:25"]
+  session_hours: ["09:20", "15:25"]
   min_profit_target: 1000 # session target (₹)
   max_day_loss: 1500 # cutoff (₹)
   charge_per_order: 20 # flat per order (entry & exit both)
@@ -12,8 +12,8 @@ global:
   # new structured intervals
   decision_interval_sec: 60 # run strategy once per minute per symbol
   risk_loop_interval_sec: 1 # manage SL/TP/Trail each second
-  ohlc_poll_minutes: 3      # pull minute OHLC every 3 mins
-  log_throttle_sec: 60      # per component throttling
+  ohlc_poll_minutes: 3 # pull minute OHLC every 3 mins
+  log_throttle_sec: 60 # per component throttling
   redis_namespace: "dhan_scalper:v1"
   historical_stagger_sec: 4 # spread requests per symbol
   tp_pct: 0.35 # take profit
@@ -42,5 +42,23 @@ SYMBOLS:
     seg_opt: "NSE_FNO"
     strike_step: 50
     lot_size: 75 # verify with your master
+    qty_multiplier: 1 # acts as per-symbol cap
+    expiry_wday: 4 # Thu (fallback only - API expiry dates are used primarily)
+
+  BANKNIFTY:
+    idx_sid: "25"
+    seg_idx: "IDX_I"
+    seg_opt: "NSE_FNO"
+    strike_step: 100
+    lot_size: 25 # verify with your master
+    qty_multiplier: 1 # acts as per-symbol cap
+    expiry_wday: 4 # Thu (fallback only - API expiry dates are used primarily)
+
+  SENSEX:
+    idx_sid: "1"
+    seg_idx: "IDX_I"
+    seg_opt: "BSE_FNO"
+    strike_step: 100
+    lot_size: 10 # verify with your master
     qty_multiplier: 1 # acts as per-symbol cap
     expiry_wday: 4 # Thu (fallback only - API expiry dates are used primarily)

@@ -58,7 +58,7 @@ module DhanScalper
         data = @redis.get(key)
         return nil unless data
 
-        JSON.parse(data, symbolize_names: true)
+        JSON.parse(data, symbolize_names: false)
       end
 
       # Store CSV raw data checksum
@@ -82,7 +82,14 @@ module DhanScalper
       end
 
       # Store CSV raw checksum (alias for store_csv_checksum)
-      def store_csv_raw_checksum(checksum, timestamp = Time.now.to_i)
+      def store_csv_raw_checksum(checksum_data)
+        if checksum_data.is_a?(Hash)
+          checksum = checksum_data[:checksum] || checksum_data["checksum"]
+          timestamp = checksum_data[:timestamp] || checksum_data["timestamp"] || Time.now.to_i
+        else
+          checksum = checksum_data
+          timestamp = Time.now.to_i
+        end
         store_csv_checksum(checksum, timestamp)
       end
 
@@ -114,7 +121,7 @@ module DhanScalper
       # Store symbol metadata
       def store_symbol_metadata(symbol, metadata)
         key = "#{@namespace}:sym:#{symbol}:meta"
-        @redis.hset(key, metadata.transform_keys(&:to_s))
+        @redis.hset(key, metadata.transform_keys(&:to_s).flatten)
         @redis.expire(key, 86_400) # 24 hours TTL
       end
 
@@ -124,7 +131,18 @@ module DhanScalper
         data = @redis.hgetall(key)
         return nil if data.empty?
 
-        data.transform_keys(&:to_sym)
+        # Convert values back to appropriate types
+        result = {}
+        data.each do |k, v|
+          key_sym = k.to_sym
+          result[key_sym] = case key_sym
+                            when :lot_size, :strike_step
+                              v.to_i
+                            else
+                              v
+                            end
+        end
+        result
       end
 
       # Store tick data (with hot cache)

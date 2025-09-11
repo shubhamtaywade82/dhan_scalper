@@ -152,29 +152,16 @@ module DhanScalper
 
     desc "balance", "View virtual balance"
     def balance
-      vdm = VirtualDataManager.new
-      balance = nil
-      begin
-        balance = vdm.get_balance
-      rescue Exception
-        # swallow errors for graceful CLI output per tests
-        balance = nil
-      end
-
+      # Use the same balance provider as paper mode for consistency
+      cfg = Config.load
+      starting_balance = cfg.dig("paper", "starting_balance") || 200_000.0
+      balance_provider = BalanceProviders::PaperWallet.new(starting_balance: starting_balance)
+      
       puts "\nVirtual Balance:"
       puts "=" * 40
-      if balance.is_a?(Numeric)
-        puts balance
-      elsif balance
-        available = balance[:available] || balance["available"]
-        used = balance[:used] || balance["used"]
-        total = balance[:total] || balance["total"]
-        puts "Available: ₹#{available.to_f.round(2)}"
-        puts "Used: ₹#{used.to_f.round(2)}"
-        puts "Total: ₹#{total.to_f.round(2)}"
-      else
-        puts "0.0"
-      end
+      puts "Available: ₹#{balance_provider.available_balance.round(2)}"
+      puts "Used: ₹#{balance_provider.used_balance.round(2)}"
+      puts "Total: ₹#{balance_provider.total_balance.round(2)}"
     end
 
     desc "reset-balance", "Reset virtual balance to initial amount"

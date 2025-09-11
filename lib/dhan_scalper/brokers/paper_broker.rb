@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "../support/money"
+require_relative "../services/enhanced_position_tracker"
 
 module DhanScalper
   module Brokers
@@ -9,6 +10,7 @@ module DhanScalper
         super(virtual_data_manager: virtual_data_manager)
         @balance_provider = balance_provider
         @logger = logger
+        @position_tracker = DhanScalper::Services::EnhancedPositionTracker.new
       end
 
       def buy_market(segment:, security_id:, quantity:, charge_per_order: 20)
@@ -35,20 +37,22 @@ module DhanScalper
         # Debit the balance (including charges)
         @balance_provider&.update_balance(total_cost, type: :debit)
 
+        # Add position to enhanced tracker
+        position = @position_tracker.add_position(
+          exchange_segment: segment,
+          security_id: security_id,
+          side: "LONG",
+          quantity: quantity,
+          price: price,
+          fee: charge_per_order
+        )
+
         order = Order.new("P-#{Time.now.to_f}", security_id, "BUY", quantity, price)
 
-        # Log the order and create a virtual position
+        # Log the order
         log_order(order)
 
-        # Create and log position
-        position = DhanScalper::Position.new(
-          security_id: security_id,
-          side: "BUY",
-          entry_price: price,
-          quantity: quantity,
-          current_price: price
-        )
-        log_position(position)
+        @logger.info("[PAPER] Position added: #{security_id} | Qty: #{DhanScalper::Support::Money.dec(quantity_bd)} @ ₹#{DhanScalper::Support::Money.dec(price_bd)} | Avg: ₹#{DhanScalper::Support::Money.dec(position[:buy_avg])} | Net Qty: #{DhanScalper::Support::Money.dec(position[:net_qty])}")
 
         order
       end
@@ -67,8 +71,27 @@ module DhanScalper
         # Log the order
         log_order(order)
 
-        # Find and close matching position
-        close_matching_position(security_id, quantity, price_bd, charge_bd)
+        # Process partial exit through enhanced tracker
+        result = @position_tracker.partial_exit(
+          exchange_segment: segment,
+          security_id: security_id,
+          side: "LONG",
+          quantity: quantity,
+          price: price,
+          fee: charge_per_order
+        )
+
+        if result
+          # Credit net proceeds to balance
+          @balance_provider&.update_balance(result[:net_proceeds], type: :credit)
+
+          # Update realized PnL in balance provider
+          @balance_provider&.add_realized_pnl(result[:realized_pnl])
+
+          @logger.info("[PAPER] Partial exit: #{security_id} | Sold: #{DhanScalper::Support::Money.dec(result[:sold_quantity])} @ ₹#{DhanScalper::Support::Money.dec(price_bd)} | Realized PnL: ₹#{DhanScalper::Support::Money.dec(result[:realized_pnl])} | Net Proceeds: ₹#{DhanScalper::Support::Money.dec(result[:net_proceeds])} | Remaining: #{DhanScalper::Support::Money.dec(result[:position][:net_qty])}")
+        else
+          @logger.warn("[PAPER] No position found for partial exit: #{security_id} (qty: #{quantity})")
+        end
 
         order
       end
@@ -83,59 +106,42 @@ module DhanScalper
 
         case side.upcase
         when "BUY"
-          # Convert to BigDecimal for safe money calculations
-          price_bd = DhanScalper::Support::Money.bd(price)
-          quantity_bd = DhanScalper::Support::Money.bd(quantity)
-          charge_bd = DhanScalper::Support::Money.bd(20)
+          # Use buy_market method for consistency
+          buy_result = buy_market(segment: "NSE_EQ", security_id: instrument_id, quantity: quantity, charge_per_order: 20)
 
-          # Calculate total cost including charges: (price * quantity) + fee
-          total_cost = DhanScalper::Support::Money.add(
-            DhanScalper::Support::Money.multiply(price_bd, quantity_bd),
-            charge_bd
-          )
-
-          # Check if we can afford this position
-          if @balance_provider && @balance_provider.available_balance < total_cost
-            return {
+          if buy_result
+            position = @position_tracker.get_position(exchange_segment: "NSE_EQ", security_id: instrument_id, side: "LONG")
+            {
+              success: true,
+              order_id: order_id,
+              order: order,
+              position: position
+            }
+          else
+            {
               success: false,
-              error: "Insufficient balance. Required: ₹#{DhanScalper::Support::Money.dec(total_cost)}, Available: ₹#{DhanScalper::Support::Money.dec(@balance_provider.available_balance)}"
+              error: "Failed to execute buy order"
             }
           end
 
-          # Debit the balance (including charges)
-          @balance_provider&.update_balance(total_cost, type: :debit)
-
-          # Create and log position
-          position = DhanScalper::Position.new(
-            security_id: instrument_id,
-            side: side,
-            entry_price: price,
-            quantity: quantity,
-            current_price: price
-          )
-          log_position(position)
-
-          {
-            success: true,
-            order_id: order_id,
-            order: order,
-            position: position
-          }
-
         when "SELL"
-          # Convert to BigDecimal for safe money calculations
-          price_bd = DhanScalper::Support::Money.bd(price)
-          charge_bd = DhanScalper::Support::Money.bd(20)
+          # Use sell_market method for consistency
+          sell_result = sell_market(segment: "NSE_EQ", security_id: instrument_id, quantity: quantity, charge_per_order: 20)
 
-          # Close matching position
-          close_matching_position(instrument_id, quantity, price_bd, charge_bd)
-
-          {
-            success: true,
-            order_id: order_id,
-            order: order,
-            position: nil
-          }
+          if sell_result
+            position = @position_tracker.get_position(exchange_segment: "NSE_EQ", security_id: instrument_id, side: "LONG")
+            {
+              success: true,
+              order_id: order_id,
+              order: order,
+              position: position
+            }
+          else
+            {
+              success: false,
+              error: "Failed to execute sell order"
+            }
+          end
 
         else
           {
@@ -145,47 +151,14 @@ module DhanScalper
         end
       end
 
-      private
+      # Get position tracker for external access
+      def position_tracker
+        @position_tracker
+      end
 
-      # Close matching position when selling
-      def close_matching_position(security_id, quantity, exit_price_bd, charge_bd)
-        positions = @virtual_data_manager.get_positions
-
-        # Find matching position
-        matching_position = positions.find do |pos|
-          pos[:security_id] == security_id && pos[:quantity] == quantity
-        end
-
-        if matching_position
-          # Convert entry price to BigDecimal
-          entry_price_bd = DhanScalper::Support::Money.bd(matching_position[:entry_price])
-          quantity_bd = DhanScalper::Support::Money.bd(quantity)
-
-          # Calculate gross proceeds: exit_price * quantity
-          gross_proceeds = DhanScalper::Support::Money.multiply(exit_price_bd, quantity_bd)
-
-          # Calculate net proceeds: gross_proceeds - fee
-          net_proceeds = DhanScalper::Support::Money.subtract(gross_proceeds, charge_bd)
-
-          # Calculate realized P&L: (exit_price - entry_price) * quantity
-          realized_pnl = DhanScalper::Support::Money.multiply(
-            DhanScalper::Support::Money.subtract(exit_price_bd, entry_price_bd),
-            quantity_bd
-          )
-
-          # Credit net proceeds to balance (full proceeds minus fees)
-          @balance_provider&.update_balance(net_proceeds, type: :credit)
-
-          # Track realized P&L separately (for reporting only)
-          @balance_provider&.add_realized_pnl(realized_pnl)
-
-          # Remove position
-          @virtual_data_manager.remove_position(security_id)
-
-          @logger.info "[PAPER] Position closed: #{security_id} | Entry: ₹#{DhanScalper::Support::Money.dec(entry_price_bd)} | Exit: ₹#{DhanScalper::Support::Money.dec(exit_price_bd)} | Net Proceeds: ₹#{DhanScalper::Support::Money.dec(net_proceeds)} | Realized P&L: ₹#{DhanScalper::Support::Money.dec(realized_pnl)}"
-        else
-          @logger.warn "[PAPER] No matching position found for #{security_id} (qty: #{quantity})"
-        end
+      # Get balance provider for external access
+      def balance_provider
+        @balance_provider
       end
     end
   end

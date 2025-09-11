@@ -427,6 +427,16 @@ module DhanScalper
       end
     end
 
+    def execute_buy_trade(symbol, direction, spot_price, symbol_config)
+      execute_trade(symbol, direction, spot_price, symbol_config)
+    end
+
+    def execute_sell_trade(symbol, direction, spot_price, symbol_config)
+      # For now, sell trades are handled by the broker's close_matching_position method
+      # This is a placeholder for the test structure
+      execute_trade(symbol, direction, spot_price, symbol_config)
+    end
+
     def check_risk_limits
       # Check daily loss limit
       total_pnl = @position_tracker.get_total_pnl

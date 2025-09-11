@@ -85,6 +85,11 @@ module DhanScalper
         # Update timestamps
         position[:last_updated] = Time.now
 
+        # Remove position if net_qty becomes zero
+        if DhanScalper::Support::Money.zero?(position[:net_qty])
+          @positions.delete(key)
+        end
+
         {
           position: position,
           realized_pnl: realized_pnl,
@@ -148,6 +153,26 @@ module DhanScalper
       def remove_position(exchange_segment:, security_id:, side:)
         key = position_key(exchange_segment, security_id, side)
         @positions.delete(key)
+      end
+
+      # Update unrealized PnL for a position
+      def update_unrealized_pnl(exchange_segment:, security_id:, side:, unrealized_pnl:)
+        key = position_key(exchange_segment, security_id, side)
+        position = @positions[key]
+        return false unless position
+
+        position[:unrealized_pnl] = DhanScalper::Support::Money.bd(unrealized_pnl)
+        true
+      end
+
+      # Update current price for a position
+      def update_current_price(exchange_segment:, security_id:, side:, current_price:)
+        key = position_key(exchange_segment, security_id, side)
+        position = @positions[key]
+        return false unless position
+
+        position[:current_price] = DhanScalper::Support::Money.bd(current_price)
+        true
       end
 
       private

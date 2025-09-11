@@ -44,8 +44,7 @@ module DhanScalper
       puts "[DRYRUN] No orders will be placed"
       puts "[DRYRUN] Only signal analysis will be performed"
 
-      # Initialize simple logger for quiet mode
-      simple_logger = UI::SimpleLogger.new(@state, balance_provider: @balance_provider) if @quiet
+      # Simple logger removed - using console output instead
 
       puts "[READY] Symbols: #{@cfg["SYMBOLS"]&.keys&.join(", ") || "None"}"
       puts "[MODE] DRYRUN with balance: ₹#{@balance_provider.available_balance.round(0)}"
@@ -84,7 +83,7 @@ module DhanScalper
             # Periodic status updates in quiet mode
             if @quiet && Time.now - last_status_update >= status_interval
               last_status_update = Time.now
-              simple_logger&.update_status({})
+              # Status updates removed - using simple console output instead
             end
           rescue StandardError => e
             puts "\n[ERR] #{e.class}: #{e.message}"

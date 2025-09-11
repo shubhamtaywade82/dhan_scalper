@@ -98,9 +98,22 @@ module DhanScalper
       end
 
       def get_underlying_price(symbol)
-        return nil unless @underlying_prices[symbol]
+        # First try position tracker's internal cache
+        if @underlying_prices[symbol] && @underlying_prices[symbol][:last_price]
+          return @underlying_prices[symbol][:last_price]
+        end
 
-        @underlying_prices[symbol][:last_price]
+        # Fallback to TickCache with LTP fallback for real-time data
+        if @underlying_prices[symbol] && @underlying_prices[symbol][:instrument_id]
+          instrument_id = @underlying_prices[symbol][:instrument_id]
+          segment = @underlying_prices[symbol][:segment] || "IDX_I"
+
+          # Use TickCache with fallback to get live data
+          ltp = DhanScalper::TickCache.ltp(segment, instrument_id, use_fallback: true)
+          return ltp if ltp
+        end
+
+        nil
       end
 
       def get_position_pnl(position_key)
@@ -170,13 +183,13 @@ module DhanScalper
         @logger.info "[PositionTracker] Session data saved"
       end
 
-      private
-
       def setup_websocket_handlers
         @websocket_manager.on_price_update do |price_data|
           handle_price_update(price_data)
         end
       end
+
+      private
 
       def handle_price_update(price_data)
         instrument_id = price_data[:instrument_id]

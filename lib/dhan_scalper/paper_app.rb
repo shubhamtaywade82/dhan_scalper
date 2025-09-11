@@ -117,6 +117,9 @@ module DhanScalper
         # Connect to WebSocket
         @websocket_manager.connect
 
+        # Setup position tracker WebSocket handlers
+        @position_tracker.setup_websocket_handlers
+
         # Setup tick handler to store data in TickCache
         @websocket_manager.on_price_update do |price_data|
           # Use the segment provided by WebSocket manager (it already has the correct segment)
@@ -185,7 +188,7 @@ module DhanScalper
             # Periodic status updates
             if @quiet && Time.now - last_status_update >= status_interval
               last_status_update = Time.now
-              simple_logger&.update_status({})
+              # Status updates removed - using simple console output instead
             end
 
             # Show position summary periodically

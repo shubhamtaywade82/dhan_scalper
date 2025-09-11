@@ -16,7 +16,9 @@ module DhanScalper
       # In-memory cache
       @orders_cache = []
       @positions_cache = []
-      @balance_cache = { available: 100_000.0, used: 0.0, total: 100_000.0 }
+      # Use config balance instead of hardcoded value
+      starting_balance = load_config_balance
+      @balance_cache = { available: starting_balance, used: 0.0, total: starting_balance }
 
       ensure_data_directory unless @memory_only
       load_existing_data unless @memory_only
@@ -182,6 +184,15 @@ module DhanScalper
       File.write(@balance_file, JSON.pretty_generate(@balance_cache))
     rescue StandardError => e
       puts "Warning: Could not save balance to JSON: #{e.message}"
+    end
+
+    # Load starting balance from config
+    def load_config_balance
+      require_relative "config"
+      cfg = DhanScalper::Config.load
+      cfg.dig("paper", "starting_balance") || 200_000.0
+    rescue StandardError
+      200_000.0 # fallback to default
     end
   end
 end

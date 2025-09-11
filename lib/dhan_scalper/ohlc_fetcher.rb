@@ -60,7 +60,11 @@ module DhanScalper
         total_cached: @candle_cache.size,
         symbols: @candle_cache.keys.map { |k| k.split("_").first }.uniq,
         timeframes: @candle_cache.keys.map { |k| k.split("_").last }.uniq,
-        last_fetch_times: @last_fetch_times.to_h
+        last_fetch_times: begin
+          @last_fetch_times.to_h
+        rescue StandardError
+          {}
+        end
       }
     end
 

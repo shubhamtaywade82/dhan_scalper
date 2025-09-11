@@ -52,6 +52,10 @@ require "dhan_scalper/session_reporter"
 require "dhan_scalper/headless_app"
 require "dhan_scalper/enhanced_app"
 
+# Stores
+require "dhan_scalper/stores/redis_store"
+require "dhan_scalper/stores/paper_reporter"
+
 # Enhanced components
 require "dhan_scalper/analyzers/position_analyzer"
 require "dhan_scalper/risk/no_loss_trend_rider"

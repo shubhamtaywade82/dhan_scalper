@@ -9,6 +9,11 @@ require_relative "virtual_data_manager"
 require_relative "quantity_sizer"
 require_relative "balance_providers/paper_wallet"
 require_relative "balance_providers/live_balance"
+require_relative "stores/redis_store"
+require_relative "stores/paper_reporter"
+require_relative "csv_master"
+require_relative "services/dhanhq_config"
+require_relative "services/market_feed"
 
 module DhanScalper
   class App
@@ -22,6 +27,15 @@ module DhanScalper
       @stop = false
       Signal.trap("INT") { @stop = true }
       Signal.trap("TERM") { @stop = true }
+
+      # Initialize core components
+      @namespace = cfg.dig("global", "redis_namespace") || "dhan_scalper:v1"
+      @redis_store = nil
+      @paper_reporter = nil
+      @csv_master = nil
+      @market_feed = nil
+
+      # Initialize state
       @state = State.new(symbols: cfg["SYMBOLS"]&.keys || [], session_target: cfg.dig("global", "min_profit_target").to_f,
                          max_day_loss: cfg.dig("global", "max_day_loss").to_f)
       @virtual_data_manager = VirtualDataManager.new
@@ -51,6 +65,9 @@ module DhanScalper
       DhanHQ.configure_with_env
       # Respect logger configured by CLI; do not override level or destination here
 
+      # Initialize core infrastructure
+      initialize_core_infrastructure
+
       # Ensure global WebSocket cleanup is registered
       DhanScalper::Services::WebSocketCleanup.register_cleanup
       # Try to create WebSocket client with fallback methods
@@ -58,7 +75,22 @@ module DhanScalper
       return unless ws
 
       ws.on(:tick) do |t|
+        # Store in Redis if available
+        if @redis_store
+          tick_data = {
+            ltp: t[:ltp]&.to_f,
+            ts: t[:ts]&.to_i || Time.now.to_i,
+            atp: t[:atp]&.to_f,
+            vol: t[:vol]&.to_i,
+            segment: t[:segment],
+            security_id: t[:security_id]
+          }
+          @redis_store.store_tick(t[:segment], t[:security_id], tick_data)
+        end
+
+        # Also store in existing TickCache for backward compatibility
         DhanScalper::TickCache.put(t)
+
         # mirror latest LTPs into subscriptions view
         rec = { segment: t[:segment], security_id: t[:security_id], ltp: t[:ltp], ts: t[:ts], symbol: sym_for(t) }
         if t[:segment] == "IDX_I"
@@ -90,7 +122,8 @@ module DhanScalper
 
       last_decision = Time.at(0)
       last_status_update = Time.at(0)
-      decision_interval = (@cfg.dig("global", "decision_interval_sec") || @cfg.dig("global", "decision_interval") || 60).to_i
+      decision_interval = (@cfg.dig("global",
+                                    "decision_interval_sec") || @cfg.dig("global", "decision_interval") || 60).to_i
       status_interval = (@cfg.dig("global", "log_status_every") || 60).to_i
       risk_loop_interval = (@cfg.dig("global", "risk_loop_interval_sec") || 1).to_f
       max_dd = @cfg.dig("global", "max_day_loss").to_f
@@ -292,6 +325,141 @@ module DhanScalper
 
     def session_target
       @state.session_target
+    end
+
+    private
+
+    # Initialize core infrastructure components
+    def initialize_core_infrastructure
+      puts "[APP] Initializing core infrastructure..."
+
+      # Initialize Redis store if Redis is available
+      if ENV["TICK_CACHE_BACKEND"] == "redis"
+        @redis_store = Stores::RedisStore.new(
+          namespace: @namespace,
+          logger: Logger.new($stdout)
+        )
+        @redis_store.connect
+        @redis_store.store_config(@cfg)
+        puts "[APP] Redis store initialized"
+      end
+
+      # Initialize paper reporter
+      @paper_reporter = Stores::PaperReporter.new(
+        data_dir: "data",
+        logger: Logger.new($stdout)
+      )
+      puts "[APP] Paper reporter initialized"
+
+      # Initialize CSV master and filter instruments
+      @csv_master = CsvMaster.new
+      filter_and_cache_instruments
+      puts "[APP] CSV master initialized and instruments filtered"
+
+      # Initialize market feed
+      @market_feed = Services::MarketFeed.new(mode: :quote)
+      @market_feed.start([]) # Start with empty instruments
+      puts "[APP] Market feed initialized"
+
+      puts "[APP] Core infrastructure initialization complete"
+    end
+
+    # Filter and cache instruments for trading
+    def filter_and_cache_instruments
+      return unless @csv_master
+
+      # Get allowed underlying symbols from config
+      allowed_symbols = @cfg["SYMBOLS"]&.keys || []
+      puts "[APP] Filtering instruments for symbols: #{allowed_symbols.join(", ")}"
+
+      # Get all instruments with segments
+      all_instruments = @csv_master.get_instruments_with_segments
+
+      # Filter for OPTIDX and OPTFUT instruments
+      @filtered_instruments = {}
+      @universe_sids = Set.new
+
+      all_instruments.each do |instrument|
+        next unless allowed_symbols.include?(instrument[:underlying_symbol])
+        next unless %w[OPTIDX OPTFUT].include?(instrument[:instrument])
+
+        symbol = instrument[:underlying_symbol]
+        @filtered_instruments[symbol] ||= []
+        @filtered_instruments[symbol] << {
+          security_id: instrument[:security_id],
+          underlying_symbol: instrument[:underlying_symbol],
+          strike_price: instrument[:strike_price].to_f,
+          option_type: instrument[:option_type],
+          expiry_date: instrument[:expiry_date],
+          lot_size: instrument[:lot_size],
+          exchange_segment: instrument[:exchange_segment]
+        }
+
+        @universe_sids.add(instrument[:security_id])
+      end
+
+      # Cache in Redis if available
+      if @redis_store
+        @redis_store.store_universe_sids(@universe_sids.to_a)
+
+        # Cache symbol metadata
+        @cfg["SYMBOLS"]&.each do |symbol, symbol_config|
+          next unless symbol_config.is_a?(Hash)
+
+          metadata = {
+            seg_idx: symbol_config["seg_idx"] || "",
+            idx_sid: symbol_config["idx_sid"] || "",
+            seg_opt: symbol_config["seg_opt"] || "",
+            lot_size: symbol_config["lot_size"] || "",
+            strike_step: symbol_config["strike_step"] || ""
+          }
+          @redis_store.store_symbol_metadata(symbol, metadata)
+        end
+      end
+
+      puts "[APP] Filtered #{@universe_sids.size} instruments for #{allowed_symbols.size} symbols"
+    end
+
+    # Get instruments for a symbol
+    def get_instruments_for_symbol(symbol)
+      @filtered_instruments[symbol] || []
+    end
+
+    # Check if security ID is in universe
+    def universe_contains?(security_id)
+      return @universe_sids.include?(security_id) unless @redis_store
+
+      @redis_store.universe_contains?(security_id)
+    end
+
+    # Get tick data with Redis integration
+    def get_tick_data(segment, security_id)
+      return nil unless @redis_store
+
+      @redis_store.get_tick(segment, security_id)
+    end
+
+    # Get LTP with Redis integration
+    def get_ltp(segment, security_id)
+      return nil unless @redis_store
+
+      @redis_store.get_ltp(segment, security_id)
+    end
+
+    # Cleanup method
+    def cleanup
+      puts "[APP] Cleaning up..."
+
+      # Stop market feed
+      @market_feed&.stop
+
+      # Disconnect Redis store
+      @redis_store&.disconnect
+
+      # Disconnect WebSocket
+      @ws&.disconnect!
+
+      puts "[APP] Cleanup complete"
     end
   end
 end

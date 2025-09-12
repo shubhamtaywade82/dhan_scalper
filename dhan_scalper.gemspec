@@ -50,6 +50,12 @@ Gem::Specification.new do |spec|
   spec.add_dependency "technical-analysis"         # intrinio
   spec.add_dependency "thor"
 
+  # Development dependencies
+  spec.add_development_dependency "rake", ">= 13.0"
+  spec.add_development_dependency "rspec", ">= 3.12"
+  spec.add_development_dependency "rubycritic", ">= 4.0"
+  spec.add_development_dependency "webmock", ">= 3.19"
+
   # For more information and examples about making a new gem, check out our
   # guide at: https://bundler.io/guides/creating_gem.html
 end

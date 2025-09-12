@@ -133,14 +133,8 @@ module DhanScalper
 
       def subscribe_to_instrument(instrument_id, instrument_type = "EQUITY", is_baseline: false, is_position: false)
         # Always store the segment mapping, even if not connected
-        @instrument_segments ||= {}
-
-        # Determine segment based on instrument type
-        segment = case instrument_type
-                  when "INDEX" then "IDX_I"
-                  when "OPTION" then "NSE_FNO"
-                  else "NSE_EQ"
-                  end
+        @instrument_segments ||=         # Determine segment based on instrument type and underlying
+        segment = determine_segment(instrument_id, instrument_type)
 
         # Store the segment mapping for this instrument
         @instrument_segments[instrument_id] = segment
@@ -274,6 +268,47 @@ module DhanScalper
       end
 
       private
+
+      def determine_segment(instrument_id, instrument_type)
+        case instrument_type
+        when "INDEX"
+          # For indices, determine based on the instrument ID
+          case instrument_id.to_s
+          when "13" then "IDX_I"  # NIFTY
+          when "25", "23" then "IDX_I"  # BANKNIFTY
+          when "51" then "IDX_I"  # SENSEX
+          else "IDX_I"  # Default to IDX_I for indices
+          end
+        when "OPTION"
+          # For options, use CSV master to determine the correct segment
+          determine_option_segment(instrument_id)
+        else
+          "NSE_EQ"  # Default for equity
+        end
+      end
+
+      def determine_option_segment(instrument_id)
+        # Use CSV master to get the correct exchange segment
+        begin
+          @csv_master ||= DhanScalper::CsvMaster.new
+          segment = @csv_master.get_exchange_segment(instrument_id)
+
+          if segment
+            @logger.debug "[ResilientWebSocket] Found segment #{segment} for option #{instrument_id}"
+            return segment
+          end
+        rescue StandardError => e
+          @logger.debug "[ResilientWebSocket] CSV master lookup failed for #{instrument_id}: #{e.message}"
+        end
+
+        # Fallback: try to determine based on common patterns
+        # BSE options typically have longer IDs and different patterns
+        if instrument_id.to_s.length > 4  # BSE options typically have longer IDs
+          "BSE_FNO"
+        else
+          "NSE_FNO"  # Default to NSE for most options
+        end
+      end
 
       def setup_connection_handlers
         @connection.on(:tick) do |tick_data|

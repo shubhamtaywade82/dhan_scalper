@@ -15,6 +15,7 @@ module DhanScalper
         @instruments = []
         @running = false
         @ws_client = nil
+        @instrument_segments = {} # Store mapping of security_id -> segment
         setup_cleanup_handlers
       end
 
@@ -115,23 +116,37 @@ module DhanScalper
           enhanced_tick[:day_high] ||= tick[:high] # Use high as day_high if not provided
           enhanced_tick[:day_low] ||= tick[:low]   # Use low as day_low if not provided
 
+          # Fix segment mapping - the DhanHQ WebSocket client doesn't preserve segment correctly
+          # We need to look up the correct segment from our instrument mapping
+          correct_segment = find_correct_segment(tick[:security_id])
+          enhanced_tick[:segment] = correct_segment if correct_segment
+
           # Store tick in cache
           TickCache.put(enhanced_tick)
 
           # Log tick for debugging (can be removed in production)
           if ENV["DHAN_LOG_LEVEL"] == "DEBUG"
-            puts "[TICK] #{tick[:segment]}:#{tick[:security_id]} LTP=#{tick[:ltp]} H=#{tick[:day_high]} L=#{tick[:day_low]} kind=#{tick[:kind]}"
+            puts "[TICK] #{enhanced_tick[:segment]}:#{tick[:security_id]} LTP=#{tick[:ltp]} H=#{tick[:day_high]} L=#{tick[:day_low]} kind=#{tick[:kind]}"
           end
         end
       end
 
       def subscribe_instruments
         @instruments.each do |instrument|
+          # Store the segment mapping for this instrument
+          @instrument_segments[instrument[:security_id]] = instrument[:segment]
+
           @ws_client.subscribe_one(
             segment: instrument[:segment],
             security_id: instrument[:security_id]
           )
         end
+      end
+
+      private
+
+      def find_correct_segment(security_id)
+        @instrument_segments[security_id]
       end
     end
   end

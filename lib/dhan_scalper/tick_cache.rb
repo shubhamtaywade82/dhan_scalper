@@ -22,7 +22,7 @@ module DhanScalper
       # Store a tick in the cache
       # @param tick [Hash] The tick data with keys like :segment, :security_id, :ltp, etc.
       def put(tick)
-        puts "Putting tick: #{tick.inspect}"
+        # puts "Putting tick: #{tick.inspect}"
         return unless tick.is_a?(Hash) && tick[:segment] && tick[:security_id]
 
         if REDIS_POOL

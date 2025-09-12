@@ -255,6 +255,30 @@ module DhanScalper
 
     private
 
+    def determine_option_segment(symbol, option_sid)
+      # Use CSV master to get the correct exchange segment
+      begin
+        segment = @csv_master.get_exchange_segment(option_sid)
+
+        if segment
+          puts "[#{symbol}] Found segment #{segment} for option #{option_sid}"
+          return segment
+        end
+      rescue StandardError => e
+        puts "[#{symbol}] CSV master lookup failed for #{option_sid}: #{e.message}"
+      end
+
+      # Fallback: determine based on underlying symbol
+      case symbol.to_s.upcase
+      when "SENSEX"
+        "BSE_FNO"
+      when "NIFTY", "BANKNIFTY"
+        "NSE_FNO"
+      else
+        "NSE_FNO"  # Default to NSE
+      end
+    end
+
     def start_tracking_underlyings
       @cfg["SYMBOLS"]&.each_key do |sym|
         next unless sym
@@ -349,8 +373,8 @@ module DhanScalper
       # Wait a moment for subscription to establish
       sleep(0.1)
 
-      # Use NSE_FNO segment for options
-      option_segment = "NSE_FNO"
+      # Determine the correct segment for options based on underlying
+      option_segment = determine_option_segment(symbol, option_sid)
 
       # Get real market price for the option
       puts DhanScalper::TickCache.all

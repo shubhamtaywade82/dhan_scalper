@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+
+      - name: Bundle install
+        run: bundle install --jobs 4 --retry 3
+
+      - name: Lint (RuboCop)
+        run: ./bin/rubocop
+
+      - name: Run RSpec
+        env:
+          COVERAGE: 'true'
+        run: ./bin/rspec
+

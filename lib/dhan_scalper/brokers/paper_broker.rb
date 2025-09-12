@@ -118,8 +118,8 @@ module DhanScalper
           # Credit the net proceeds (price × quantity - exit fee)
           @balance_provider&.update_balance(result[:net_proceeds], type: :credit)
 
-          # Deduct exit fee from available balance and add to used balance
-          @balance_provider&.update_balance(fee_value, type: :debit)
+          # Add exit fee to used balance without deducting from available
+          @balance_provider&.add_to_used_balance(fee_value)
 
           # Release only the principal (premium) from used balance, keep entry fee in used balance
           @balance_provider&.update_balance(weighted_avg_cost, type: :release_principal)

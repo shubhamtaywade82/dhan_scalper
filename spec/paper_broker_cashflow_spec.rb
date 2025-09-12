@@ -47,7 +47,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
       positions << {
         security_id: security_id,
         quantity: 75,
-        entry_price: 100.0
+        entry_price: 100.0,
       }
 
       # Sell 75 units @ 120
@@ -58,9 +58,11 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
       # Expected calculations:
       # Gross proceeds: 120 * 75 = 9,000
       # Net proceeds: 9,000 - 20 = 8,980
-      # Final balance: 92,480 + 8,980 = 101,460
+      # Available balance: 92,480 + 8,980 + 7,500 = 108,960 (net proceeds + released principal)
+      # Used balance: 40 (20 entry fee + 20 exit fee)
       # Realized PnL: (120 - 100) * 75 = 1,500
-      expect(balance_provider.available_balance).to eq(DhanScalper::Support::Money.bd(101_460))
+      expect(balance_provider.available_balance).to eq(DhanScalper::Support::Money.bd(108_960))
+      expect(balance_provider.used_balance).to eq(DhanScalper::Support::Money.bd(40))
       expect(balance_provider.realized_pnl).to eq(DhanScalper::Support::Money.bd(1_500))
     end
   end
@@ -92,7 +94,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
       positions << {
         security_id: security_id,
         quantity: 75,
-        entry_price: 100.0
+        entry_price: 100.0,
       }
 
       # Sell 75 units @ 90
@@ -103,9 +105,11 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
       # Expected calculations:
       # Gross proceeds: 90 * 75 = 6,750
       # Net proceeds: 6,750 - 20 = 6,730
-      # Final balance: 92,480 + 6,730 = 99,210
+      # Available balance: 92,480 + 6,730 + 7,500 = 106,710 (net proceeds + released principal)
+      # Used balance: 40 (20 entry fee + 20 exit fee)
       # Realized PnL: (90 - 100) * 75 = -750
-      expect(balance_provider.available_balance).to eq(DhanScalper::Support::Money.bd(99_210))
+      expect(balance_provider.available_balance).to eq(DhanScalper::Support::Money.bd(106_710))
+      expect(balance_provider.used_balance).to eq(DhanScalper::Support::Money.bd(40))
       expect(balance_provider.realized_pnl).to eq(DhanScalper::Support::Money.bd(-750))
     end
   end
@@ -127,7 +131,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
       positions << {
         security_id: security_id,
         quantity: 75,
-        entry_price: 100.0
+        entry_price: 100.0,
       }
 
       # Sell 75 units @ 120
@@ -138,9 +142,11 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
       # Starting balance: 100,000
       # Buy cost: 7,520 (7,500 + 20 fee)
       # Sell proceeds: 8,980 (9,000 - 20 fee)
-      # Final balance: 100,000 - 7,520 + 8,980 = 101,460
-      # Total fees: 100,000 - 101,460 + 1,500 (PnL) = 40
-      expect(balance_provider.available_balance).to eq(DhanScalper::Support::Money.bd(101_460))
+      # Available balance: 100,000 - 7,520 + 8,980 + 7,500 = 108,960
+      # Used balance: 40 (20 entry + 20 exit fees)
+      # Total fees: 40 (locked in used balance)
+      expect(balance_provider.available_balance).to eq(DhanScalper::Support::Money.bd(108_960))
+      expect(balance_provider.used_balance).to eq(DhanScalper::Support::Money.bd(40))
       expect(balance_provider.realized_pnl).to eq(DhanScalper::Support::Money.bd(1_500))
     end
   end
@@ -160,11 +166,12 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
         instrument_id: security_id,
         side: "BUY",
         quantity: 75,
-        price: 100.0
+        price: 100.0,
       )
 
       expect(result[:success]).to be true
       expect(balance_provider.available_balance).to eq(DhanScalper::Support::Money.bd(92_480))
+      expect(balance_provider.used_balance).to eq(DhanScalper::Support::Money.bd(7_520))
     end
 
     it "handles SELL orders with correct cash flow" do
@@ -175,12 +182,20 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
         positions.reject! { |pos| pos[:security_id] == id }
       end
 
-      # Add a position first
-      positions << {
+      # Add a position first to the position tracker
+      broker.instance_variable_get(:@position_tracker).add_position(
+        exchange_segment: segment,
         security_id: security_id,
+        side: "LONG",
         quantity: 75,
-        entry_price: 100.0
-      }
+        price: 100.0,
+        fee: 20,
+      )
+
+      # Set up balance to match the position (simulate having bought the position)
+      balance_provider.instance_variable_set(:@available, DhanScalper::Support::Money.bd(92_480))
+      balance_provider.instance_variable_set(:@used, DhanScalper::Support::Money.bd(7_520))
+      balance_provider.instance_variable_set(:@total, DhanScalper::Support::Money.bd(100_000))
 
       # Sell 75 units @ 120
       result = broker.place_order(
@@ -188,11 +203,12 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
         instrument_id: security_id,
         side: "SELL",
         quantity: 75,
-        price: 120.0
+        price: 120.0,
       )
 
       expect(result[:success]).to be true
-      expect(balance_provider.available_balance).to eq(DhanScalper::Support::Money.bd(108_980)) # 100,000 + 8,980
+      expect(balance_provider.available_balance).to eq(DhanScalper::Support::Money.bd(108_960)) # 100,000 + 8,980 - 20
+      expect(balance_provider.used_balance).to eq(DhanScalper::Support::Money.bd(20)) # exit fee only
       expect(balance_provider.realized_pnl).to eq(DhanScalper::Support::Money.bd(1_500))
     end
   end

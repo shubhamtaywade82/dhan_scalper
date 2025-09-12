@@ -121,6 +121,15 @@ module DhanScalper
       # Get realized PnL for reporting
       attr_reader :realized_pnl
 
+      # Add amount to used balance without affecting available balance
+      def add_to_used_balance(amount)
+        amount_bd = DhanScalper::Support::Money.bd(amount)
+        @used = DhanScalper::Support::Money.add(@used, amount_bd)
+        @total = DhanScalper::Support::Money.add(@available, @used)
+        puts "  DEBUG: add_to_used_balance called - amount: #{DhanScalper::Support::Money.dec(amount_bd)}, used after: #{DhanScalper::Support::Money.dec(@used)}"
+        @total
+      end
+
       # Clear used balance (for when positions are closed)
       def clear_used_balance
         @used = DhanScalper::Support::Money.bd(0)

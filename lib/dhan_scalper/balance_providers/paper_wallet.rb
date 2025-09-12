@@ -20,9 +20,10 @@ module DhanScalper
       end
 
       def total_balance
-        # Total balance should be available + used
-        # The realized PnL is already reflected in the available balance through cash flow
+        # Total balance should be available + used + realized PnL
+        # Realized PnL represents the cumulative profit/loss from closed positions
         result = DhanScalper::Support::Money.add(@available, @used)
+        result = DhanScalper::Support::Money.add(result, @realized_pnl)
         puts "  DEBUG: total_balance called - available: #{DhanScalper::Support::Money.dec(@available)}, used: #{DhanScalper::Support::Money.dec(@used)}, realized_pnl: #{DhanScalper::Support::Money.dec(@realized_pnl)}, result: #{DhanScalper::Support::Money.dec(result)}"
         result
       end
@@ -42,8 +43,9 @@ module DhanScalper
         when :credit
           @available = DhanScalper::Support::Money.add(@available, amount_bd)
         when :release_principal
-          # Release principal from used balance without affecting available balance
+          # Release principal from used balance and add it back to available balance
           @used = DhanScalper::Support::Money.subtract(@used, amount_bd)
+          @available = DhanScalper::Support::Money.add(@available, amount_bd)
         end
 
         # Ensure used balance doesn't go negative
@@ -60,9 +62,9 @@ module DhanScalper
 
         puts "  DEBUG: debit_for_buy called - principal: #{DhanScalper::Support::Money.dec(principal_bd)}, fee: #{DhanScalper::Support::Money.dec(fee_bd)}"
 
-        @available = DhanScalper::Support::Money.subtract(@available,
-                                                          DhanScalper::Support::Money.add(principal_bd, fee_bd))
-        @used = DhanScalper::Support::Money.add(@used, principal_bd)
+        total_cost = DhanScalper::Support::Money.add(principal_bd, fee_bd)
+        @available = DhanScalper::Support::Money.subtract(@available, total_cost)
+        @used = DhanScalper::Support::Money.add(@used, total_cost)
         @total = DhanScalper::Support::Money.add(@available, @used)
         puts "  DEBUG: debit_for_buy result - available: #{DhanScalper::Support::Money.dec(@available)}, used: #{DhanScalper::Support::Money.dec(@used)}, total: #{DhanScalper::Support::Money.dec(@total)}"
         @total

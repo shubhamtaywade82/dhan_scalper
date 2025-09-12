@@ -108,17 +108,26 @@ module DhanScalper
           weighted_avg_cost_per_unit = position[:buy_avg]
           weighted_avg_cost = DhanScalper::Support::Money.multiply(weighted_avg_cost_per_unit, sold_quantity)
 
-          # Credit only the net proceeds (price × quantity - fee)
-          # Do not reconcile original cost separately to avoid double-crediting
+          # Calculate the proportion of entry fee for this partial exit
+          total_position_qty = position[:buy_qty]
+          entry_fee_proportion = DhanScalper::Support::Money.divide(sold_quantity, total_position_qty)
+          proportional_entry_fee = DhanScalper::Support::Money.multiply(
+            position[:entry_fee] || DhanScalper::Support::Money.bd(0), entry_fee_proportion
+          )
+
+          # Credit the net proceeds (price × quantity - exit fee)
           @balance_provider&.update_balance(result[:net_proceeds], type: :credit)
 
-          # Release the principal that was tied up in the position
+          # Deduct exit fee from available balance and add to used balance
+          @balance_provider&.update_balance(fee_value, type: :debit)
+
+          # Release only the principal (premium) from used balance, keep entry fee in used balance
           @balance_provider&.update_balance(weighted_avg_cost, type: :release_principal)
 
           # Update realized PnL in balance provider (for reporting only)
           @balance_provider&.add_realized_pnl(result[:realized_pnl])
 
-          @logger.info("[PAPER] Partial exit: #{security_id} | Sold: #{DhanScalper::Support::Money.dec(result[:sold_quantity])} @ ₹#{DhanScalper::Support::Money.dec(price_bd)} | Realized PnL: ₹#{DhanScalper::Support::Money.dec(result[:realized_pnl])} | Net Proceeds: ₹#{DhanScalper::Support::Money.dec(result[:net_proceeds])} | Remaining: #{DhanScalper::Support::Money.dec(result[:position]&.dig(:net_qty) || 0)}")
+          @logger.info("[PAPER] Partial exit: #{security_id} | Sold: #{DhanScalper::Support::Money.dec(result[:sold_quantity])} @ ₹#{DhanScalper::Support::Money.dec(price_bd)} | Realized PnL: ₹#{DhanScalper::Support::Money.dec(result[:realized_pnl])} | Net Proceeds: ₹#{DhanScalper::Support::Money.dec(result[:net_proceeds])} | Released: ₹#{DhanScalper::Support::Money.dec(weighted_avg_cost)} | Remaining: #{DhanScalper::Support::Money.dec(result[:position]&.dig(:net_qty) || 0)}")
         else
           @logger.warn("[PAPER] No position found for partial exit: #{security_id} (qty: #{quantity})")
         end

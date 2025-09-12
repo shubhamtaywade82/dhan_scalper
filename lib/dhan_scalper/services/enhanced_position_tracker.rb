@@ -199,6 +199,7 @@ module DhanScalper
           current_price: price_bd,
           unrealized_pnl: DhanScalper::Support::Money.bd(0),
           realized_pnl: DhanScalper::Support::Money.bd(0),
+          entry_fee: fee_bd, # Store the entry fee
           multiplier: 1,
           lot_size: 75,
           option_type: nil,
@@ -226,6 +227,10 @@ module DhanScalper
         position[:buy_avg] = DhanScalper::Support::Money.divide(total_buy_value, total_buy_qty)
         position[:net_qty] = DhanScalper::Support::Money.add(position[:net_qty], quantity_bd)
         position[:day_buy_qty] = DhanScalper::Support::Money.add(position[:day_buy_qty], quantity_bd)
+
+        # Update entry fee (add new fee to existing)
+        position[:entry_fee] =
+          DhanScalper::Support::Money.add(position[:entry_fee] || DhanScalper::Support::Money.bd(0), fee_bd)
         position[:last_updated] = Time.now
       end
     end

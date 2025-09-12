@@ -2,6 +2,8 @@
 
 require "json"
 require "logger"
+require "set"
+require "securerandom"
 
 module DhanScalper
   module Services
@@ -19,8 +21,15 @@ module DhanScalper
         @connection = nil
         @message_handlers = {}
         @reconnect_attempts = 0
-        @max_reconnect_attempts = 5
-        @reconnect_delay = 5
+        @base_reconnect_delay = 1 # seconds
+        @max_reconnect_delay = 30 # seconds
+        @heartbeat_interval = 5 # seconds between checks
+        @heartbeat_timeout = 10 # seconds without ticks => reconnect
+        @monitor_thread = nil
+        @last_tick_at = Time.at(0)
+        @last_ts_per_instrument = {}
+        @baseline_instruments = [] # Array of {id:, type:}
+        @active_instruments_provider = nil # -> [[id, type], ...]
       end
 
       def connect
@@ -47,6 +56,10 @@ module DhanScalper
           @reconnect_attempts = 0
 
           @logger.info "[WebSocket] Connected successfully"
+          start_monitor!
+
+          # Resubscribe on fresh connections too (idempotent)
+          resubscribe_all
         rescue StandardError => e
           @logger.error "[WebSocket] Connection failed: #{e.message}"
           @connected = false
@@ -163,11 +176,121 @@ module DhanScalper
         @message_handlers[:position_update] = block
       end
 
+      # Configure a static list of baseline instruments (e.g., indices)
+      # instruments: Array of [id, type] or hashes {id:, type:}
+      def set_baseline_instruments(instruments)
+        @baseline_instruments = instruments.map do |it|
+          if it.is_a?(Array)
+            { id: it[0].to_s, type: it[1] || "EQUITY" }
+          else
+            { id: it[:id].to_s, type: it[:type] || "EQUITY" }
+          end
+        end
+      end
+
+      # Provide a callable that returns active instruments to resubscribe
+      # Block should return Array of [id, type]
+      def set_active_instruments_provider(&block)
+        @active_instruments_provider = block
+      end
+
+      # Force a reconnect and resubscribe (useful for tests/manual)
+      def force_reconnect!
+        @logger.warn "[WebSocket] Force reconnect requested"
+        attempt_reconnect!
+      end
+
       private
+
+      def start_monitor!
+        return if @monitor_thread&.alive?
+
+        @monitor_thread = Thread.new do
+          Thread.current.abort_on_exception = false
+          loop do
+            begin
+              sleep(@heartbeat_interval)
+              # If not connected, try reconnect with backoff
+              unless @connected
+                attempt_reconnect!
+                next
+              end
+
+              # Heartbeat: reconnect if ticks stale
+              if Time.now - @last_tick_at > @heartbeat_timeout
+                @logger.warn "[WebSocket] Heartbeat timeout (#{@heartbeat_timeout}s). Reconnecting..."
+                attempt_reconnect!
+              end
+            rescue StandardError => e
+              @logger.error "[WebSocket] Monitor error: #{e.message}"
+            end
+          end
+        end
+      end
+
+      def attempt_reconnect!
+        # Disconnect stale connection first
+        begin
+          if @connected
+            @connection&.disconnect!
+          end
+        rescue StandardError
+          # ignore
+        ensure
+          @connected = false
+        end
+
+        delay = [@base_reconnect_delay * (2**@reconnect_attempts), @max_reconnect_delay].min
+        jitter = rand * (delay * 0.3)
+        sleep_time = delay + jitter
+        @logger.info "[WebSocket] Reconnecting (attempt #{@reconnect_attempts + 1}) in #{sleep_time.round(2)}s"
+        sleep(sleep_time)
+
+        begin
+          connect
+          @reconnect_attempts = 0
+          resubscribe_all
+        rescue StandardError => e
+          @reconnect_attempts += 1
+          @logger.error "[WebSocket] Reconnect failed: #{e.message}"
+        end
+      end
+
+      def resubscribe_all
+        # Baseline indices/instruments
+        @baseline_instruments.each do |bi|
+          subscribe_to_instrument(bi[:id], bi[:type])
+        end
+
+        # Active instruments from provider (e.g., netQty>0)
+        if @active_instruments_provider
+          begin
+            list = Array(@active_instruments_provider.call)
+            list.each do |item|
+              id, type = item
+              subscribe_to_instrument(id.to_s, type || "EQUITY")
+            end
+          rescue StandardError => e
+            @logger.error "[WebSocket] Active instruments provider error: #{e.message}"
+          end
+        end
+      end
 
       def handle_tick_data(tick_data)
         instrument_id = tick_data[:security_id]
         segment = @instrument_segments&.[](instrument_id) || "NSE_FNO"
+
+        # Ignore out-of-order ticks based on timestamp
+        ts = tick_data[:ts] || tick_data[:timestamp]
+        if ts
+          last_ts = @last_ts_per_instrument[instrument_id]
+          if last_ts && (ts < last_ts)
+            @logger.debug "[WebSocket] Dropping out-of-order tick for #{instrument_id} (ts=#{ts}, last=#{last_ts})"
+            return
+          end
+          @last_ts_per_instrument[instrument_id] = ts
+        end
+        @last_tick_at = Time.now
 
         # Debug: Log the raw tick data
         puts "[DEBUG] Raw tick data: #{tick_data.inspect}" if ENV["DHAN_LOG_LEVEL"] == "DEBUG"

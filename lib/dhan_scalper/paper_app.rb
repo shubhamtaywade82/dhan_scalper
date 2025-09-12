@@ -114,6 +114,17 @@ module DhanScalper
       puts "[CONTROLS] Press Ctrl+C to stop"
 
       begin
+        # Configure baseline indices and active instrument provider
+        baseline = Array(@cfg["SYMBOLS"]).flat_map do |sym, s|
+          sid = s&.dig("idx_sid")
+          sid.to_s.empty? ? [] : [[sid.to_s, "INDEX"]]
+        end
+        @websocket_manager.set_baseline_instruments(baseline)
+        @websocket_manager.set_active_instruments_provider do
+          # Any instruments with quantity > 0 in paper tracker
+          @position_tracker.positions.values.select { |p| (p[:quantity] || 0).to_f > 0 }.map { |p| [p[:instrument_id].to_s, "OPTION"] }
+        end
+
         # Connect to WebSocket
         @websocket_manager.connect
 

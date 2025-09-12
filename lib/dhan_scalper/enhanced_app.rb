@@ -151,8 +151,13 @@ module DhanScalper
         logger: @logger
       )
 
-      # Initialize WebSocket manager
-      @websocket_manager = Services::WebSocketManager.new(logger: @logger)
+      # Initialize resilient WebSocket manager
+      @websocket_manager = Services::ResilientWebSocketManager.new(
+        logger: @logger,
+        heartbeat_interval: @config.dig("websocket", "heartbeat_interval") || 30,
+        max_reconnect_attempts: @config.dig("websocket", "max_reconnect_attempts") || 10,
+        base_reconnect_delay: @config.dig("websocket", "base_reconnect_delay") || 1
+      )
       @position_tracker.instance_variable_set(:@websocket_manager, @websocket_manager)
     end
 
@@ -171,24 +176,44 @@ module DhanScalper
     end
 
     def start_websocket
-      @logger.info "[ENHANCED] Starting WebSocket connection"
+      @logger.info "[ENHANCED] Starting resilient WebSocket connection"
 
-      @websocket_manager.connect
+      # Start the resilient WebSocket manager
+      @websocket_manager.start
 
-      # Subscribe to underlying instruments
+      # Add baseline subscriptions (indices)
       @config["SYMBOLS"]&.each_key do |symbol|
         symbol_config = @config.dig("SYMBOLS", symbol)
         next unless symbol_config
 
-        @websocket_manager.subscribe_to_instrument(
+        @websocket_manager.add_baseline_subscription(
           symbol_config["idx_sid"],
           "INDEX"
         )
       end
 
+      # Setup resubscription callback for positions
+      @websocket_manager.on_reconnect do
+        @logger.info "[ENHANCED] Resubscribing to positions after reconnect"
+        resubscribe_to_positions
+      end
+
       # Setup price update handler
       @websocket_manager.on_price_update do |price_data|
         handle_price_update(price_data)
+      end
+    end
+
+    def resubscribe_to_positions
+      # Resubscribe to all positions with net quantity > 0
+      positions = @position_tracker.get_positions
+      positions.each do |position|
+        next unless DhanScalper::Support::Money.positive?(position[:net_qty])
+
+        @websocket_manager.add_position_subscription(
+          position[:security_id].to_s,
+          "OPTION"
+        )
       end
     end
 
@@ -323,7 +348,7 @@ module DhanScalper
     def cleanup
       @logger.info "[ENHANCED] Cleaning up..."
 
-      @websocket_manager&.disconnect
+      @websocket_manager&.stop
       @cache&.disconnect
 
       @logger.info "[ENHANCED] Cleanup complete"

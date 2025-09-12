@@ -98,7 +98,12 @@ module DhanScalper
       @session_reporter = SessionReporter.new(logger: @logger)
 
       # Initialize WebSocket manager
-      @websocket_manager = Services::WebSocketManager.new(logger: @logger)
+      @websocket_manager = Services::ResilientWebSocketManager.new(
+        logger: @logger,
+        heartbeat_interval: @config.dig("websocket", "heartbeat_interval") || 30,
+        max_reconnect_attempts: @config.dig("websocket", "max_reconnect_attempts") || 10,
+        base_reconnect_delay: @config.dig("websocket", "base_reconnect_delay") || 1
+      )
 
       # Initialize order monitor for live trading
       @order_monitor = (Services::OrderMonitor.new(@broker, @position_tracker, logger: @logger) if @mode == :live)
@@ -122,24 +127,38 @@ module DhanScalper
     end
 
     def start_websocket_connection
-      @logger.info "[WEBSOCKET] Connecting to DhanHQ WebSocket..."
+      @logger.info "[WEBSOCKET] Starting resilient WebSocket connection..."
 
       begin
         DhanHQ.configure_with_env
         DhanHQ.logger.level = Logger::WARN
         DhanHQ.logger = Logger.new($stderr)
 
-        # Connect using WebSocketManager
-        @websocket_manager.connect
+        # Start the resilient WebSocket manager
+        @websocket_manager.start
+
+        # Add baseline subscriptions (indices)
+        @config["SYMBOLS"]&.each_key do |symbol|
+          symbol_config = @config["SYMBOLS"][symbol]
+          next unless symbol_config["idx_sid"]
+
+          @websocket_manager.add_baseline_subscription(
+            symbol_config["idx_sid"],
+            "INDEX"
+          )
+        end
+
+        # Setup resubscription callback for positions
+        @websocket_manager.on_reconnect do
+          @logger.info "[WEBSOCKET] Resubscribing to positions after reconnect"
+          resubscribe_to_positions
+        end
 
         # Setup tick handler
         @websocket_manager.on_price_update do |price_data|
           TickCache.put(price_data)
           @position_tracker.update_all_positions
         end
-
-        # Subscribe to index instruments
-        subscribe_to_instruments
 
         @logger.info "[WEBSOCKET] Connected successfully"
       rescue StandardError => e
@@ -148,19 +167,19 @@ module DhanScalper
       end
     end
 
-    def subscribe_to_instruments
-      @config["SYMBOLS"]&.each_key do |symbol|
-        symbol_config = @config["SYMBOLS"][symbol]
-        next unless symbol_config["idx_sid"]
+    def resubscribe_to_positions
+      # Resubscribe to all positions with net quantity > 0
+      positions = @position_tracker.get_positions
+      positions.each do |position|
+        next unless DhanScalper::Support::Money.positive?(position[:net_qty])
 
-        @websocket_manager.subscribe_to_instrument(
-          symbol_config["idx_sid"],
-          "INDEX"
+        @websocket_manager.add_position_subscription(
+          position[:security_id].to_s,
+          "OPTION"
         )
-
-        @logger.info "[WEBSOCKET] Subscribed to #{symbol} (#{symbol_config["seg_idx"]}:#{symbol_config["idx_sid"]})"
       end
     end
+
 
     def main_trading_loop
       last_decision = Time.at(0)
@@ -419,9 +438,9 @@ module DhanScalper
       @order_monitor&.stop
       @position_reconciler&.stop
 
-      # Disconnect WebSocket
+      # Stop resilient WebSocket manager
       begin
-        @websocket_manager&.disconnect
+        @websocket_manager&.stop
       rescue StandardError
         nil
       end

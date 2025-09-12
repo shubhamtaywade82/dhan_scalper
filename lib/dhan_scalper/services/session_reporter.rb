@@ -143,12 +143,12 @@ module DhanScalper
 
           # Financial Summary
           csv << ["FINANCIAL SUMMARY"]
-          csv << ["Starting Balance", "₹#{report_data[:starting_balance].round(2)}"]
-          csv << ["Ending Balance", "₹#{report_data[:ending_balance].round(2)}"]
-          csv << ["Total P&L", "₹#{report_data[:total_pnl].round(2)}"]
-          csv << ["Max Profit", "₹#{report_data[:max_profit].round(2)}"]
-          csv << ["Max Drawdown", "₹#{report_data[:max_drawdown].round(2)}"]
-          csv << ["Average Trade P&L", "₹#{report_data[:average_trade_pnl].round(2)}"]
+          csv << ["Starting Balance", DhanScalper::Support::Money.format(report_data[:starting_balance] || 0)]
+          csv << ["Ending Balance", DhanScalper::Support::Money.format(report_data[:ending_balance] || 0)]
+          csv << ["Total P&L", DhanScalper::Support::Money.format(report_data[:total_pnl] || 0)]
+          csv << ["Max Profit", DhanScalper::Support::Money.format(report_data[:max_profit] || 0)]
+          csv << ["Max Drawdown", DhanScalper::Support::Money.format(report_data[:max_drawdown] || 0)]
+          csv << ["Average Trade P&L", DhanScalper::Support::Money.format(report_data[:average_trade_pnl] || 0)]
           csv << []
 
           # Positions
@@ -211,12 +211,12 @@ module DhanScalper
 
         # Financial Summary
         puts "\n💰 FINANCIAL SUMMARY:"
-        puts "  Starting Balance: ₹#{report_data[:starting_balance]&.round(2)}"
-        puts "  Ending Balance: ₹#{report_data[:ending_balance]&.round(2)}"
-        puts "  Total P&L: ₹#{report_data[:total_pnl]&.round(2)}"
-        puts "  Max Profit: ₹#{report_data[:max_profit]&.round(2)}"
-        puts "  Max Drawdown: ₹#{report_data[:max_drawdown]&.round(2)}"
-        puts "  Avg Trade P&L: ₹#{report_data[:average_trade_pnl]&.round(2)}"
+        puts "  Starting Balance: #{DhanScalper::Support::Money.format(report_data[:starting_balance] || 0)}"
+        puts "  Ending Balance: #{DhanScalper::Support::Money.format(report_data[:ending_balance] || 0)}"
+        puts "  Total P&L: #{DhanScalper::Support::Money.format(report_data[:total_pnl] || 0)}"
+        puts "  Max Profit: #{DhanScalper::Support::Money.format(report_data[:max_profit] || 0)}"
+        puts "  Max Drawdown: #{DhanScalper::Support::Money.format(report_data[:max_drawdown] || 0)}"
+        puts "  Avg Trade P&L: #{DhanScalper::Support::Money.format(report_data[:average_trade_pnl] || 0)}"
 
         # Performance Rating
         pnl = report_data[:total_pnl] || 0

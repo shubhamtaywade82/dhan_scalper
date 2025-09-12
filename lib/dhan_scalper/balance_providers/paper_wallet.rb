@@ -20,7 +20,9 @@ module DhanScalper
       end
 
       def total_balance
-        @total
+        result = DhanScalper::Support::Money.add(@available, @used)
+        puts "  DEBUG: total_balance called - available: #{DhanScalper::Support::Money.dec(@available)}, used: #{DhanScalper::Support::Money.dec(@used)}, result: #{DhanScalper::Support::Money.dec(result)}"
+        result
       end
 
       def used_balance
@@ -29,6 +31,7 @@ module DhanScalper
 
       def update_balance(amount, type: :debit)
         amount_bd = DhanScalper::Support::Money.bd(amount)
+        puts "  DEBUG: update_balance called - amount: #{DhanScalper::Support::Money.dec(amount_bd)}, type: #{type}, available before: #{DhanScalper::Support::Money.dec(@available)}, used before: #{DhanScalper::Support::Money.dec(@used)}"
 
         case type
         when :debit
@@ -42,6 +45,7 @@ module DhanScalper
         # Ensure used balance doesn't go negative
         @used = DhanScalper::Support::Money.max(@used, DhanScalper::Support::Money.bd(0))
         @total = DhanScalper::Support::Money.add(@available, @used)
+        puts "  DEBUG: update_balance result - available after: #{DhanScalper::Support::Money.dec(@available)}, used after: #{DhanScalper::Support::Money.dec(@used)}, total: #{DhanScalper::Support::Money.dec(@total)}"
         @total
       end
 
@@ -68,7 +72,8 @@ module DhanScalper
         pnl_bd = DhanScalper::Support::Money.bd(pnl)
         @realized_pnl = DhanScalper::Support::Money.add(@realized_pnl, pnl_bd)
         # Note: Realized PnL is tracked separately for reporting only
-        # Cash flow is handled separately in update_balance
+        # Cash flow is already reflected in available/used balance
+        puts "  DEBUG: add_realized_pnl called with #{DhanScalper::Support::Money.dec(pnl)}, realized_pnl now: #{DhanScalper::Support::Money.dec(@realized_pnl)}"
         @total
       end
 

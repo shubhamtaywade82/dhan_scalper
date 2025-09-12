@@ -353,26 +353,14 @@ module DhanScalper
       option_segment = "NSE_FNO"
 
       # Get real market price for the option
+      puts DhanScalper::TickCache.all
+      puts "[#{symbol}] Getting market price for #{option_sid} in #{option_segment}"
       option_price = DhanScalper::TickCache.ltp(option_segment, option_sid)&.to_f
 
-      # Fallback to mock price for testing when market is closed
+      # Skip trade if no real market price is available
       unless option_price&.positive?
-        # Calculate mock price based on spot price and strike
-        spot_price = spot_price.to_f
-        strike = actual_strike.to_f
-        option_type_for_price = option_type == "CE" ? "CE" : "PE"
-
-        # Simple mock pricing: ITM options have higher value
-        option_price = if option_type_for_price == "CE"
-                         ([spot_price - strike, 0].max * 0.01) + 10.0
-                       else
-                         ([strike - spot_price, 0].max * 0.01) + 10.0
-                       end
-
-        # Ensure minimum price
-        option_price = [option_price, 5.0].max
-
-        puts "[#{symbol}] Using mock price for testing: ₹#{option_price.round(2)} (market closed)"
+        puts "[#{symbol}] No market price available for #{option_sid}, skipping trade"
+        return
       end
 
       # Calculate position size
@@ -691,7 +679,7 @@ module DhanScalper
     def get_cached_picker(symbol, symbol_config)
       picker_key = "#{symbol}_picker"
 
-      @cached_pickers[picker_key] = OptionPicker.new(symbol_config, mode: :paper) unless @cached_pickers[picker_key]
+      @cached_pickers[picker_key] = OptionPicker.new(symbol_config, mode: :paper, csv_master: @csv_master) unless @cached_pickers[picker_key]
 
       @cached_pickers[picker_key]
     end

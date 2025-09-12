@@ -1,0 +1,71 @@
+global:
+  mode: paper
+  fee_per_order_rs: 20.0
+  session_id: "paper-smoke"
+  charge_per_order: 20.0
+  allocation_pct: 0.30
+  slippage_buffer_pct: 0.01
+  max_lots_per_trade: 10
+  decision_interval: 10
+  decision_interval_sec: 60
+  risk_loop_interval_sec: 1
+  ohlc_poll_minutes: 3
+  log_throttle_sec: 60
+  redis_namespace: "dhan_scalper:v1"
+  historical_stagger_sec: 4
+  tp_pct: 0.35
+  sl_pct: 0.18
+  trail_pct: 0.12
+  log_level: "INFO"
+  use_multi_timeframe: false
+  secondary_timeframe: 5
+  min_premium_price: 1.0
+  log_status_every: 60
+  min_signal_strength: 0.6
+  max_positions: 5
+  risk_check_interval: 1
+  ohlc_fetch_interval: 180
+  ohlc_timeframes: ["1", "5"]
+
+paper:
+  starting_balance: 100000.0
+
+risk:
+  max_concurrent_positions: 3
+  allow_averaging: true
+  allow_scaling_out: true
+  time_stop_seconds: 180
+  cooldown_seconds: 30
+  max_daily_loss_rs: 5000
+
+market:
+  enforce_hours: false # test any time
+  reject_if_stale_tick_seconds: 5
+
+SYMBOLS:
+  NIFTY:
+    idx_sid: "13"
+    seg_idx: "IDX_I"
+    seg_opt: "NSE_FNO"
+    strike_step: 50
+    lot_size: 75
+    qty_multiplier: 1
+    expiry_wday: 4
+
+  BANKNIFTY:
+    idx_sid: "25"
+    seg_idx: "IDX_I"
+    seg_opt: "NSE_FNO"
+    strike_step: 100
+    lot_size: 35
+    qty_multiplier: 1
+    expiry_wday: 4
+
+  SENSEX:
+    idx_sid: "51"
+    seg_idx: "IDX_I"
+    seg_opt: "BSE_FNO"
+    strike_step: 100
+    lot_size: 20
+    qty_multiplier: 1
+    expiry_wday: 4

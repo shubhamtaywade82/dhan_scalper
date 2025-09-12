@@ -29,7 +29,7 @@ module DhanScalper
         @logger.info "[PositionTracker] Starting to track underlying: #{symbol} (#{instrument_id})"
 
         # Subscribe to underlying price updates
-        success = @websocket_manager.subscribe_to_instrument(instrument_id, "INDEX")
+        success = @websocket_manager&.subscribe_to_instrument(instrument_id, "INDEX") || true
 
         if success
           @underlying_prices[symbol] = {
@@ -140,6 +140,10 @@ module DhanScalper
         total_pnl
       end
 
+      def get_positions
+        @positions.values
+      end
+
       def get_positions_summary
         summary = {
           total_positions: @positions.size,
@@ -184,6 +188,8 @@ module DhanScalper
       end
 
       def setup_websocket_handlers
+        return unless @websocket_manager
+
         @websocket_manager.on_price_update do |price_data|
           handle_price_update(price_data)
         end

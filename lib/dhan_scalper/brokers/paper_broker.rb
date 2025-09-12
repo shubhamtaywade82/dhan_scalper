@@ -107,6 +107,23 @@ module DhanScalper
           # Update realized PnL in balance provider
           @balance_provider&.add_realized_pnl(result[:realized_pnl])
 
+          # If position is completely closed, we need to debit the remaining used balance
+          if result[:position].nil? || DhanScalper::Support::Money.zero?(result[:position][:net_qty])
+            # Calculate the original cost that was used to open this position
+            original_buy_cost = DhanScalper::Support::Money.add(
+              DhanScalper::Support::Money.multiply(
+                result[:position][:buy_qty] || DhanScalper::Support::Money.bd(quantity),
+                result[:position][:buy_avg] || DhanScalper::Support::Money.bd(price)
+              ),
+              DhanScalper::Support::Money.bd(charge_per_order)
+            )
+
+            # The net proceeds have already been credited, now we need to debit the difference
+            # between original cost and net proceeds to clear the used balance
+            remaining_used = DhanScalper::Support::Money.subtract(original_buy_cost, result[:net_proceeds])
+            @balance_provider&.update_balance(remaining_used, type: :debit)
+          end
+
           @logger.info("[PAPER] Partial exit: #{security_id} | Sold: #{DhanScalper::Support::Money.dec(result[:sold_quantity])} @ ₹#{DhanScalper::Support::Money.dec(price_bd)} | Realized PnL: ₹#{DhanScalper::Support::Money.dec(result[:realized_pnl])} | Net Proceeds: ₹#{DhanScalper::Support::Money.dec(result[:net_proceeds])} | Remaining: #{DhanScalper::Support::Money.dec(result[:position][:net_qty])}")
         else
           @logger.warn("[PAPER] No position found for partial exit: #{security_id} (qty: #{quantity})")
@@ -243,6 +260,7 @@ module DhanScalper
       end
 
       private
+
 
       # Create validation error object
       def create_validation_error(error_code, message)

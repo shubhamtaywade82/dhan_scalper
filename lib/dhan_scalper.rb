@@ -5,6 +5,7 @@ require "dhan_scalper/config"
 require "dhan_scalper/indicators"
 
 require "dhan_scalper/candle"
+require "dhan_scalper/indicators_gate"
 require "dhan_scalper/candle_series"
 require "dhan_scalper/support/application_service"
 require "dhan_scalper/support/time_zone"

@@ -286,12 +286,12 @@ module DhanScalper
 
           # Financial summary
           csv << ["Financial Summary"]
-          csv << ["Starting Balance", "₹#{session_data[:starting_balance]}"]
-          csv << ["Ending Balance", "₹#{session_data[:ending_balance]}"]
-          csv << ["Total P&L", "₹#{session_data[:total_pnl]}"]
-          csv << ["Max Profit", "₹#{session_data[:max_profit]}"]
-          csv << ["Max Drawdown", "₹#{session_data[:max_drawdown]}"]
-          csv << ["Avg Trade P&L", "₹#{session_data[:avg_trade_pnl]}"]
+          csv << ["Starting Balance", DhanScalper::Support::Money.format(session_data[:starting_balance] || 0)]
+          csv << ["Ending Balance", DhanScalper::Support::Money.format(session_data[:ending_balance] || 0)]
+          csv << ["Total P&L", DhanScalper::Support::Money.format(session_data[:total_pnl] || 0)]
+          csv << ["Max Profit", DhanScalper::Support::Money.format(session_data[:max_profit] || 0)]
+          csv << ["Max Drawdown", DhanScalper::Support::Money.format(session_data[:max_drawdown] || 0)]
+          csv << ["Avg Trade P&L", DhanScalper::Support::Money.format(session_data[:avg_trade_pnl] || 0)]
           csv << []
 
           # Positions

@@ -4,10 +4,10 @@ require_relative "csv_master"
 
 module DhanScalper
   class OptionPicker
-    def initialize(cfg, mode: :live)
+    def initialize(cfg, mode: :live, csv_master: nil)
       @cfg = cfg
       @mode = mode
-      @csv_master = CsvMaster.new
+      @csv_master = csv_master || CsvMaster.new
     end
 
     def pick(current_spot:)

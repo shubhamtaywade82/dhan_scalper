@@ -250,9 +250,9 @@ module DhanScalper
 
       # Balance information
       puts "BALANCE INFORMATION:"
-      puts "  Starting Balance: ₹#{report_data[:starting_balance].round(2)}"
-      puts "  Final Balance: ₹#{report_data[:final_balance].round(2)}"
-      puts "  Balance Change: ₹#{report_data[:balance_change].round(2)}"
+      puts "  Starting Balance: #{DhanScalper::Support::Money.format(report_data[:starting_balance] || 0)}"
+      puts "  Final Balance: #{DhanScalper::Support::Money.format(report_data[:final_balance] || 0)}"
+      puts "  Balance Change: #{DhanScalper::Support::Money.format(report_data[:balance_change] || 0)}"
       puts "  Balance Change: #{report_data[:balance_change_pct].round(2)}%"
       puts
 

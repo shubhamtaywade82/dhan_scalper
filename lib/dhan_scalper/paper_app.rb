@@ -29,7 +29,7 @@ module DhanScalper
       @state = State.new(
         symbols: cfg["SYMBOLS"]&.keys || [],
         session_target: cfg.dig("global", "min_profit_target").to_f,
-        max_day_loss: cfg.dig("global", "max_day_loss").to_f
+        max_day_loss: cfg.dig("global", "max_day_loss").to_f,
       )
 
       @virtual_data_manager = VirtualDataManager.new(memory_only: true)
@@ -44,8 +44,11 @@ module DhanScalper
       # Initialize broker
       @broker = Brokers::PaperBroker.new(
         virtual_data_manager: @virtual_data_manager,
-        balance_provider: @balance_provider
+        balance_provider: @balance_provider,
       )
+
+      # Make the broker use the same position tracker as the app
+      @broker.instance_variable_set(:@position_tracker, @position_tracker)
 
       # Initialize WebSocket manager
       @websocket_manager = Services::WebSocketManager.new(logger: @logger)
@@ -54,7 +57,7 @@ module DhanScalper
       @position_tracker = Services::PaperPositionTracker.new(
         websocket_manager: @websocket_manager,
         logger: @logger,
-        memory_only: true
+        memory_only: true,
       )
 
       # Initialize logger
@@ -78,7 +81,7 @@ module DhanScalper
         trades: [],
         max_pnl: 0.0,
         min_pnl: 0.0,
-        symbols_traded: Set.new
+        symbols_traded: Set.new,
       }
 
       # Cache for trend objects and option pickers
@@ -122,7 +125,9 @@ module DhanScalper
         @websocket_manager.set_baseline_instruments(baseline)
         @websocket_manager.set_active_instruments_provider do
           # Any instruments with quantity > 0 in paper tracker
-          @position_tracker.positions.values.select { |p| (p[:quantity] || 0).to_f > 0 }.map { |p| [p[:instrument_id].to_s, "OPTION"] }
+          @position_tracker.positions.values.select do |p|
+            (p[:quantity] || 0).to_f > 0
+          end.map { |p| [p[:instrument_id].to_s, "OPTION"] }
         end
 
         # Connect to WebSocket
@@ -146,7 +151,7 @@ module DhanScalper
             low: price_data[:low],
             close: price_data[:close],
             volume: price_data[:volume],
-            ts: price_data[:timestamp]
+            ts: price_data[:timestamp],
           }
 
           # Debug: Log the tick data being stored
@@ -233,7 +238,7 @@ module DhanScalper
         # Finalize session data
         @session_data[:end_time] = Time.now.strftime("%Y-%m-%d %H:%M:%S")
         @session_data[:duration_minutes] = (Time.now - @start_time) / 60.0
-        @session_data[:ending_balance] = @balance_provider.available_balance
+        @session_data[:ending_balance] = @balance_provider.total_balance
         @session_data[:total_pnl] = @session_data[:ending_balance] - @session_data[:starting_balance]
         @session_data[:win_rate] =
           @session_data[:total_trades] > 0 ? (@session_data[:successful_trades].to_f / @session_data[:total_trades] * 100) : 0.0
@@ -275,7 +280,7 @@ module DhanScalper
       when "NIFTY", "BANKNIFTY"
         "NSE_FNO"
       else
-        "NSE_FNO"  # Default to NSE
+        "NSE_FNO" # Default to NSE
       end
     end
 
@@ -399,7 +404,7 @@ module DhanScalper
         side: "BUY",
         quantity: quantity,
         price: option_price,
-        order_type: "MARKET"
+        order_type: "MARKET",
       )
 
       if order_result[:success]
@@ -425,7 +430,7 @@ module DhanScalper
           order_id: order_result[:order_id],
           status: "SUCCESS",
           option_type: option_type,
-          strike: actual_strike
+          strike: actual_strike,
         }
 
         puts "[#{symbol}] Position added to tracker: #{position_key}"
@@ -445,7 +450,7 @@ module DhanScalper
           status: "FAILED",
           error: order_result[:error],
           option_type: option_type,
-          strike: actual_strike
+          strike: actual_strike,
         }
       end
     end
@@ -573,7 +578,7 @@ module DhanScalper
       strikes_to_subscribe = [
         atm_strike - strike_step,  # ATM-1
         atm_strike,                # ATM
-        atm_strike + strike_step   # ATM+1
+        atm_strike + strike_step, # ATM+1
       ]
 
       puts "\n[#{symbol}] Subscribing to ATM options around #{atm_strike}:"
@@ -687,12 +692,12 @@ module DhanScalper
             seg_idx: symbol_config["seg_idx"],
             sid_idx: symbol_config["idx_sid"],
             use_multi_timeframe: use_multi_timeframe,
-            secondary_timeframe: secondary_timeframe
+            secondary_timeframe: secondary_timeframe,
           )
         else
           @cached_trends[trend_key] = Trend.new(
             seg_idx: symbol_config["seg_idx"],
-            sid_idx: symbol_config["idx_sid"]
+            sid_idx: symbol_config["idx_sid"],
           )
         end
       end
@@ -703,7 +708,10 @@ module DhanScalper
     def get_cached_picker(symbol, symbol_config)
       picker_key = "#{symbol}_picker"
 
-      @cached_pickers[picker_key] = OptionPicker.new(symbol_config, mode: :paper, csv_master: @csv_master) unless @cached_pickers[picker_key]
+      unless @cached_pickers[picker_key]
+        @cached_pickers[picker_key] =
+          OptionPicker.new(symbol_config, mode: :paper, csv_master: @csv_master)
+      end
 
       @cached_pickers[picker_key]
     end
@@ -723,7 +731,7 @@ module DhanScalper
                              (@session_data[:max_pnl] / @session_data[:min_pnl].abs).round(2)
                            else
                              0.0
-                           end
+                           end,
       }
 
       # Generate the report

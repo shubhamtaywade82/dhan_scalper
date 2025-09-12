@@ -203,11 +203,9 @@ module DhanScalper
         when "INDEX"
           # For indices, determine based on the instrument ID
           case instrument_id.to_s
-          when "13", "25", "51"  # NIFTY, BANKNIFTY, SENSEX
-            "IDX_I"
-          else
-            "IDX_I"  # Default for other indices
+          when "13", "25", "51" # NIFTY, BANKNIFTY, SENSEX
           end
+          "IDX_I"
         when "OPTION"
           # For options, use CSV master to determine the correct segment
           determine_option_segment(instrument_id)

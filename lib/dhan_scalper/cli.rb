@@ -56,6 +56,10 @@ module DhanScalper
       mode = (opts[:mode] || "paper").to_sym
       quiet = !opts[:quiet].nil?
       enhanced = opts.key?(:enhanced) ? opts[:enhanced] : true
+
+      # Initialize logger
+      DhanScalper::Support::Logger.setup(level: quiet ? :warn : :info)
+
       DhanHQ.configure_with_env
       # Always set INFO level for CLI start; keep logs concise for terminal usage
       if DhanHQ.respond_to?(:logger)

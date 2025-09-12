@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require_relative "../support/money"
+require_relative "../support/logger"
+require_relative "../support/validations"
 require_relative "../services/enhanced_position_tracker"
 
 module DhanScalper
@@ -14,10 +16,21 @@ module DhanScalper
       end
 
       def buy_market(segment:, security_id:, quantity:, charge_per_order: nil)
-        puts "Buying market: #{segment}, #{security_id}, #{quantity}, #{charge_per_order}"
+        DhanScalper::Support::Logger.info(
+          "Buying market: #{segment}, #{security_id}, #{quantity}, #{charge_per_order}",
+          component: "PaperBroker"
+        )
+
+        # Validate inputs
+        DhanScalper::Support::Validations.validate_instrument_id(security_id)
+        DhanScalper::Support::Validations.validate_segment(segment)
+        DhanScalper::Support::Validations.validate_quantity(quantity, 1) # Basic quantity validation
+
         price = DhanScalper::TickCache.ltp(segment, security_id)
         unless price&.positive?
-          return create_validation_error("INVALID_PRICE", "No valid price available for #{security_id}")
+          error_msg = "No valid price available for #{security_id}"
+          DhanScalper::Support::Logger.error(error_msg, component: "PaperBroker")
+          return create_validation_error("INVALID_PRICE", error_msg)
         end
 
         # Convert to BigDecimal for safe money calculations
@@ -62,9 +75,21 @@ module DhanScalper
       end
 
       def sell_market(segment:, security_id:, quantity:, charge_per_order: 20)
+        DhanScalper::Support::Logger.info(
+          "Selling market: #{segment}, #{security_id}, #{quantity}, #{charge_per_order}",
+          component: "PaperBroker"
+        )
+
+        # Validate inputs
+        DhanScalper::Support::Validations.validate_instrument_id(security_id)
+        DhanScalper::Support::Validations.validate_segment(segment)
+        DhanScalper::Support::Validations.validate_quantity(quantity, 1) # Basic quantity validation
+
         price = DhanScalper::TickCache.ltp(segment, security_id)
         unless price&.positive?
-          return create_validation_error("INVALID_PRICE", "No valid price available for #{security_id}")
+          error_msg = "No valid price available for #{security_id}"
+          DhanScalper::Support::Logger.error(error_msg, component: "PaperBroker")
+          return create_validation_error("INVALID_PRICE", error_msg)
         end
 
         # Convert to BigDecimal for safe money calculations
@@ -83,8 +108,19 @@ module DhanScalper
                                                                                                     quantity_bd)
           available_qty = position&.dig(:net_qty) || 0
           error_msg = "Insufficient position. Trying to sell #{DhanScalper::Support::Money.dec(quantity_bd)}, have #{DhanScalper::Support::Money.dec(available_qty)}"
-          @logger.warn("[PAPER] #{error_msg}")
+          DhanScalper::Support::Logger.warn("[PAPER] #{error_msg}", component: "PaperBroker")
           return create_validation_error("INSUFFICIENT_POSITION", error_msg)
+        end
+
+        # Additional oversell protection using validation module
+        begin
+          DhanScalper::Support::Validations.validate_position_sufficient(
+            DhanScalper::Support::Money.dec(position[:net_qty]),
+            DhanScalper::Support::Money.dec(quantity_bd)
+          )
+        rescue DhanScalper::OversellError => e
+          DhanScalper::Support::Logger.error(e.message, component: "PaperBroker")
+          return create_validation_error("OVERSELL", e.message)
         end
 
         order = Order.new("P-#{Time.now.to_f}", security_id, "SELL", quantity, price)

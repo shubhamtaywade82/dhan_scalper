@@ -2,6 +2,8 @@
 
 require_relative "base"
 require_relative "../support/money"
+require_relative "../support/logger"
+require_relative "../support/validations"
 
 module DhanScalper
   module BalanceProviders
@@ -24,7 +26,13 @@ module DhanScalper
         # Realized PnL represents the cumulative profit/loss from closed positions
         result = DhanScalper::Support::Money.add(@available, @used)
         result = DhanScalper::Support::Money.add(result, @realized_pnl)
-        puts "  DEBUG: total_balance called - available: #{DhanScalper::Support::Money.dec(@available)}, used: #{DhanScalper::Support::Money.dec(@used)}, realized_pnl: #{DhanScalper::Support::Money.dec(@realized_pnl)}, result: #{DhanScalper::Support::Money.dec(result)}"
+        DhanScalper::Support::Logger.debug(
+          "Total balance calculated - available: #{DhanScalper::Support::Money.dec(@available)}, " \
+          "used: #{DhanScalper::Support::Money.dec(@used)}, " \
+          "realized_pnl: #{DhanScalper::Support::Money.dec(@realized_pnl)}, " \
+          "result: #{DhanScalper::Support::Money.dec(result)}",
+          component: "PaperWallet"
+        )
         result
       end
 
@@ -34,10 +42,18 @@ module DhanScalper
 
       def update_balance(amount, type: :debit)
         amount_bd = DhanScalper::Support::Money.bd(amount)
-        puts "  DEBUG: update_balance called - amount: #{DhanScalper::Support::Money.dec(amount_bd)}, type: #{type}, available before: #{DhanScalper::Support::Money.dec(@available)}, used before: #{DhanScalper::Support::Money.dec(@used)}"
+        DhanScalper::Support::Validations.validate_price_positive(amount)
+
+        DhanScalper::Support::Logger.debug(
+          "Updating balance - amount: #{DhanScalper::Support::Money.dec(amount_bd)}, " \
+          "type: #{type}, available before: #{DhanScalper::Support::Money.dec(@available)}, " \
+          "used before: #{DhanScalper::Support::Money.dec(@used)}",
+          component: "PaperWallet"
+        )
 
         case type
         when :debit
+          DhanScalper::Support::Validations.validate_balance_sufficient(@available, amount)
           @available = DhanScalper::Support::Money.subtract(@available, amount_bd)
           @used = DhanScalper::Support::Money.add(@used, amount_bd)
         when :credit
@@ -51,7 +67,13 @@ module DhanScalper
         # Ensure used balance doesn't go negative
         @used = DhanScalper::Support::Money.max(@used, DhanScalper::Support::Money.bd(0))
         @total = DhanScalper::Support::Money.add(@available, @used)
-        puts "  DEBUG: update_balance result - available after: #{DhanScalper::Support::Money.dec(@available)}, used after: #{DhanScalper::Support::Money.dec(@used)}, total: #{DhanScalper::Support::Money.dec(@total)}"
+
+        DhanScalper::Support::Logger.debug(
+          "Balance updated - available after: #{DhanScalper::Support::Money.dec(@available)}, " \
+          "used after: #{DhanScalper::Support::Money.dec(@used)}, " \
+          "total: #{DhanScalper::Support::Money.dec(@total)}",
+          component: "PaperWallet"
+        )
         @total
       end
 
@@ -60,13 +82,28 @@ module DhanScalper
         principal_bd = DhanScalper::Support::Money.bd(principal_cost)
         fee_bd = DhanScalper::Support::Money.bd(fee)
 
-        puts "  DEBUG: debit_for_buy called - principal: #{DhanScalper::Support::Money.dec(principal_bd)}, fee: #{DhanScalper::Support::Money.dec(fee_bd)}"
+        DhanScalper::Support::Validations.validate_price_positive(principal_cost)
+        DhanScalper::Support::Validations.validate_price_positive(fee)
+
+        DhanScalper::Support::Logger.debug(
+          "Debiting for buy - principal: #{DhanScalper::Support::Money.dec(principal_bd)}, " \
+          "fee: #{DhanScalper::Support::Money.dec(fee_bd)}",
+          component: "PaperWallet"
+        )
 
         total_cost = DhanScalper::Support::Money.add(principal_bd, fee_bd)
+        DhanScalper::Support::Validations.validate_balance_sufficient(@available, total_cost)
+
         @available = DhanScalper::Support::Money.subtract(@available, total_cost)
         @used = DhanScalper::Support::Money.add(@used, total_cost)
         @total = DhanScalper::Support::Money.add(@available, @used)
-        puts "  DEBUG: debit_for_buy result - available: #{DhanScalper::Support::Money.dec(@available)}, used: #{DhanScalper::Support::Money.dec(@used)}, total: #{DhanScalper::Support::Money.dec(@total)}"
+
+        DhanScalper::Support::Logger.debug(
+          "Buy debit completed - available: #{DhanScalper::Support::Money.dec(@available)}, " \
+          "used: #{DhanScalper::Support::Money.dec(@used)}, " \
+          "total: #{DhanScalper::Support::Money.dec(@total)}",
+          component: "PaperWallet"
+        )
         @total
       end
 
@@ -75,7 +112,11 @@ module DhanScalper
         net_bd = DhanScalper::Support::Money.bd(net_proceeds)
         released_bd = DhanScalper::Support::Money.bd(released_principal)
 
-        puts "  DEBUG: credit_for_sell called - net_proceeds: #{DhanScalper::Support::Money.dec(net_bd)}, released_principal: #{DhanScalper::Support::Money.dec(released_bd)}"
+        DhanScalper::Support::Logger.debug(
+          "Crediting for sell - net_proceeds: #{DhanScalper::Support::Money.dec(net_bd)}, " \
+          "released_principal: #{DhanScalper::Support::Money.dec(released_bd)}",
+          component: "PaperWallet"
+        )
 
         # Credit the actual cash received from the sale
         @available = DhanScalper::Support::Money.add(@available, net_bd)
@@ -86,7 +127,13 @@ module DhanScalper
 
         # Total balance is available + used (no double counting)
         @total = DhanScalper::Support::Money.add(@available, @used)
-        puts "  DEBUG: credit_for_sell result - available: #{DhanScalper::Support::Money.dec(@available)}, used: #{DhanScalper::Support::Money.dec(@used)}, total: #{DhanScalper::Support::Money.dec(@total)}"
+
+        DhanScalper::Support::Logger.debug(
+          "Sell credit completed - available: #{DhanScalper::Support::Money.dec(@available)}, " \
+          "used: #{DhanScalper::Support::Money.dec(@used)}, " \
+          "total: #{DhanScalper::Support::Money.dec(@total)}",
+          component: "PaperWallet"
+        )
         @total
       end
 
@@ -114,7 +161,11 @@ module DhanScalper
         @realized_pnl = DhanScalper::Support::Money.add(@realized_pnl, pnl_bd)
         # NOTE: Realized PnL is tracked separately for reporting only
         # Cash flow is already reflected in available/used balance
-        puts "  DEBUG: add_realized_pnl called with #{DhanScalper::Support::Money.dec(pnl)}, realized_pnl now: #{DhanScalper::Support::Money.dec(@realized_pnl)}"
+        DhanScalper::Support::Logger.debug(
+          "Added realized PnL: #{DhanScalper::Support::Money.dec(pnl)}, " \
+          "realized_pnl now: #{DhanScalper::Support::Money.dec(@realized_pnl)}",
+          component: "PaperWallet"
+        )
         @total
       end
 
@@ -124,9 +175,16 @@ module DhanScalper
       # Add amount to used balance without affecting available balance
       def add_to_used_balance(amount)
         amount_bd = DhanScalper::Support::Money.bd(amount)
+        DhanScalper::Support::Validations.validate_price_positive(amount)
+
         @used = DhanScalper::Support::Money.add(@used, amount_bd)
         @total = DhanScalper::Support::Money.add(@available, @used)
-        puts "  DEBUG: add_to_used_balance called - amount: #{DhanScalper::Support::Money.dec(amount_bd)}, used after: #{DhanScalper::Support::Money.dec(@used)}"
+
+        DhanScalper::Support::Logger.debug(
+          "Added to used balance - amount: #{DhanScalper::Support::Money.dec(amount_bd)}, " \
+          "used after: #{DhanScalper::Support::Money.dec(@used)}",
+          component: "PaperWallet"
+        )
         @total
       end
 

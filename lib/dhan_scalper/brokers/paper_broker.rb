@@ -15,7 +15,9 @@ module DhanScalper
 
       def buy_market(segment:, security_id:, quantity:, charge_per_order: nil)
         price = DhanScalper::TickCache.ltp(segment, security_id)
-        return nil unless price&.positive?
+        unless price&.positive?
+          return create_validation_error("INVALID_PRICE", "No valid price available for #{security_id}")
+        end
 
         # Convert to BigDecimal for safe money calculations
         price_bd = DhanScalper::Support::Money.bd(price)
@@ -30,8 +32,9 @@ module DhanScalper
 
         # Check if we can afford this position
         if @balance_provider && @balance_provider.available_balance < total_cost
-          @logger.warn("[PAPER] Insufficient balance. Need ₹#{DhanScalper::Support::Money.dec(total_cost)}, have ₹#{DhanScalper::Support::Money.dec(@balance_provider.available_balance)}")
-          return nil
+          error_msg = "Insufficient balance. Need ₹#{DhanScalper::Support::Money.dec(total_cost)}, have ₹#{DhanScalper::Support::Money.dec(@balance_provider.available_balance)}"
+          @logger.warn("[PAPER] #{error_msg}")
+          return create_validation_error("INSUFFICIENT_BALANCE", error_msg)
         end
 
         # Debit the balance (including charges)
@@ -59,12 +62,28 @@ module DhanScalper
 
       def sell_market(segment:, security_id:, quantity:, charge_per_order: 20)
         price = DhanScalper::TickCache.ltp(segment, security_id)
-        return nil unless price&.positive?
+        unless price&.positive?
+          return create_validation_error("INVALID_PRICE", "No valid price available for #{security_id}")
+        end
 
         # Convert to BigDecimal for safe money calculations
         price_bd = DhanScalper::Support::Money.bd(price)
         quantity_bd = DhanScalper::Support::Money.bd(quantity)
         charge_bd = DhanScalper::Support::Money.bd(charge_per_order)
+
+        # Check if we have sufficient position to sell
+        position = @position_tracker.get_position(
+          exchange_segment: segment,
+          security_id: security_id,
+          side: "LONG"
+        )
+
+        unless position && position[:net_qty] && DhanScalper::Support::Money.greater_than_or_equal?(position[:net_qty], quantity_bd)
+          available_qty = position&.dig(:net_qty) || 0
+          error_msg = "Insufficient position. Trying to sell #{DhanScalper::Support::Money.dec(quantity_bd)}, have #{DhanScalper::Support::Money.dec(available_qty)}"
+          @logger.warn("[PAPER] #{error_msg}")
+          return create_validation_error("INSUFFICIENT_POSITION", error_msg)
+        end
 
         order = Order.new("P-#{Time.now.to_f}", security_id, "SELL", quantity, price)
 
@@ -109,7 +128,10 @@ module DhanScalper
           # Use buy_market method for consistency
           buy_result = buy_market(segment: "NSE_EQ", security_id: instrument_id, quantity: quantity, charge_per_order: 20)
 
-          if buy_result
+          if buy_result.is_a?(Hash) && buy_result[:success] == false
+            # Return validation error
+            buy_result
+          elsif buy_result
             position = @position_tracker.get_position(exchange_segment: "NSE_EQ", security_id: instrument_id, side: "LONG")
             {
               success: true,
@@ -128,7 +150,10 @@ module DhanScalper
           # Use sell_market method for consistency
           sell_result = sell_market(segment: "NSE_EQ", security_id: instrument_id, quantity: quantity, charge_per_order: 20)
 
-          if sell_result
+          if sell_result.is_a?(Hash) && sell_result[:success] == false
+            # Return validation error
+            sell_result
+          elsif sell_result
             position = @position_tracker.get_position(exchange_segment: "NSE_EQ", security_id: instrument_id, side: "LONG")
             {
               success: true,
@@ -218,6 +243,18 @@ module DhanScalper
       end
 
       private
+
+      # Create validation error object
+      def create_validation_error(error_code, message)
+        {
+          success: false,
+          error: error_code,
+          error_message: message,
+          order_id: nil,
+          order: nil,
+          position: nil
+        }
+      end
 
       # Create Dhan-compatible order response
       def create_dhan_compatible_response(order_id:, side:, quantity:, price:, position: nil, idempotent: false, existing_order: nil)

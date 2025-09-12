@@ -95,7 +95,7 @@ module DhanScalper
         return nil unless atm_strike
 
         # Apply ATM window
-        atm_window = symbol_config.dig("atm_window_pct")&.to_f || 0.02
+        atm_window = symbol_config["atm_window_pct"]&.to_f || 0.02
         strike_range = spot_price * atm_window
 
         # Pick strike within range
@@ -117,7 +117,7 @@ module DhanScalper
       end
 
       def calculate_atm_strike(spot_price, symbol_config)
-        strike_step = symbol_config.dig("strike_step")&.to_i || 50
+        strike_step = symbol_config["strike_step"]&.to_i || 50
         (spot_price / strike_step).round * strike_step
       end
 
@@ -133,7 +133,7 @@ module DhanScalper
 
           window_min = atm_strike - strike_range
           window_max = atm_strike + strike_range
-          strikes.select { |s| s >= window_min && s <= window_max }
+          strikes.select { |s| s.between?(window_min, window_max) }
         rescue StandardError => e
           @logger.warn("[ENTRY] CSV master unavailable (#{e.message}); using simple ATM window")
           simple_strikes(atm_strike, strike_range)

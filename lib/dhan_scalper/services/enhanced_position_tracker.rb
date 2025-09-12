@@ -121,7 +121,7 @@ module DhanScalper
       def update_unrealized_pnl(ltp_provider)
         total_unrealized = DhanScalper::Support::Money.bd(0)
 
-        @positions.each do |_key, position|
+        @positions.each_value do |position|
           current_price = ltp_provider.call(position[:exchange_segment], position[:security_id])
           next unless current_price&.positive?
 
@@ -146,7 +146,7 @@ module DhanScalper
 
       # Reset day quantities (call at start of new trading day)
       def reset_day_quantities
-        @positions.each do |_key, position|
+        @positions.each_value do |position|
           position[:day_buy_qty] = DhanScalper::Support::Money.bd(0)
           position[:day_sell_qty] = DhanScalper::Support::Money.bd(0)
         end

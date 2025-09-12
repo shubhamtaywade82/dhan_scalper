@@ -468,9 +468,9 @@ module DhanScalper
         # Store cache metadata
         cache_key = "#{@namespace}:instruments:cache"
         @redis.hset(cache_key, {
-                      "symbols" => symbols.join(","),
-                      "timestamp" => Time.now.to_i,
-                      "count" => instruments.values.sum(&:size),
+                      symbols: symbols.join(","),
+                      timestamp: Time.now.to_i,
+                      count: instruments.values.sum(&:size),
                     })
       end
 

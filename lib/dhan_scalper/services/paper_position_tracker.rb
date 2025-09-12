@@ -203,7 +203,7 @@ module DhanScalper
         timestamp = price_data[:timestamp]
 
         # Update underlying prices
-        @underlying_prices.each do |_symbol, data|
+        @underlying_prices.each_value do |data|
           next unless data[:instrument_id] == instrument_id
 
           data[:last_price] = last_price
@@ -213,7 +213,7 @@ module DhanScalper
         end
 
         # Update position prices
-        @positions.each do |_position_key, position|
+        @positions.each_value do |position|
           next unless position[:instrument_id] == instrument_id
 
           position[:current_price] = last_price

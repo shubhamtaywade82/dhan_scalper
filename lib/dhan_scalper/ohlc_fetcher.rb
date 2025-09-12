@@ -94,7 +94,7 @@ module DhanScalper
         # Calculate stagger delay (10 seconds between symbols)
         stagger_delay = index * 10
 
-        if stagger_delay > 0
+        if stagger_delay.positive?
           @logger.info "[OHLC] Staggering #{symbol} by #{stagger_delay}s"
           Thread.new do
             sleep(stagger_delay)

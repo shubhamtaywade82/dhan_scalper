@@ -139,7 +139,7 @@ module DhanScalper
           # use TTL as freshness proxy
           key = namespaced(tick_key(segment, security_id))
           ttl = REDIS_POOL.with { |r| r.ttl(key) }
-          ttl && ttl > 0 && ttl <= 60
+          ttl && ttl.positive? && ttl <= 60
         else
           tick = get(segment, security_id)
           return false unless tick&.dig(:timestamp)
@@ -170,8 +170,8 @@ module DhanScalper
           {
             total_ticks: MAP.size,
             segments: MAP.values.map { |t| t[:segment] }.uniq,
-            oldest_tick: MAP.values.map { |t| t[:timestamp] }.compact.min,
-            newest_tick: MAP.values.map { |t| t[:timestamp] }.compact.max,
+            oldest_tick: MAP.values.filter_map { |t| t[:timestamp] }.min,
+            newest_tick: MAP.values.filter_map { |t| t[:timestamp] }.max,
           }
         end
       end

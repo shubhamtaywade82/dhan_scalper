@@ -9,15 +9,15 @@ RSpec.describe DhanScalper::QuantitySizer do
 
   let(:config) do
     {
-      "global" => {
-        "allocation_pct" => 0.30,
-        "slippage_buffer_pct" => 0.01,
-        "max_lots_per_trade" => 10,
+      global: {
+        allocation_pct: 0.30,
+        slippage_buffer_pct: 0.01,
+        max_lots_per_trade: 10,
       },
-      "SYMBOLS" => {
-        "NIFTY" => {
-          "lot_size" => 75,
-          "qty_multiplier" => 5,
+      SYMBOLS: {
+        NIFTY: {
+          lot_size: 75,
+          qty_multiplier: 5,
         },
       },
     }

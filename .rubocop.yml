@@ -125,31 +125,40 @@ Layout/BlockAlignment:
 
 # Metrics
 Metrics/AbcSize:
-  Enabled: false
+  Enabled: true
+  Max: 20
 
 Metrics/CyclomaticComplexity:
-  Enabled: false
+  Enabled: true
+  Max: 10
 
 Metrics/MethodLength:
-  Enabled: false
+  Enabled: true
+  Max: 20
 
 Metrics/BlockLength:
-  Enabled: false
+  Enabled: true
+  Max: 30
 
 Metrics/BlockNesting:
-  Enabled: false
+  Enabled: true
+  Max: 4
 
 Metrics/PerceivedComplexity:
-  Enabled: false
+  Enabled: true
+  Max: 10
 
 Metrics/ClassLength:
-  Enabled: false
+  Enabled: true
+  Max: 200
 
 Metrics/ModuleLength:
-  Enabled: false
+  Enabled: true
+  Max: 200
 
 Metrics/ParameterLists:
-  Enabled: false
+  Enabled: true
+  Max: 5
 
 # Lint
 Lint/UnusedMethodArgument:
@@ -159,36 +168,36 @@ Lint/UnusedBlockArgument:
   AllowUnusedKeywordArguments: true
 
 Lint/RedundantSafeNavigation:
-  Enabled: false
+  Enabled: true
 
 Lint/DuplicateBranch:
-  Enabled: false
+  Enabled: true
 
 Lint/MissingSuper:
-  Enabled: false
+  Enabled: true
 
 Lint/AmbiguousRange:
-  Enabled: false
+  Enabled: true
 
 Lint/ConstantDefinitionInBlock:
-  Enabled: false
+  Enabled: true
 
 Lint/DuplicateMethods:
-  Enabled: false
+  Enabled: true
 
 Lint/NonLocalExitFromIterator:
-  Enabled: false
+  Enabled: true
 
 Lint/SuppressedException:
-  Enabled: false
+  Enabled: true
 Lint/EmptyBlock:
-  Enabled: false
+  Enabled: true
 Lint/FloatComparison:
-  Enabled: false
+  Enabled: true
 Lint/RescueException:
-  Enabled: false
+  Enabled: true
 Lint/UnderscorePrefixedVariableName:
-  Enabled: false
+  Enabled: true
 
 # Style
 Style/Documentation:
@@ -228,7 +237,7 @@ Style/StderrPuts:
   Enabled: true
 
 Style/StringHashKeys:
-  Enabled: false
+  Enabled: true
 
 Style/SymbolArray:
   Enabled: true
@@ -271,62 +280,62 @@ Style/WordArray:
 
 # Relax style cops that are largely preference and may risk subtle behavior
 Style/NumericPredicate:
-  Enabled: false
+  Enabled: true
 
 Style/IdenticalConditionalBranches:
-  Enabled: false
+  Enabled: true
 
 Style/MultilineBlockChain:
-  Enabled: false
+  Enabled: true
 
 Style/HashEachMethods:
-  Enabled: false
+  Enabled: true
 
 Style/StringConcatenation:
-  Enabled: false
+  Enabled: true
 
 Style/SpecialGlobalVars:
-  Enabled: false
+  Enabled: true
 
 Style/ComparableBetween:
-  Enabled: false
+  Enabled: true
 
 Style/MinMaxComparison:
-  Enabled: false
+  Enabled: true
 
 Style/SingleArgumentDig:
-  Enabled: false
+  Enabled: true
 
 Style/DoubleNegation:
-  Enabled: false
+  Enabled: true
 
 Style/HashTransformValues:
-  Enabled: false
+  Enabled: true
 
 Style/SymbolProc:
-  Enabled: false
+  Enabled: true
 
 Style/ItAssignment:
-  Enabled: false
+  Enabled: true
 
 # Naming
 Naming/AccessorMethodName:
-  Enabled: false
+  Enabled: true
 
 Naming/MethodParameterName:
-  Enabled: false
+  Enabled: true
 
 Naming/PredicateMethod:
-  Enabled: false
+  Enabled: true
 
 Naming/VariableNumber:
-  Enabled: false
+  Enabled: true
 
 Naming/MemoizedInstanceVariableName:
-  Enabled: false
+  Enabled: true
 
 Naming/PredicatePrefix:
-  Enabled: false
+  Enabled: true
 
 # Performance
 Performance/UnfreezeString:
@@ -376,13 +385,13 @@ Performance/Sum:
 
 # Relax performance cops that require refactors
 Performance/CollectionLiteralInLoop:
-  Enabled: false
+  Enabled: true
 
 Performance/MapCompact:
-  Enabled: false
+  Enabled: true
 
 Performance/RedundantEqualityComparisonBlock:
-  Enabled: false
+  Enabled: true
 
 # Gemspec
 Gemspec/DevelopmentDependencies:

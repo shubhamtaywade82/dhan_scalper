@@ -155,7 +155,7 @@ module DhanScalper
 
       # Get detailed breakdown of all positions
       def get_position_breakdown
-        @position_tracker.get_positions.map do |position|
+        @position_tracker.get_positions.filter_map do |position|
           next unless DhanScalper::Support::Money.positive?(position[:net_qty])
 
           current_price = position[:current_price] || position[:buy_avg]
@@ -174,7 +174,7 @@ module DhanScalper
             unrealized_pnl: unrealized,
             market_value: DhanScalper::Support::Money.multiply(current_price, position[:net_qty]),
           }
-        end.compact
+        end
       end
     end
   end

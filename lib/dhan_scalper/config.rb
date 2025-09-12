@@ -7,48 +7,48 @@ module DhanScalper
   class Config
     class ValidationError < StandardError; end
     DEFAULT = {
-      "symbols" => ["NIFTY"],
-      "global" => {
-        "session_hours" => ["09:20", "15:25"],
-        "min_profit_target" => 1_000.0,
-        "max_day_loss" => 1_500.0,
-        "charge_per_order" => 20.0,
-        "allocation_pct" => 0.30,
-        "slippage_buffer_pct" => 0.01,
-        "max_lots_per_trade" => 10,
-        "decision_interval" => 10,
-        "decision_interval_sec" => nil,
-        "risk_loop_interval_sec" => 1,
-        "ohlc_poll_minutes" => 3,
-        "log_throttle_sec" => 60,
-        "redis_namespace" => "dhan_scalper:v1",
-        "historical_stagger_sec" => 4,
-        "log_level" => "INFO",
-        "tp_pct" => 0.35,
-        "sl_pct" => 0.18,
-        "trail_pct" => 0.12,
-        "min_premium_price" => 1.0,
-        "log_status_every" => 60,
+      symbols: ["NIFTY"],
+      global: {
+        session_hours: ["09:20", "15:25"],
+        min_profit_target: 1_000.0,
+        max_day_loss: 1_500.0,
+        charge_per_order: 20.0,
+        allocation_pct: 0.30,
+        slippage_buffer_pct: 0.01,
+        max_lots_per_trade: 10,
+        decision_interval: 10,
+        decision_interval_sec: nil,
+        risk_loop_interval_sec: 1,
+        ohlc_poll_minutes: 3,
+        log_throttle_sec: 60,
+        redis_namespace: "dhan_scalper:v1",
+        historical_stagger_sec: 4,
+        log_level: "INFO",
+        tp_pct: 0.35,
+        sl_pct: 0.18,
+        trail_pct: 0.12,
+        min_premium_price: 1.0,
+        log_status_every: 60,
         # Risk manager hardening
-        "time_stop_seconds" => 300, # 5 minutes default
-        "max_daily_loss_rs" => 2_000.0, # Max daily loss in rupees
-        "cooldown_after_loss_seconds" => 180, # 3 minutes default
-        "enable_time_stop" => true,
-        "enable_daily_loss_cap" => true,
-        "enable_cooldown" => true,
+        time_stop_seconds: 300, # 5 minutes default
+        max_daily_loss_rs: 2_000.0, # Max daily loss in rupees
+        cooldown_after_loss_seconds: 180, # 3 minutes default
+        enable_time_stop: true,
+        enable_daily_loss_cap: true,
+        enable_cooldown: true,
       },
-      "paper" => {
-        "starting_balance" => 200_000.0,
+      paper: {
+        starting_balance: 200_000.0,
       },
-      "SYMBOLS" => {
-        "NIFTY" => {
-          "idx_sid" => ENV.fetch("NIFTY_IDX_SID", "13"),
-          "seg_idx" => "IDX_I",
-          "seg_opt" => "NSE_FNO",
-          "strike_step" => 50,
-          "lot_size" => 75,
-          "qty_multiplier" => 1,
-          "expiry_wday" => 4, # Fallback only - API expiry dates are used primarily
+      SYMBOLS: {
+        NIFTY: {
+          idx_sid: ENV.fetch("NIFTY_IDX_SID", "13"),
+          seg_idx: "IDX_I",
+          seg_opt: "NSE_FNO",
+          strike_step: 50,
+          lot_size: 75,
+          qty_multiplier: 1,
+          expiry_wday: 4, # Fallback only - API expiry dates are used primarily
         },
       },
     }.freeze
@@ -243,7 +243,7 @@ module DhanScalper
     def self.deep_dup(obj)
       case obj
       when Hash
-        obj.each_with_object({}) { |(k, v), h| h[k] = deep_dup(v) }
+        obj.transform_values { |v| deep_dup(v) }
       when Array
         obj.map { |v| deep_dup(v) }
       else

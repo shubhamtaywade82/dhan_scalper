@@ -269,10 +269,10 @@ module DhanScalper
         when "INDEX"
           # For indices, determine based on the instrument ID
           case instrument_id.to_s
-          when "13" then "IDX_I" # NIFTY
-          when "25", "23" then "IDX_I" # BANKNIFTY
-          when "51" then "IDX_I" # SENSEX
-          else "IDX_I" # Default to IDX_I for indices
+          when "13", "25", "51"  # NIFTY, BANKNIFTY, SENSEX
+            "IDX_I"
+          else
+            "IDX_I"  # Default for other indices
           end
         when "OPTION"
           # For options, use CSV master to determine the correct segment
@@ -346,17 +346,17 @@ module DhanScalper
         tick_cache_data = {
           segment: segment,
           security_id: instrument_id,
-          ltp: tick_data[:ltp]&.to_f || 0.0,
-          open: tick_data[:open]&.to_f || 0.0,
-          high: tick_data[:high]&.to_f || 0.0,
-          low: tick_data[:low]&.to_f || 0.0,
-          close: tick_data[:close]&.to_f || 0.0,
-          volume: tick_data[:volume]&.to_i || 0,
+          ltp: tick_data[:ltp].to_f,
+          open: tick_data[:open].to_f,
+          high: tick_data[:high].to_f,
+          low: tick_data[:low].to_f,
+          close: tick_data[:close].to_f,
+          volume: tick_data[:volume].to_i,
           timestamp: timestamp,
-          day_high: tick_data[:high]&.to_f || 0.0,
-          day_low: tick_data[:low]&.to_f || 0.0,
-          atp: tick_data[:ltp]&.to_f || 0.0,
-          vol: tick_data[:volume]&.to_i || 0,
+          day_high: tick_data[:high].to_f,
+          day_low: tick_data[:low].to_f,
+          atp: tick_data[:ltp].to_f,
+          vol: tick_data[:volume].to_i,
         }
 
         # Store in TickCache
@@ -366,12 +366,12 @@ module DhanScalper
         price_data = {
           instrument_id: instrument_id,
           symbol: tick_data[:symbol],
-          last_price: tick_data[:ltp]&.to_f || 0.0,
-          open: tick_data[:open]&.to_f || 0.0,
-          high: tick_data[:high]&.to_f || 0.0,
-          low: tick_data[:low]&.to_f || 0.0,
-          close: tick_data[:close]&.to_f || 0.0,
-          volume: tick_data[:volume]&.to_i || 0,
+          last_price: tick_data[:ltp].to_f,
+          open: tick_data[:open].to_f,
+          high: tick_data[:high].to_f,
+          low: tick_data[:low].to_f,
+          close: tick_data[:close].to_f,
+          volume: tick_data[:volume].to_i,
           timestamp: timestamp,
           segment: segment,
           exchange: "NSE",

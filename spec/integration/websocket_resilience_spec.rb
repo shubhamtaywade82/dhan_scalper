@@ -76,7 +76,7 @@ RSpec.describe "WebSocket Resilience Integration", :integration do
     # Mock DhanHQ WebSocket client
     fake_client_class = Class.new do
       def self.new(*)
-        @instance ||= FakeWebSocketConnection.new
+        @new ||= FakeWebSocketConnection.new
       end
     end
     stub_const("DhanHQ::WS::Client", fake_client_class)

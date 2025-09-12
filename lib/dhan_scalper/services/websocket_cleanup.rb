@@ -9,7 +9,7 @@ module DhanScalper
       class << self
         # Register cleanup handlers for all WebSocket connections
         def register_cleanup
-          @cleanup_registered ||= begin
+          @register_cleanup ||= begin
             at_exit do
               cleanup_all_websockets
             end

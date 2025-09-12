@@ -54,7 +54,7 @@ module DhanScalper
         grace_start = market_start - 5.minutes
         grace_end = market_end + 5.minutes
 
-        current_time >= grace_start && current_time <= grace_end
+        current_time.between?(grace_start, grace_end)
       end
 
       def day_loss_limit_breached?

@@ -262,12 +262,12 @@ RSpec.describe DhanScalper::CandleSeries do
     context "with columnar hash response" do
       let(:raw_data) do
         {
-          "timestamp" => [Time.now.to_i, Time.now.to_i],
-          "open" => [100.0, 103.0],
-          "high" => [105.0, 107.0],
-          "low" => [98.0, 102.0],
-          "close" => [103.0, 106.0],
-          "volume" => [1_000, 1_200],
+          timestamp: [Time.now.to_i, Time.now.to_i],
+          open: [100.0, 103.0],
+          high: [105.0, 107.0],
+          low: [98.0, 102.0],
+          close: [103.0, 106.0],
+          volume: [1_000, 1_200],
         }
       end
 
@@ -325,12 +325,12 @@ RSpec.describe DhanScalper::CandleSeries do
     context "with columnar hash response" do
       let(:raw_data) do
         {
-          "timestamp" => [Time.now.to_i],
-          "open" => [100.0],
-          "high" => [105.0],
-          "low" => [98.0],
-          "close" => [103.0],
-          "volume" => [1_000],
+          timestamp: [Time.now.to_i],
+          open: [100.0],
+          high: [105.0],
+          low: [98.0],
+          close: [103.0],
+          volume: [1_000],
         }
       end
 
@@ -366,12 +366,12 @@ RSpec.describe DhanScalper::CandleSeries do
 
       it "handles string keys" do
         candle_with_strings = {
-          "timestamp" => Time.now.to_i,
-          "open" => "100.0",
-          "high" => "105.0",
-          "low" => "98.0",
-          "close" => "103.0",
-          "volume" => "1000",
+          timestamp: Time.now.to_i,
+          open: "100.0",
+          high: "105.0",
+          low: "98.0",
+          close: "103.0",
+          volume: "1000",
         }
         result = series.send(:slice_candle, candle_with_strings)
         expect(result[:open]).to eq("100.0")

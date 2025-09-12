@@ -216,7 +216,7 @@ module DhanScalper
     end
 
     def print_console_summary(report_data)
-      puts "\n" + ("=" * 60)
+      puts "\n#{"=" * 60}"
       puts "DHAN SCALPER - SESSION REPORT"
       puts "=" * 60
 

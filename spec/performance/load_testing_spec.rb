@@ -5,33 +5,33 @@ require "spec_helper"
 RSpec.describe "Performance and Load Testing", :slow do
   let(:config) do
     {
-      "global" => {
-        "min_profit_target" => 1_000,
-        "max_day_loss" => 5_000,
-        "decision_interval" => 1,
-        "log_level" => "WARN",
+      global: {
+        min_profit_target: 1_000,
+        max_day_loss: 5_000,
+        decision_interval: 1,
+        log_level: "WARN",
       },
-      "paper" => {
-        "starting_balance" => 1_000_000,
+      paper: {
+        starting_balance: 1_000_000,
       },
-      "SYMBOLS" => {
-        "NIFTY" => {
-          "idx_sid" => "13",
-          "seg_idx" => "IDX_I",
-          "seg_opt" => "NSE_FNO",
-          "strike_step" => 50,
-          "lot_size" => 75,
-          "qty_multiplier" => 1,
-          "expiry_wday" => 4,
+      SYMBOLS: {
+        NIFTY: {
+          idx_sid: "13",
+          seg_idx: "IDX_I",
+          seg_opt: "NSE_FNO",
+          strike_step: 50,
+          lot_size: 75,
+          qty_multiplier: 1,
+          expiry_wday: 4,
         },
-        "BANKNIFTY" => {
-          "idx_sid" => "25",
-          "seg_idx" => "IDX_I",
-          "seg_opt" => "NSE_FNO",
-          "strike_step" => 100,
-          "lot_size" => 25,
-          "qty_multiplier" => 1,
-          "expiry_wday" => 4,
+        BANKNIFTY: {
+          idx_sid: "25",
+          seg_idx: "IDX_I",
+          seg_opt: "NSE_FNO",
+          strike_step: 100,
+          lot_size: 25,
+          qty_multiplier: 1,
+          expiry_wday: 4,
         },
       },
     }
@@ -255,13 +255,13 @@ RSpec.describe "Performance and Load Testing", :slow do
       large_csv_data = []
       10_000.times do |i|
         large_csv_data << {
-          "UNDERLYING_SYMBOL" => "NIFTY",
-          "INSTRUMENT" => "OPTIDX",
-          "SM_EXPIRY_DATE" => "2024-12-26",
-          "STRIKE_PRICE" => (25_000 + (i * 50)).to_s,
-          "OPTION_TYPE" => i.even? ? "CE" : "PE",
-          "SECURITY_ID" => "TEST#{i}",
-          "LOT_SIZE" => "75",
+          UNDERLYING_SYMBOL: "NIFTY",
+          INSTRUMENT: "OPTIDX",
+          SM_EXPIRY_DATE: "2024-12-26",
+          STRIKE_PRICE: (25_000 + (i * 50)).to_s,
+          OPTION_TYPE: i.even? ? "CE" : "PE",
+          SECURITY_ID: "TEST#{i}",
+          LOT_SIZE: "75",
         }
       end
 
@@ -409,13 +409,13 @@ RSpec.describe "Performance and Load Testing", :slow do
 
       50.times do |i|
         many_symbols_config["SYMBOLS"]["SYMBOL_#{i}"] = {
-          "idx_sid" => "#{i}",
-          "seg_idx" => "IDX_I",
-          "seg_opt" => "NSE_FNO",
-          "strike_step" => 50,
-          "lot_size" => 75,
-          "qty_multiplier" => 1,
-          "expiry_wday" => 4,
+          idx_sid: "#{i}",
+          seg_idx: "IDX_I",
+          seg_opt: "NSE_FNO",
+          strike_step: 50,
+          lot_size: 75,
+          qty_multiplier: 1,
+          expiry_wday: 4,
         }
       end
 

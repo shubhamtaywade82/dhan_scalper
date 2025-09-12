@@ -5,18 +5,18 @@ require "spec_helper"
 RSpec.describe DhanScalper::EnhancedRiskManager do
   let(:config) do
     {
-      "global" => {
-        "tp_pct" => 0.35,
-        "sl_pct" => 0.18,
-        "trail_pct" => 0.12,
-        "charge_per_order" => 20.0,
-        "risk_check_interval" => 1,
-        "time_stop_seconds" => 5, # Short for testing
-        "max_daily_loss_rs" => 1_000.0,
-        "cooldown_after_loss_seconds" => 3, # Short for testing
-        "enable_time_stop" => true,
-        "enable_daily_loss_cap" => true,
-        "enable_cooldown" => true,
+      global: {
+        tp_pct: 0.35,
+        sl_pct: 0.18,
+        trail_pct: 0.12,
+        charge_per_order: 20.0,
+        risk_check_interval: 1,
+        time_stop_seconds: 5, # Short for testing
+        max_daily_loss_rs: 1_000.0,
+        cooldown_after_loss_seconds: 3, # Short for testing
+        enable_time_stop: true,
+        enable_daily_loss_cap: true,
+        enable_cooldown: true,
       },
     }
   end

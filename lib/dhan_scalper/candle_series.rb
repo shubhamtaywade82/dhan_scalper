@@ -247,9 +247,9 @@ module DhanScalper
 
     def to_hash
       {
-        "timestamp" => candles.map { |c| c.timestamp.to_i },
-        "open" => opens, "high" => highs, "low" => lows, "close" => closes,
-        "volume" => volumes
+        timestamp: candles.map { |c| c.timestamp.to_i },
+        open: opens, high: highs, low: lows, close: closes,
+        volume: volumes
       }
     end
 

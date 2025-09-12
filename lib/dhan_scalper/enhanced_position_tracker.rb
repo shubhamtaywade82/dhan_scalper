@@ -109,7 +109,7 @@ module DhanScalper
     end
 
     def update_all_positions
-      @positions.each do |_key, position|
+      @positions.each_value do |position|
         current_price = get_current_price(position.security_id)
         position.update_price(current_price) if current_price&.positive?
       end
@@ -143,8 +143,8 @@ module DhanScalper
         closed: {
           count: closed_positions.size,
           total_pnl: closed_positions.sum { |p| p[:pnl] },
-          winning: closed_positions.count { |p| p[:pnl] > 0 },
-          losing: closed_positions.count { |p| p[:pnl] < 0 },
+          winning: closed_positions.count { |p| p[:pnl].positive? },
+          losing: closed_positions.count { |p| p[:pnl].negative? },
           positions: closed_positions,
         },
         session: get_session_stats,
@@ -173,7 +173,7 @@ module DhanScalper
       pnl = position.pnl
       @session_stats[:total_pnl] += pnl
 
-      if pnl > 0
+      if pnl.positive?
         @session_stats[:winning_trades] += 1
         @session_stats[:max_profit] = [@session_stats[:max_profit], pnl].max
       else
@@ -199,7 +199,7 @@ module DhanScalper
         csv << %w[symbol security_id side entry_price quantity current_price pnl pnl_percentage
                   option_type strike expiry timestamp]
 
-        @positions.values.each do |position|
+        @positions.each_value do |position|
           csv << [
             position.symbol,
             position.security_id,

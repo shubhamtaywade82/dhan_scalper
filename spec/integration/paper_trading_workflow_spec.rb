@@ -5,35 +5,35 @@ require "spec_helper"
 RSpec.describe "Paper Trading Workflow Integration", :integration do
   let(:config) do
     {
-      "global" => {
-        "min_profit_target" => 1_000,
-        "max_day_loss" => 5_000,
-        "decision_interval" => 5,
-        "log_level" => "INFO",
-        "use_multi_timeframe" => true,
-        "secondary_timeframe" => 5,
+      global: {
+        min_profit_target: 1_000,
+        max_day_loss: 5_000,
+        decision_interval: 5,
+        log_level: "INFO",
+        use_multi_timeframe: true,
+        secondary_timeframe: 5,
       },
-      "paper" => {
-        "starting_balance" => 200_000,
+      paper: {
+        starting_balance: 200_000,
       },
-      "SYMBOLS" => {
-        "NIFTY" => {
-          "idx_sid" => "13",
-          "seg_idx" => "IDX_I",
-          "seg_opt" => "NSE_FNO",
-          "strike_step" => 50,
-          "lot_size" => 75,
-          "qty_multiplier" => 1,
-          "expiry_wday" => 4,
+      SYMBOLS: {
+        NIFTY: {
+          idx_sid: "13",
+          seg_idx: "IDX_I",
+          seg_opt: "NSE_FNO",
+          strike_step: 50,
+          lot_size: 75,
+          qty_multiplier: 1,
+          expiry_wday: 4,
         },
-        "BANKNIFTY" => {
-          "idx_sid" => "25",
-          "seg_idx" => "IDX_I",
-          "seg_opt" => "NSE_FNO",
-          "strike_step" => 100,
-          "lot_size" => 25,
-          "qty_multiplier" => 1,
-          "expiry_wday" => 4,
+        BANKNIFTY: {
+          idx_sid: "25",
+          seg_idx: "IDX_I",
+          seg_opt: "NSE_FNO",
+          strike_step: 100,
+          lot_size: 25,
+          qty_multiplier: 1,
+          expiry_wday: 4,
         },
       },
     }
@@ -119,8 +119,8 @@ RSpec.describe "Paper Trading Workflow Integration", :integration do
 
     # Mock TickCache with realistic price data
     @price_data = {
-      "NIFTY" => 25_000.0,
-      "BANKNIFTY" => 50_000.0,
+      NIFTY: 25_000.0,
+      BANKNIFTY: 50_000.0,
     }
     allow(DhanScalper::TickCache).to receive(:ltp) do |_segment, security_id|
       case security_id
@@ -136,14 +136,14 @@ RSpec.describe "Paper Trading Workflow Integration", :integration do
 
     # Mock CandleSeries with realistic indicator data
     @indicator_data = {
-      "NIFTY" => {
+      NIFTY: {
         bias: :bullish,
         momentum: :strong,
         adx: 30.0,
         rsi: 65.0,
         macd: :bullish,
       },
-      "BANKNIFTY" => {
+      BANKNIFTY: {
         bias: :bearish,
         momentum: :strong,
         adx: 28.0,
@@ -171,8 +171,8 @@ RSpec.describe "Paper Trading Workflow Integration", :integration do
       }
     end
     allow(paper_app).to receive(:instance_variable_get).with(:@option_pickers).and_return({
-                                                                                            "NIFTY" => @mock_option_picker,
-                                                                                            "BANKNIFTY" => @mock_option_picker,
+                                                                                            NIFTY: @mock_option_picker,
+                                                                                            BANKNIFTY: @mock_option_picker,
                                                                                           })
 
     # Mock Paper Broker with realistic order execution
@@ -412,9 +412,9 @@ RSpec.describe "Paper Trading Workflow Integration", :integration do
     it "handles missing configuration gracefully" do
       # Test with minimal configuration
       minimal_config = {
-        "global" => { "decision_interval" => 10 },
-        "paper" => { "starting_balance" => 100_000 },
-        "SYMBOLS" => { "NIFTY" => { "idx_sid" => "13", "seg_idx" => "IDX_I", "seg_opt" => "NSE_FNO" } },
+        global: { decision_interval: 10 },
+        paper: { starting_balance: 100_000 },
+        SYMBOLS: { NIFTY: { idx_sid: "13", seg_idx: "IDX_I", seg_opt: "NSE_FNO" } },
       }
 
       minimal_app = DhanScalper::PaperApp.new(minimal_config, quiet: true, enhanced: true)

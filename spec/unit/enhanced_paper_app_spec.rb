@@ -5,26 +5,26 @@ require "spec_helper"
 RSpec.describe DhanScalper::PaperApp, :unit do
   let(:base_config) do
     {
-      "global" => {
-        "min_profit_target" => 1_000,
-        "max_day_loss" => 5_000,
-        "decision_interval" => 10,
-        "log_level" => "INFO",
-        "use_multi_timeframe" => true,
-        "secondary_timeframe" => 5,
+      global: {
+        min_profit_target: 1_000,
+        max_day_loss: 5_000,
+        decision_interval: 10,
+        log_level: "INFO",
+        use_multi_timeframe: true,
+        secondary_timeframe: 5,
       },
-      "paper" => {
-        "starting_balance" => 200_000,
+      paper: {
+        starting_balance: 200_000,
       },
-      "SYMBOLS" => {
-        "NIFTY" => {
-          "idx_sid" => "13",
-          "seg_idx" => "IDX_I",
-          "seg_opt" => "NSE_FNO",
-          "strike_step" => 50,
-          "lot_size" => 75,
-          "qty_multiplier" => 1,
-          "expiry_wday" => 4,
+      SYMBOLS: {
+        NIFTY: {
+          idx_sid: "13",
+          seg_idx: "IDX_I",
+          seg_opt: "NSE_FNO",
+          strike_step: 50,
+          lot_size: 75,
+          qty_multiplier: 1,
+          expiry_wday: 4,
         },
       },
     }
@@ -120,7 +120,7 @@ RSpec.describe DhanScalper::PaperApp, :unit do
                                                                                strike: 25_000 },
                                                                        })
     allow(paper_app).to receive(:instance_variable_get).with(:@option_pickers).and_return({
-                                                                                            "NIFTY" => @mock_option_picker,
+                                                                                            NIFTY: @mock_option_picker,
                                                                                           })
 
     # Mock Paper Broker

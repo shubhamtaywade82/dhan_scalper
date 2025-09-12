@@ -5,29 +5,29 @@ require "spec_helper"
 RSpec.describe DhanScalper::App do
   let(:config) do
     {
-      "SYMBOLS" => {
-        "NIFTY" => {
-          "idx_sid" => "13",
-          "seg_idx" => "IDX_I",
-          "seg_opt" => "NSE_FNO",
-          "strike_step" => 50,
-          "lot_size" => 75,
-          "qty_multiplier" => 1,
-          "expiry_wday" => 4,
+      SYMBOLS: {
+        NIFTY: {
+          idx_sid: "13",
+          seg_idx: "IDX_I",
+          seg_opt: "NSE_FNO",
+          strike_step: 50,
+          lot_size: 75,
+          qty_multiplier: 1,
+          expiry_wday: 4,
         },
       },
-      "global" => {
-        "min_profit_target" => 1_000.0,
-        "max_day_loss" => 1_500.0,
-        "decision_interval" => 10,
-        "tp_pct" => 0.35,
-        "sl_pct" => 0.18,
-        "trail_pct" => 0.12,
-        "charge_per_order" => 20.0,
-        "log_level" => "INFO",
+      global: {
+        min_profit_target: 1_000.0,
+        max_day_loss: 1_500.0,
+        decision_interval: 10,
+        tp_pct: 0.35,
+        sl_pct: 0.18,
+        trail_pct: 0.12,
+        charge_per_order: 20.0,
+        log_level: "INFO",
       },
-      "paper" => {
-        "starting_balance" => 200_000.0,
+      paper: {
+        starting_balance: 200_000.0,
       },
     }
   end
@@ -191,7 +191,7 @@ RSpec.describe DhanScalper::App do
     before do
       # Mock WebSocket creation
       allow(app).to receive_messages(create_websocket_client: mock_websocket,
-                                     setup_traders: [{ "NIFTY" => mock_trader }, {}, {}], sym_cfg: config["SYMBOLS"]["NIFTY"], wait_for_spot: 19_500.0, total_pnl_preview: 0.0, instance_open?: false, session_target: 1_000.0)
+                                     setup_traders: [{ NIFTY: mock_trader }, {}, {}], sym_cfg: config["SYMBOLS"]["NIFTY"], wait_for_spot: 19_500.0, total_pnl_preview: 0.0, instance_open?: false, session_target: 1_000.0)
     end
 
     it "configures DhanHQ" do

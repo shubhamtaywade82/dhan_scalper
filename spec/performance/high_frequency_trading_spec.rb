@@ -5,44 +5,44 @@ require "spec_helper"
 RSpec.describe "High-Frequency Trading Performance", :performance, :slow do
   let(:config) do
     {
-      "global" => {
-        "min_profit_target" => 1_000,
-        "max_day_loss" => 5_000,
-        "decision_interval" => 1, # 1 second for high frequency
-        "log_level" => "WARN", # Reduce logging for performance
-        "use_multi_timeframe" => true,
-        "secondary_timeframe" => 5,
+      global: {
+        min_profit_target: 1_000,
+        max_day_loss: 5_000,
+        decision_interval: 1, # 1 second for high frequency
+        log_level: "WARN", # Reduce logging for performance
+        use_multi_timeframe: true,
+        secondary_timeframe: 5,
       },
-      "paper" => {
-        "starting_balance" => 1_000_000,
+      paper: {
+        starting_balance: 1_000_000,
       },
-      "SYMBOLS" => {
-        "NIFTY" => {
-          "idx_sid" => "13",
-          "seg_idx" => "IDX_I",
-          "seg_opt" => "NSE_FNO",
-          "strike_step" => 50,
-          "lot_size" => 75,
-          "qty_multiplier" => 1,
-          "expiry_wday" => 4,
+      SYMBOLS: {
+        NIFTY: {
+          idx_sid: "13",
+          seg_idx: "IDX_I",
+          seg_opt: "NSE_FNO",
+          strike_step: 50,
+          lot_size: 75,
+          qty_multiplier: 1,
+          expiry_wday: 4,
         },
-        "BANKNIFTY" => {
-          "idx_sid" => "25",
-          "seg_idx" => "IDX_I",
-          "seg_opt" => "NSE_FNO",
-          "strike_step" => 100,
-          "lot_size" => 25,
-          "qty_multiplier" => 1,
-          "expiry_wday" => 4,
+        BANKNIFTY: {
+          idx_sid: "25",
+          seg_idx: "IDX_I",
+          seg_opt: "NSE_FNO",
+          strike_step: 100,
+          lot_size: 25,
+          qty_multiplier: 1,
+          expiry_wday: 4,
         },
-        "FINNIFTY" => {
-          "idx_sid" => "26",
-          "seg_idx" => "IDX_I",
-          "seg_opt" => "NSE_FNO",
-          "strike_step" => 50,
-          "lot_size" => 50,
-          "qty_multiplier" => 1,
-          "expiry_wday" => 4,
+        FINNIFTY: {
+          idx_sid: "26",
+          seg_idx: "IDX_I",
+          seg_opt: "NSE_FNO",
+          strike_step: 50,
+          lot_size: 50,
+          qty_multiplier: 1,
+          expiry_wday: 4,
         },
       },
     }
@@ -180,9 +180,9 @@ RSpec.describe "High-Frequency Trading Performance", :performance, :slow do
       }
     end
     allow(paper_app).to receive(:instance_variable_get).with(:@option_pickers).and_return({
-                                                                                            "NIFTY" => @mock_option_picker,
-                                                                                            "BANKNIFTY" => @mock_option_picker,
-                                                                                            "FINNIFTY" => @mock_option_picker,
+                                                                                            NIFTY: @mock_option_picker,
+                                                                                            BANKNIFTY: @mock_option_picker,
+                                                                                            FINNIFTY: @mock_option_picker,
                                                                                           })
 
     # Mock Paper Broker with high-performance order execution

@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
+require "English"
 require "bundler/setup"
 require "rspec"
 require "colorize"
@@ -87,7 +88,7 @@ class ComprehensiveTestRunner
 
     # Run tests
     system(*cmd)
-    $?.success?
+    $CHILD_STATUS.success?
   end
 
   def print_summary
@@ -120,7 +121,7 @@ class ComprehensiveTestRunner
 end
 
 # Main execution
-if __FILE__ == $0
+if __FILE__ == $PROGRAM_NAME
   categories = ARGV.map(&:to_sym)
   categories = [:all] if categories.empty?
 

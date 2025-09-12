@@ -131,14 +131,14 @@ module DhanScalper
       # @param value [BigDecimal, Numeric] The value
       # @return [Boolean] True if value is positive
       def positive?(value)
-        bd(value) > 0
+        bd(value).positive?
       end
 
       # Check if value is negative
       # @param value [BigDecimal, Numeric] The value
       # @return [Boolean] True if value is negative
       def negative?(value)
-        bd(value) < 0
+        bd(value).negative?
       end
 
       # Format monetary value for display
@@ -176,7 +176,7 @@ module DhanScalper
       def max(a, b)
         a_bd = bd(a)
         b_bd = bd(b)
-        a_bd > b_bd ? a_bd : b_bd
+        [a_bd, b_bd].max
       end
 
       # Get minimum of two values
@@ -186,7 +186,7 @@ module DhanScalper
       def min(a, b)
         a_bd = bd(a)
         b_bd = bd(b)
-        a_bd < b_bd ? a_bd : b_bd
+        [a_bd, b_bd].min
       end
     end
   end

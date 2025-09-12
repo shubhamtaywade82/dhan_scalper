@@ -67,7 +67,7 @@ RSpec.describe "WebSocket Resubscription Demo", :integration do
     # Mock DhanHQ WebSocket client to use our fake feed
     fake_client_class = Class.new do
       def self.new(*)
-        @instance ||= FakeMarketFeed.new
+        @new ||= FakeMarketFeed.new
       end
     end
     stub_const("DhanHQ::WS::Client", fake_client_class)

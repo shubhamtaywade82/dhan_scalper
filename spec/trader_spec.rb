@@ -12,12 +12,12 @@ RSpec.describe DhanScalper::Trader do
 
   let(:symbol_config) do
     {
-      "seg_idx" => "IDX_I",
-      "idx_sid" => "13",
-      "seg_opt" => "NSE_FNO",
-      "strike_step" => 50,
-      "lot_size" => 75,
-      "qty_multiplier" => 1,
+      seg_idx: "IDX_I",
+      idx_sid: "13",
+      seg_opt: "NSE_FNO",
+      strike_step: 50,
+      lot_size: 75,
+      qty_multiplier: 1,
     }
   end
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
+require "English"
 require "colorize"
 require "time"
 
@@ -84,7 +85,7 @@ class ComprehensiveTestSuite
     puts
 
     system(*cmd)
-    $?.success?
+    $CHILD_STATUS.success?
   end
 
   def print_category_summary(_category, duration, success)

@@ -163,7 +163,7 @@ RSpec.describe DhanScalper::Indicators::HolyGrail, :unit do
 
       it "handles negative values gracefully" do
         negative_data = candle_data.dup
-        negative_data[:closes] = (1..200).map { |i| -i }
+        negative_data[:closes] = (1..200).map(&:-@)
         negative_data[:highs] = (1..200).map { |i| -i + 10 }
         negative_data[:lows] = (1..200).map { |i| -i - 10 }
 
@@ -245,7 +245,7 @@ RSpec.describe DhanScalper::Indicators::HolyGrail, :unit do
       threads.each(&:join)
 
       expect(results.length).to eq(10)
-      expect(results.all? { |r| r.is_a?(Hash) }).to be true
+      expect(results.all?(Hash)).to be true
     end
   end
 end
@@ -266,7 +266,7 @@ RSpec.describe DhanScalper::Indicators::Supertrend, :unit do
       result = supertrend.call
       expect(result).to be_an(Array)
       expect(result.length).to eq(100)
-      expect(result.all? { |v| v.is_a?(Numeric) }).to be true
+      expect(result.all?(Numeric)).to be true
     end
 
     it "handles different periods correctly" do

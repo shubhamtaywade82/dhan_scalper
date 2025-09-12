@@ -102,11 +102,10 @@ module DhanScalper
 
         if %i[long short].include?(signal)
           # If streak not already on, set start.
+          @cache.set(key_on, "1", ttl: @streak_window_seconds)
           if @cache.exists?(key_on)
-            # Refresh TTL while trend remains ON
-            @cache.set(key_on, "1", ttl: @streak_window_seconds)
+          # Refresh TTL while trend remains ON
           else
-            @cache.set(key_on, "1", ttl: @streak_window_seconds)
             @cache.set(key_ts, Time.now.iso8601, ttl: @streak_window_seconds)
           end
         else

@@ -190,7 +190,7 @@ module DhanScalper
       end
 
       def generate_console_summary(report_data)
-        puts "\n" + ("=" * 80)
+        puts "\n#{"=" * 80}"
         puts "📊 SESSION REPORT - #{report_data[:session_id]}"
         puts "=" * 80
 
@@ -220,9 +220,9 @@ module DhanScalper
 
         # Performance Rating
         pnl = report_data[:total_pnl] || 0
-        if pnl > 0
+        if pnl.positive?
           puts "\n✅ SESSION RESULT: PROFITABLE"
-        elsif pnl < 0
+        elsif pnl.negative?
           puts "\n❌ SESSION RESULT: LOSS"
         else
           puts "\n➖ SESSION RESULT: BREAKEVEN"

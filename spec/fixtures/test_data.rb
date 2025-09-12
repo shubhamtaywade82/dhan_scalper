@@ -3,42 +3,42 @@
 module TestData
   # Sample configuration for testing
   SAMPLE_CONFIG = {
-    "global" => {
-      "min_profit_target" => 1_000,
-      "max_day_loss" => 5_000,
-      "decision_interval" => 10,
-      "log_level" => "INFO",
-      "use_multi_timeframe" => true,
-      "secondary_timeframe" => 5,
-      "charge_per_order" => 20,
-      "allocation_pct" => 0.30,
-      "slippage_buffer_pct" => 0.01,
-      "max_lots_per_trade" => 10,
-      "tp_pct" => 0.35,
-      "sl_pct" => 0.18,
-      "trail_pct" => 0.12,
+    global: {
+      min_profit_target: 1_000,
+      max_day_loss: 5_000,
+      decision_interval: 10,
+      log_level: "INFO",
+      use_multi_timeframe: true,
+      secondary_timeframe: 5,
+      charge_per_order: 20,
+      allocation_pct: 0.30,
+      slippage_buffer_pct: 0.01,
+      max_lots_per_trade: 10,
+      tp_pct: 0.35,
+      sl_pct: 0.18,
+      trail_pct: 0.12,
     },
-    "paper" => {
-      "starting_balance" => 200_000,
+    paper: {
+      starting_balance: 200_000,
     },
-    "SYMBOLS" => {
-      "NIFTY" => {
-        "idx_sid" => "13",
-        "seg_idx" => "IDX_I",
-        "seg_opt" => "NSE_FNO",
-        "strike_step" => 50,
-        "lot_size" => 75,
-        "qty_multiplier" => 1,
-        "expiry_wday" => 4,
+    SYMBOLS: {
+      NIFTY: {
+        idx_sid: "13",
+        seg_idx: "IDX_I",
+        seg_opt: "NSE_FNO",
+        strike_step: 50,
+        lot_size: 75,
+        qty_multiplier: 1,
+        expiry_wday: 4,
       },
-      "BANKNIFTY" => {
-        "idx_sid" => "25",
-        "seg_idx" => "IDX_I",
-        "seg_opt" => "NSE_FNO",
-        "strike_step" => 100,
-        "lot_size" => 25,
-        "qty_multiplier" => 1,
-        "expiry_wday" => 4,
+      BANKNIFTY: {
+        idx_sid: "25",
+        seg_idx: "IDX_I",
+        seg_opt: "NSE_FNO",
+        strike_step: 100,
+        lot_size: 25,
+        qty_multiplier: 1,
+        expiry_wday: 4,
       },
     },
   }.freeze
@@ -138,37 +138,37 @@ module TestData
   # Sample CSV master data for testing
   SAMPLE_CSV_DATA = [
     {
-      "UNDERLYING_SYMBOL" => "NIFTY",
-      "INSTRUMENT" => "OPTIDX",
-      "SM_EXPIRY_DATE" => "2024-12-26",
-      "STRIKE_PRICE" => "25000",
-      "OPTION_TYPE" => "CE",
-      "SECURITY_ID" => "TEST123",
-      "LOT_SIZE" => "75",
-      "EXCHANGE" => "NSE",
-      "SEGMENT" => "FNO",
+      UNDERLYING_SYMBOL: "NIFTY",
+      INSTRUMENT: "OPTIDX",
+      SM_EXPIRY_DATE: "2024-12-26",
+      STRIKE_PRICE: "25000",
+      OPTION_TYPE: "CE",
+      SECURITY_ID: "TEST123",
+      LOT_SIZE: "75",
+      EXCHANGE: "NSE",
+      SEGMENT: "FNO",
     },
     {
-      "UNDERLYING_SYMBOL" => "NIFTY",
-      "INSTRUMENT" => "OPTIDX",
-      "SM_EXPIRY_DATE" => "2024-12-26",
-      "STRIKE_PRICE" => "25000",
-      "OPTION_TYPE" => "PE",
-      "SECURITY_ID" => "TEST124",
-      "LOT_SIZE" => "75",
-      "EXCHANGE" => "NSE",
-      "SEGMENT" => "FNO",
+      UNDERLYING_SYMBOL: "NIFTY",
+      INSTRUMENT: "OPTIDX",
+      SM_EXPIRY_DATE: "2024-12-26",
+      STRIKE_PRICE: "25000",
+      OPTION_TYPE: "PE",
+      SECURITY_ID: "TEST124",
+      LOT_SIZE: "75",
+      EXCHANGE: "NSE",
+      SEGMENT: "FNO",
     },
     {
-      "UNDERLYING_SYMBOL" => "NIFTY",
-      "INSTRUMENT" => "INDEX",
-      "SM_EXPIRY_DATE" => "",
-      "STRIKE_PRICE" => "",
-      "OPTION_TYPE" => "",
-      "SECURITY_ID" => "13",
-      "LOT_SIZE" => "75",
-      "EXCHANGE" => "NSE",
-      "SEGMENT" => "I",
+      UNDERLYING_SYMBOL: "NIFTY",
+      INSTRUMENT: "INDEX",
+      SM_EXPIRY_DATE: "",
+      STRIKE_PRICE: "",
+      OPTION_TYPE: "",
+      SECURITY_ID: "13",
+      LOT_SIZE: "75",
+      EXCHANGE: "NSE",
+      SEGMENT: "I",
     },
   ].freeze
 
@@ -209,30 +209,30 @@ module TestData
 
   # Sample Redis data for testing
   SAMPLE_REDIS_DATA = {
-    "dhan_scalper:v1:ticks:NSE_FNO:TEST123" => {
-      "ltp" => "150.0",
-      "open" => "145.0",
-      "high" => "155.0",
-      "low" => "140.0",
-      "close" => "148.0",
-      "volume" => "1000",
-      "timestamp" => Time.now.to_i.to_s,
-      "day_high" => "155.0",
-      "day_low" => "140.0",
-      "atp" => "150.0",
-      "vol" => "1000",
+    "dhan_scalper:v1:ticks:NSE_FNO:TEST123": {
+      ltp: "150.0",
+      open: "145.0",
+      high: "155.0",
+      low: "140.0",
+      close: "148.0",
+      volume: "1000",
+      timestamp: Time.now.to_i.to_s,
+      day_high: "155.0",
+      day_low: "140.0",
+      atp: "150.0",
+      vol: "1000",
     },
-    "dhan_scalper:v1:pos:TEST123" => {
-      "symbol" => "NIFTY",
-      "option_type" => "CE",
-      "strike" => "25000",
-      "expiry" => Date.today.to_s,
-      "instrument_id" => "TEST123",
-      "quantity" => "75",
-      "entry_price" => "150.0",
-      "current_price" => "150.0",
-      "pnl" => "0.0",
-      "created_at" => Time.now.to_s,
+    "dhan_scalper:v1:pos:TEST123": {
+      symbol: "NIFTY",
+      option_type: "CE",
+      strike: "25000",
+      expiry: Date.today.to_s,
+      instrument_id: "TEST123",
+      quantity: "75",
+      entry_price: "150.0",
+      current_price: "150.0",
+      pnl: "0.0",
+      created_at: Time.now.to_s,
     },
   }.freeze
 
@@ -388,11 +388,11 @@ module TestData
   # Mock data generators for testing
   def self.mock_dhanhq_response
     {
-      "status" => "success",
-      "data" => {
-        "available_balance" => 200_000.0,
-        "utilized_amount" => 0.0,
-        "total_balance" => 200_000.0,
+      status: "success",
+      data: {
+        available_balance: 200_000.0,
+        utilized_amount: 0.0,
+        total_balance: 200_000.0,
       },
     }
   end
@@ -417,23 +417,23 @@ module TestData
 
   def self.mock_historical_data
     {
-      "status" => "success",
-      "data" => [
+      status: "success",
+      data: [
         {
-          "timestamp" => (Time.now - 300).to_i,
-          "open" => 25_000.0,
-          "high" => 25_050.0,
-          "low" => 24_950.0,
-          "close" => 25_025.0,
-          "volume" => 1_000,
+          timestamp: (Time.now - 300).to_i,
+          open: 25_000.0,
+          high: 25_050.0,
+          low: 24_950.0,
+          close: 25_025.0,
+          volume: 1_000,
         },
         {
-          "timestamp" => (Time.now - 240).to_i,
-          "open" => 25_025.0,
-          "high" => 25_075.0,
-          "low" => 25_000.0,
-          "close" => 25_050.0,
-          "volume" => 1_200,
+          timestamp: (Time.now - 240).to_i,
+          open: 25_025.0,
+          high: 25_075.0,
+          low: 25_000.0,
+          close: 25_050.0,
+          volume: 1_200,
         },
       ],
     }

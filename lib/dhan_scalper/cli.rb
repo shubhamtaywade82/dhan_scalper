@@ -54,7 +54,7 @@ module DhanScalper
       opts = respond_to?(:options) && options ? options : {}
       cfg = Config.load(path: opts[:config])
       mode = (opts[:mode] || "paper").to_sym
-      quiet = !!opts[:quiet]
+      quiet = !opts[:quiet].nil?
       enhanced = opts.key?(:enhanced) ? opts[:enhanced] : true
       DhanHQ.configure_with_env
       # Always set INFO level for CLI start; keep logs concise for terminal usage

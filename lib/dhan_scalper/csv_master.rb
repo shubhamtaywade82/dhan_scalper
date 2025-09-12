@@ -171,7 +171,7 @@ module DhanScalper
         processed += 1
 
         # Show progress every 10,000 records or every 5 seconds
-        if processed % 10_000 == 0 || Time.now - last_progress > 5
+        if (processed % 10_000).zero? || Time.now - last_progress > 5
           progress = (processed.to_f / total * 100).round(1)
           puts "[CSV_MASTER] Progress: #{processed}/#{total} (#{progress}%)"
           last_progress = Time.now

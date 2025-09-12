@@ -19,9 +19,9 @@ RSpec.describe DhanScalper::Services::AtomicOperations do
     allow(redis).to receive(:multi).and_yield(redis)
     allow(redis).to receive(:eval).and_return(["ok", "100000.0"])
     allow(redis).to receive(:hgetall).and_return({
-                                                   "available" => "100000.0",
-                                                   "used" => "0.0",
-                                                   "total" => "100000.0",
+                                                   available: "100000.0",
+                                                   used: "0.0",
+                                                   total: "100000.0",
                                                  })
     allow(redis).to receive(:hincrbyfloat).and_return("100000.0")
     allow(redis).to receive(:hset).and_return("1")

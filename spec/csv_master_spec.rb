@@ -276,7 +276,7 @@ RSpec.describe DhanScalper::CsvMaster do
   describe "#ensure_data_loaded" do
     context "when data is already loaded" do
       before do
-        csv_master.instance_variable_set(:@data, [{ "test" => "data" }])
+        csv_master.instance_variable_set(:@data, [{ test: "data" }])
       end
 
       it "does not reload data" do
@@ -291,7 +291,7 @@ RSpec.describe DhanScalper::CsvMaster do
       before do
         csv_master.instance_variable_set(:@data, nil)
         allow(csv_master).to receive_messages(load_from_cache: mock_csv_data, download_csv: mock_csv_data,
-                                              parse_csv: [{ "test" => "data" }])
+                                              parse_csv: [{ test: "data" }])
       end
 
       it "tries to load from cache first" do
@@ -491,7 +491,7 @@ RSpec.describe DhanScalper::CsvMaster do
   describe "performance considerations", :slow do
     it "loads data only once per instance" do
       expect(csv_master).to receive(:download_csv).once.and_return(mock_csv_data)
-      allow(csv_master).to receive(:parse_csv).and_return([{ "test" => "data" }])
+      allow(csv_master).to receive(:parse_csv).and_return([{ test: "data" }])
 
       # First call should download
       csv_master.get_expiry_dates("NIFTY")

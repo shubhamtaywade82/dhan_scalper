@@ -101,7 +101,7 @@ module DhanScalper
 
       def setup_cleanup_handlers
         # Set up at_exit handler to ensure WebSocket connections are properly closed
-        @cleanup_registered ||= begin
+        @setup_cleanup_handlers ||= begin
           at_exit do
             stop if @running
           end

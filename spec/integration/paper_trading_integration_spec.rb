@@ -5,26 +5,26 @@ require "spec_helper"
 RSpec.describe "Paper Trading Integration", :slow do
   let(:config) do
     {
-      "global" => {
-        "min_profit_target" => 1_000,
-        "max_day_loss" => 5_000,
-        "decision_interval" => 5,
-        "log_level" => "INFO",
-        "use_multi_timeframe" => true,
-        "secondary_timeframe" => 5,
+      global: {
+        min_profit_target: 1_000,
+        max_day_loss: 5_000,
+        decision_interval: 5,
+        log_level: "INFO",
+        use_multi_timeframe: true,
+        secondary_timeframe: 5,
       },
-      "paper" => {
-        "starting_balance" => 200_000,
+      paper: {
+        starting_balance: 200_000,
       },
-      "SYMBOLS" => {
-        "NIFTY" => {
-          "idx_sid" => "13",
-          "seg_idx" => "IDX_I",
-          "seg_opt" => "NSE_FNO",
-          "strike_step" => 50,
-          "lot_size" => 75,
-          "qty_multiplier" => 1,
-          "expiry_wday" => 4,
+      SYMBOLS: {
+        NIFTY: {
+          idx_sid: "13",
+          seg_idx: "IDX_I",
+          seg_opt: "NSE_FNO",
+          strike_step: 50,
+          lot_size: 75,
+          qty_multiplier: 1,
+          expiry_wday: 4,
         },
       },
     }
@@ -291,13 +291,13 @@ RSpec.describe "Paper Trading Integration", :slow do
     it "handles multiple symbols efficiently" do
       multi_symbol_config = config.dup
       multi_symbol_config["SYMBOLS"]["BANKNIFTY"] = {
-        "idx_sid" => "25",
-        "seg_idx" => "IDX_I",
-        "seg_opt" => "NSE_FNO",
-        "strike_step" => 100,
-        "lot_size" => 25,
-        "qty_multiplier" => 1,
-        "expiry_wday" => 4,
+        idx_sid: "25",
+        seg_idx: "IDX_I",
+        seg_opt: "NSE_FNO",
+        strike_step: 100,
+        lot_size: 25,
+        qty_multiplier: 1,
+        expiry_wday: 4,
       }
 
       multi_app = DhanScalper::PaperApp.new(multi_symbol_config, quiet: true, enhanced: true)
@@ -352,13 +352,13 @@ RSpec.describe "Paper Trading Integration", :slow do
 
     it "uses default values for optional configuration" do
       minimal_config = {
-        "SYMBOLS" => {
-          "NIFTY" => {
-            "idx_sid" => "13",
-            "seg_idx" => "IDX_I",
-            "seg_opt" => "NSE_FNO",
-            "strike_step" => 50,
-            "lot_size" => 75,
+        SYMBOLS: {
+          NIFTY: {
+            idx_sid: "13",
+            seg_idx: "IDX_I",
+            seg_opt: "NSE_FNO",
+            strike_step: 50,
+            lot_size: 75,
           },
         },
       }

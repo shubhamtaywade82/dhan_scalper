@@ -126,7 +126,7 @@ module DhanScalper
         @websocket_manager.set_active_instruments_provider do
           # Any instruments with quantity > 0 in paper tracker
           @position_tracker.positions.values.select do |p|
-            (p[:quantity] || 0).to_f > 0
+            (p[:quantity] || 0).to_f.positive?
           end.map { |p| [p[:instrument_id].to_s, "OPTION"] }
         end
 
@@ -213,7 +213,7 @@ module DhanScalper
               if @timeout_minutes
                 elapsed = (Time.now - @start_time) / 60
                 remaining = @timeout_minutes - elapsed
-                puts "[TIMEOUT] #{remaining.round(1)} minutes remaining" if remaining > 0
+                puts "[TIMEOUT] #{remaining.round(1)} minutes remaining" if remaining.positive?
               end
               last_status_update = Time.now
             end
@@ -241,9 +241,9 @@ module DhanScalper
         @session_data[:ending_balance] = @balance_provider.total_balance
         @session_data[:total_pnl] = @session_data[:ending_balance] - @session_data[:starting_balance]
         @session_data[:win_rate] =
-          @session_data[:total_trades] > 0 ? (@session_data[:successful_trades].to_f / @session_data[:total_trades] * 100) : 0.0
+          @session_data[:total_trades].positive? ? (@session_data[:successful_trades].to_f / @session_data[:total_trades] * 100) : 0.0
         @session_data[:average_trade_pnl] =
-          @session_data[:total_trades] > 0 ? (@session_data[:total_pnl] / @session_data[:total_trades]) : 0.0
+          @session_data[:total_trades].positive? ? (@session_data[:total_pnl] / @session_data[:total_trades]) : 0.0
 
         # Get positions summary
         positions_summary = @position_tracker.get_positions_summary
@@ -478,7 +478,7 @@ module DhanScalper
 
       # Check position limits
       max_positions = @cfg.dig("global", "max_positions").to_i
-      return unless max_positions > 0 && @position_tracker.positions.size >= max_positions
+      return unless max_positions.positive? && @position_tracker.positions.size >= max_positions
 
       puts "[RISK] Maximum positions reached: #{@position_tracker.positions.size}"
       puts "[RISK] No new positions will be opened"
@@ -493,7 +493,7 @@ module DhanScalper
       @session_data[:max_pnl] = [@session_data[:max_pnl], current_pnl].max
       @session_data[:min_pnl] = [@session_data[:min_pnl], current_pnl].min
 
-      puts "\n" + ("=" * 60)
+      puts "\n#{"=" * 60}"
       puts "[POSITION SUMMARY]"
       puts "Total Positions: #{summary[:total_positions]}"
       puts "Total P&L: ₹#{summary[:total_pnl].round(2)}"
@@ -522,7 +522,7 @@ module DhanScalper
     def show_final_summary
       summary = @position_tracker.get_positions_summary
 
-      puts "\n" + ("=" * 60)
+      puts "\n#{"=" * 60}"
       puts "[FINAL SUMMARY]"
       puts "Session P&L: ₹#{summary[:total_pnl].round(2)}"
       puts "Final Balance: ₹#{@balance_provider.available_balance.round(0)}"
@@ -543,7 +543,7 @@ module DhanScalper
         spot_price = nil
         5.times do |attempt|
           # Debug: Show what's in TickCache
-          if attempt == 0
+          if attempt.zero?
             cache_data = DhanScalper::TickCache.all
             puts "[ATM MONITOR] TickCache contents: #{cache_data.keys}"
           end
@@ -605,7 +605,7 @@ module DhanScalper
     end
 
     def print_subscribed_ltps
-      puts "\n" + ("=" * 60)
+      puts "\n#{"=" * 60}"
       puts "[LTP MONITOR] - #{Time.now.strftime("%H:%M:%S")}"
       puts "=" * 60
 
@@ -727,7 +727,7 @@ module DhanScalper
       @session_data[:risk_metrics] = {
         max_drawdown: @session_data[:min_pnl] || 0.0,
         max_profit: @session_data[:max_pnl] || 0.0,
-        risk_reward_ratio: if @session_data[:max_pnl] && @session_data[:max_pnl] > 0 && @session_data[:min_pnl] && @session_data[:min_pnl] < 0
+        risk_reward_ratio: if @session_data[:max_pnl] && @session_data[:max_pnl].positive? && @session_data[:min_pnl] && @session_data[:min_pnl].negative?
                              (@session_data[:max_pnl] / @session_data[:min_pnl].abs).round(2)
                            else
                              0.0

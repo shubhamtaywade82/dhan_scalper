@@ -130,7 +130,7 @@ module DhanScalper
             @instrument_segments.delete(instrument_id)
           else
             # Fallback: try all segments
-            segments = %w[IDX_I NSE_FO NSE_EQ]
+            segments = %w[IDX_I NSE_FNO NSE_EQ]
             segments.each do |seg|
               @connection.unsubscribe_one(segment: seg, security_id: instrument_id)
             rescue StandardError

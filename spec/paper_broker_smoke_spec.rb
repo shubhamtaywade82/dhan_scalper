@@ -68,7 +68,7 @@ RSpec.describe "Paper Broker Smoke Tests" do
       expect(sell_result).not_to be_a(Hash)
 
       # Verify final balance
-      final_balance = balance_provider.total_balance
+      final_balance = balance_provider.available_balance
       expected_balance = 101_460.0 # 100000 + (20*75) - (20*2)
 
       expect(final_balance).to be_within(0.01).of(expected_balance)
@@ -106,7 +106,7 @@ RSpec.describe "Paper Broker Smoke Tests" do
       expect(sell_result).not_to be_a(Hash)
 
       # Verify final balance
-      final_balance = balance_provider.total_balance
+      final_balance = balance_provider.available_balance
       expected_balance = 99_210.0 # 100000 - (10*75) - (20*2)
 
       expect(final_balance).to be_within(0.01).of(expected_balance)
@@ -162,8 +162,8 @@ RSpec.describe "Paper Broker Smoke Tests" do
       expect(sell_result).not_to be_a(Hash)
 
       # Verify final balance
-      final_balance = balance_provider.total_balance
-      expected_balance = 99_190.0 # 100000 - (100*75) - (120*75) + (130*75) - (20*3)
+      final_balance = balance_provider.available_balance
+      expected_balance = 93_190.0 # 100000 - (100*75) - (120*75) + (130*75) - (20*3)
 
       expect(final_balance).to be_within(0.01).of(expected_balance)
     end
@@ -184,7 +184,7 @@ RSpec.describe "Paper Broker Smoke Tests" do
 
       expect(buy_result).to be_a(Hash)
       expect(buy_result[:success]).to be false
-      expect(buy_result[:error]).to include("insufficient")
+      expect(buy_result[:error].to_s).to match(/insufficient/i)
     end
   end
 
@@ -210,7 +210,7 @@ RSpec.describe "Paper Broker Smoke Tests" do
 
       expect(sell_result).to be_a(Hash)
       expect(sell_result[:success]).to be false
-      expect(sell_result[:error]).to include("insufficient")
+      expect(sell_result[:error].to_s).to match(/insufficient/i)
     end
   end
 

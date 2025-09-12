@@ -56,7 +56,7 @@ class PaperE2ESmokeTest
     )
     puts "  ✓ Initialized balance provider with #{DhanScalper::Support::Money.format(@balance_provider.total_balance)}"
 
-    @position_tracker = DhanScalper::Services::EnhancedPositionTracker.new
+    @position_tracker = DhanScalper::Services::EnhancedPositionTracker.new(balance_provider: @balance_provider)
     puts "  ✓ Initialized position tracker"
 
     @broker = DhanScalper::Brokers::PaperBroker.new(
@@ -64,6 +64,9 @@ class PaperE2ESmokeTest
       balance_provider: @balance_provider,
       logger: @logger
     )
+
+    # Make the broker use the same position tracker as the test
+    @broker.instance_variable_set(:@position_tracker, @position_tracker)
     puts "  ✓ Initialized paper broker"
 
     # Setup LTP seeding for deterministic testing
@@ -364,8 +367,7 @@ class PaperE2ESmokeTest
     @balance_provider.reset_balance(100_000.0)
 
     # Clear positions
-    @position_tracker.instance_variable_set(:@positions, {})
-    @position_tracker.instance_variable_set(:@realized_pnl, DhanScalper::Support::Money.bd(0))
+    @position_tracker.clear_positions
 
     # Reset LTP index
     @ltp_index = 0

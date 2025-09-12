@@ -6,9 +6,10 @@ module DhanScalper
   module Services
     # Enhanced position tracker that supports weighted averages and partial exits
     class EnhancedPositionTracker
-      def initialize
+      def initialize(balance_provider: nil)
         @positions = {} # Key: "#{exchange_segment}_#{security_id}_#{side}"
         @realized_pnl = DhanScalper::Support::Money.bd(0)
+        @balance_provider = balance_provider
       end
 
       # Add or update a position with weighted averaging
@@ -49,7 +50,7 @@ module DhanScalper
         # Calculate realized PnL for this partial exit
         realized_pnl = DhanScalper::Support::Money.multiply(
           DhanScalper::Support::Money.subtract(price_bd, position[:buy_avg]),
-          sellable_quantity
+          sellable_quantity,
         )
 
         # Update realized PnL
@@ -68,11 +69,11 @@ module DhanScalper
           old_sell_qty = DhanScalper::Support::Money.subtract(position[:sell_qty], sellable_quantity)
           total_sell_value = DhanScalper::Support::Money.add(
             DhanScalper::Support::Money.multiply(position[:sell_avg], old_sell_qty),
-            DhanScalper::Support::Money.multiply(price_bd, sellable_quantity)
+            DhanScalper::Support::Money.multiply(price_bd, sellable_quantity),
           )
           position[:sell_avg] = DhanScalper::Support::Money.divide(
             total_sell_value,
-            position[:sell_qty]
+            position[:sell_qty],
           )
         end
 
@@ -86,16 +87,13 @@ module DhanScalper
         # Update timestamps
         position[:last_updated] = Time.now
 
-        # Remove position if net_qty becomes zero
-        if DhanScalper::Support::Money.zero?(position[:net_qty])
-          @positions.delete(key)
-        end
+        # Keep closed positions (net_qty can be zero) for reporting consistency
 
         {
           position: position,
           realized_pnl: realized_pnl,
           net_proceeds: net_proceeds,
-          sold_quantity: sellable_quantity
+          sold_quantity: sellable_quantity,
         }
       end
 
@@ -110,10 +108,14 @@ module DhanScalper
         @positions.values
       end
 
-      # Get realized PnL
-      def realized_pnl
-        @realized_pnl
+      # Clear all positions (for testing)
+      def clear_positions
+        @positions.clear
+        @realized_pnl = DhanScalper::Support::Money.bd(0)
       end
+
+      # Get realized PnL
+      attr_reader :realized_pnl
 
       # Update unrealized PnL for all positions
       def update_unrealized_pnl(ltp_provider)
@@ -130,7 +132,7 @@ module DhanScalper
           if DhanScalper::Support::Money.positive?(position[:net_qty])
             unrealized = DhanScalper::Support::Money.multiply(
               DhanScalper::Support::Money.subtract(price_bd, position[:buy_avg]),
-              position[:net_qty]
+              position[:net_qty],
             )
             position[:unrealized_pnl] = unrealized
             total_unrealized = DhanScalper::Support::Money.add(total_unrealized, unrealized)
@@ -205,7 +207,7 @@ module DhanScalper
           underlying_symbol: nil,
           symbol: nil,
           created_at: Time.now,
-          last_updated: Time.now
+          last_updated: Time.now,
         }
       end
 
@@ -216,7 +218,7 @@ module DhanScalper
         total_buy_qty = DhanScalper::Support::Money.add(position[:buy_qty], quantity_bd)
         total_buy_value = DhanScalper::Support::Money.add(
           DhanScalper::Support::Money.multiply(position[:buy_avg], position[:buy_qty]),
-          DhanScalper::Support::Money.multiply(price_bd, quantity_bd)
+          DhanScalper::Support::Money.multiply(price_bd, quantity_bd),
         )
 
         # Update quantities

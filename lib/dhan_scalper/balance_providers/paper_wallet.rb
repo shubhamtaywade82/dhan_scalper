@@ -20,8 +20,10 @@ module DhanScalper
       end
 
       def total_balance
+        # Total balance should be available + used
+        # The realized PnL is already reflected in the available balance through cash flow
         result = DhanScalper::Support::Money.add(@available, @used)
-        puts "  DEBUG: total_balance called - available: #{DhanScalper::Support::Money.dec(@available)}, used: #{DhanScalper::Support::Money.dec(@used)}, result: #{DhanScalper::Support::Money.dec(result)}"
+        puts "  DEBUG: total_balance called - available: #{DhanScalper::Support::Money.dec(@available)}, used: #{DhanScalper::Support::Money.dec(@used)}, realized_pnl: #{DhanScalper::Support::Money.dec(@realized_pnl)}, result: #{DhanScalper::Support::Money.dec(result)}"
         result
       end
 
@@ -49,6 +51,36 @@ module DhanScalper
         @total
       end
 
+      # Debit balance for a BUY: reduce available by (principal + fee), lock principal in used
+      def debit_for_buy(principal_cost:, fee: 0)
+        principal_bd = DhanScalper::Support::Money.bd(principal_cost)
+        fee_bd = DhanScalper::Support::Money.bd(fee)
+
+        puts "  DEBUG: debit_for_buy called - principal: #{DhanScalper::Support::Money.dec(principal_bd)}, fee: #{DhanScalper::Support::Money.dec(fee_bd)}"
+
+        @available = DhanScalper::Support::Money.subtract(@available,
+                                                          DhanScalper::Support::Money.add(principal_bd, fee_bd))
+        @used = DhanScalper::Support::Money.add(@used, principal_bd)
+        @total = DhanScalper::Support::Money.add(@available, @used)
+        puts "  DEBUG: debit_for_buy result - available: #{DhanScalper::Support::Money.dec(@available)}, used: #{DhanScalper::Support::Money.dec(@used)}, total: #{DhanScalper::Support::Money.dec(@total)}"
+        @total
+      end
+
+      # Credit balance for a SELL: increase available by net proceeds, release principal from used
+      def credit_for_sell(net_proceeds:, released_principal:)
+        net_bd = DhanScalper::Support::Money.bd(net_proceeds)
+        released_bd = DhanScalper::Support::Money.bd(released_principal)
+
+        puts "  DEBUG: credit_for_sell called - net_proceeds: #{DhanScalper::Support::Money.dec(net_bd)}, released_principal: #{DhanScalper::Support::Money.dec(released_bd)}"
+
+        @available = DhanScalper::Support::Money.add(@available, net_bd)
+        @used = DhanScalper::Support::Money.subtract(@used, released_bd)
+        @used = DhanScalper::Support::Money.max(@used, DhanScalper::Support::Money.bd(0))
+        @total = DhanScalper::Support::Money.add(@available, @used)
+        puts "  DEBUG: credit_for_sell result - available: #{DhanScalper::Support::Money.dec(@available)}, used: #{DhanScalper::Support::Money.dec(@used)}, total: #{DhanScalper::Support::Money.dec(@total)}"
+        @total
+      end
+
       def reset_balance(amount)
         @starting_balance = DhanScalper::Support::Money.bd(amount)
         @available = @starting_balance
@@ -63,7 +95,7 @@ module DhanScalper
         unrealized_pnl_bd = DhanScalper::Support::Money.bd(unrealized_pnl)
         @total = DhanScalper::Support::Money.add(
           DhanScalper::Support::Money.add(@starting_balance, @realized_pnl),
-          unrealized_pnl_bd
+          unrealized_pnl_bd,
         )
         @total
       end
@@ -71,15 +103,19 @@ module DhanScalper
       def add_realized_pnl(pnl)
         pnl_bd = DhanScalper::Support::Money.bd(pnl)
         @realized_pnl = DhanScalper::Support::Money.add(@realized_pnl, pnl_bd)
-        # Note: Realized PnL is tracked separately for reporting only
+        # NOTE: Realized PnL is tracked separately for reporting only
         # Cash flow is already reflected in available/used balance
         puts "  DEBUG: add_realized_pnl called with #{DhanScalper::Support::Money.dec(pnl)}, realized_pnl now: #{DhanScalper::Support::Money.dec(@realized_pnl)}"
         @total
       end
 
       # Get realized PnL for reporting
-      def realized_pnl
-        @realized_pnl
+      attr_reader :realized_pnl
+
+      # Clear used balance (for when positions are closed)
+      def clear_used_balance
+        @used = DhanScalper::Support::Money.bd(0)
+        @total = DhanScalper::Support::Money.add(@available, @used)
       end
     end
   end

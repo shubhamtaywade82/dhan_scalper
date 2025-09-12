@@ -102,3 +102,6 @@ module DhanScalper
     end
   end
 end
+
+# Provide a top-level alias for specs and external callers expecting `IndicatorsGate`
+IndicatorsGate = DhanScalper::IndicatorsGate unless defined?(::IndicatorsGate)

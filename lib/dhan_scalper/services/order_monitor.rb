@@ -36,7 +36,7 @@ module DhanScalper
         @pending_orders[order_id] = {
           order_data: order_data,
           created_at: Time.now,
-          last_checked: Time.now
+          last_checked: Time.now,
         }
         @logger.debug "[ORDER_MONITOR] Added pending order: #{order_id}"
       end
@@ -115,7 +115,7 @@ module DhanScalper
           order_data[:expiry],
           order_id,
           fill_quantity,
-          fill_price
+          fill_price,
         )
 
         # Remove from pending orders
@@ -132,7 +132,7 @@ module DhanScalper
 
       def cleanup_old_orders
         # Remove orders older than 1 hour
-        cutoff_time = Time.now - 3600
+        cutoff_time = Time.now - 3_600
         @pending_orders.each do |order_id, order_info|
           if order_info[:created_at] < cutoff_time
             @logger.warn "[ORDER_MONITOR] Removing old pending order: #{order_id}"

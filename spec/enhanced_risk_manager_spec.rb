@@ -12,12 +12,12 @@ RSpec.describe DhanScalper::EnhancedRiskManager do
         "charge_per_order" => 20.0,
         "risk_check_interval" => 1,
         "time_stop_seconds" => 5, # Short for testing
-        "max_daily_loss_rs" => 1000.0,
+        "max_daily_loss_rs" => 1_000.0,
         "cooldown_after_loss_seconds" => 3, # Short for testing
         "enable_time_stop" => true,
         "enable_daily_loss_cap" => true,
-        "enable_cooldown" => true
-      }
+        "enable_cooldown" => true,
+      },
     }
   end
 
@@ -47,7 +47,7 @@ RSpec.describe DhanScalper::EnhancedRiskManager do
   describe "#initialize" do
     it "initializes with correct configuration" do
       expect(risk_manager.instance_variable_get(:@time_stop_seconds)).to eq(5)
-      expect(risk_manager.instance_variable_get(:@max_daily_loss_rs)).to eq(DhanScalper::Support::Money.bd(1000.0))
+      expect(risk_manager.instance_variable_get(:@max_daily_loss_rs)).to eq(DhanScalper::Support::Money.bd(1_000.0))
       expect(risk_manager.instance_variable_get(:@cooldown_after_loss_seconds)).to eq(3)
       expect(risk_manager.instance_variable_get(:@enable_time_stop)).to be true
       expect(risk_manager.instance_variable_get(:@enable_daily_loss_cap)).to be true
@@ -77,13 +77,13 @@ RSpec.describe DhanScalper::EnhancedRiskManager do
         security_id: "TEST123",
         side: "LONG",
         quantity: 75,
-        price: 100.0
+        price: 100.0,
       )
 
-      position = position_tracker.get_position(
+      position_tracker.get_position(
         exchange_segment: "NSE_EQ",
         security_id: "TEST123",
-        side: "LONG"
+        side: "LONG",
       )
 
       # Mock entry time to be past the time stop threshold
@@ -104,7 +104,7 @@ RSpec.describe DhanScalper::EnhancedRiskManager do
         quantity: 75,
         price: 100.0,
         order_type: "MARKET",
-        idempotency_key: match(/risk_exit_TEST123_TIME_STOP_/)
+        idempotency_key: match(/risk_exit_TEST123_TIME_STOP_/),
       )
 
       risk_manager.stop
@@ -117,7 +117,7 @@ RSpec.describe DhanScalper::EnhancedRiskManager do
         security_id: "TEST123",
         side: "LONG",
         quantity: 75,
-        price: 100.0
+        price: 100.0,
       )
 
       # Mock entry time to be within the time stop threshold
@@ -158,7 +158,7 @@ RSpec.describe DhanScalper::EnhancedRiskManager do
         security_id: "TEST123",
         side: "LONG",
         quantity: 75,
-        price: 100.0
+        price: 100.0,
       )
 
       fresh_position_tracker.add_position(
@@ -166,7 +166,7 @@ RSpec.describe DhanScalper::EnhancedRiskManager do
         security_id: "TEST456",
         side: "LONG",
         quantity: 50,
-        price: 100.0  # Same price to avoid stop loss
+        price: 100.0, # Same price to avoid stop loss
       )
 
       # Simulate a large loss by reducing balance significantly
@@ -190,7 +190,7 @@ RSpec.describe DhanScalper::EnhancedRiskManager do
         quantity: 75,
         price: 101.0,
         order_type: "MARKET",
-        idempotency_key: match(/risk_exit_TEST123_DAILY_LOSS_CAP_/)
+        idempotency_key: match(/risk_exit_TEST123_DAILY_LOSS_CAP_/),
       )
 
       expect(broker_mock).to have_received(:place_order!).with(
@@ -200,7 +200,7 @@ RSpec.describe DhanScalper::EnhancedRiskManager do
         quantity: 50,
         price: 101.0,
         order_type: "MARKET",
-        idempotency_key: match(/risk_exit_TEST456_DAILY_LOSS_CAP_/)
+        idempotency_key: match(/risk_exit_TEST456_DAILY_LOSS_CAP_/),
       )
     end
 
@@ -211,7 +211,7 @@ RSpec.describe DhanScalper::EnhancedRiskManager do
         security_id: "TEST123",
         side: "LONG",
         quantity: 75,
-        price: 100.0
+        price: 100.0,
       )
 
       # Simulate a small loss within the cap
@@ -247,7 +247,7 @@ RSpec.describe DhanScalper::EnhancedRiskManager do
         security_id: "TEST123",
         side: "LONG",
         quantity: 75,
-        price: 100.0
+        price: 100.0,
       )
 
       # Mock a loss scenario (current price below entry - 18% loss to trigger stop loss)
@@ -284,7 +284,7 @@ RSpec.describe DhanScalper::EnhancedRiskManager do
         security_id: "TEST123",
         side: "LONG",
         quantity: 75,
-        price: 100.0
+        price: 100.0,
       )
 
       # Mock a loss scenario (18% loss to trigger stop loss)
@@ -315,7 +315,7 @@ RSpec.describe DhanScalper::EnhancedRiskManager do
         security_id: "TEST123",
         side: "LONG",
         quantity: 75,
-        price: 100.0
+        price: 100.0,
       )
 
       # Manually set cooldown
@@ -343,7 +343,7 @@ RSpec.describe DhanScalper::EnhancedRiskManager do
         security_id: "TEST123",
         side: "LONG",
         quantity: 75,
-        price: 100.0
+        price: 100.0,
       )
 
       # Mock profitable price (35% profit)
@@ -363,7 +363,7 @@ RSpec.describe DhanScalper::EnhancedRiskManager do
         quantity: 75,
         price: 135.0,
         order_type: "MARKET",
-        idempotency_key: match(/risk_exit_TEST123_TP_/)
+        idempotency_key: match(/risk_exit_TEST123_TP_/),
       )
 
       risk_manager.stop
@@ -376,7 +376,7 @@ RSpec.describe DhanScalper::EnhancedRiskManager do
         security_id: "TEST123",
         side: "LONG",
         quantity: 75,
-        price: 100.0
+        price: 100.0,
       )
 
       # Mock loss price (18% loss)
@@ -396,7 +396,7 @@ RSpec.describe DhanScalper::EnhancedRiskManager do
         quantity: 75,
         price: 82.0,
         order_type: "MARKET",
-        idempotency_key: match(/risk_exit_TEST123_SL_/)
+        idempotency_key: match(/risk_exit_TEST123_SL_/),
       )
 
       risk_manager.stop
@@ -411,7 +411,7 @@ RSpec.describe DhanScalper::EnhancedRiskManager do
         security_id: "TEST123",
         side: "LONG",
         quantity: 75,
-        price: 100.0
+        price: 100.0,
       )
 
       # Mock profitable price
@@ -425,7 +425,7 @@ RSpec.describe DhanScalper::EnhancedRiskManager do
 
       # Verify idempotency key format
       expect(broker).to have_received(:place_order!).with(
-        hash_including(idempotency_key: match(/^risk_exit_TEST123_TP_\d+_[a-f0-9]{8}$/))
+        hash_including(idempotency_key: match(/^risk_exit_TEST123_TP_\d+_[a-f0-9]{8}$/)),
       )
 
       risk_manager.stop

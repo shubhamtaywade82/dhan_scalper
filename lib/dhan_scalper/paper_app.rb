@@ -118,7 +118,7 @@ module DhanScalper
 
       begin
         # Configure baseline indices and active instrument provider
-        baseline = Array(@cfg["SYMBOLS"]).flat_map do |sym, s|
+        baseline = Array(@cfg["SYMBOLS"]).flat_map do |_sym, s|
           sid = s&.dig("idx_sid")
           sid.to_s.empty? ? [] : [[sid.to_s, "INDEX"]]
         end

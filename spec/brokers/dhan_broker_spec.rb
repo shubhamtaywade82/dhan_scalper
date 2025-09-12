@@ -45,7 +45,7 @@ RSpec.describe DhanScalper::Brokers::DhanBroker do
       {
         segment: "NSE_FNO",
         security_id: "CE123",
-        quantity: 150
+        quantity: 150,
       }
     end
 
@@ -105,7 +105,7 @@ RSpec.describe DhanScalper::Brokers::DhanBroker do
       {
         segment: "NSE_FNO",
         security_id: "CE123",
-        quantity: 150
+        quantity: 150,
       }
     end
 
@@ -158,7 +158,7 @@ RSpec.describe DhanScalper::Brokers::DhanBroker do
         order_type: "MARKET",
         validity: "DAY",
         security_id: "CE123",
-        quantity: 150
+        quantity: 150,
       }
     end
 
@@ -224,7 +224,7 @@ RSpec.describe DhanScalper::Brokers::DhanBroker do
         order_type: "MARKET",
         validity: "DAY",
         security_id: "CE123",
-        quantity: 150
+        quantity: 150,
       }
     end
 
@@ -283,7 +283,7 @@ RSpec.describe DhanScalper::Brokers::DhanBroker do
         order_type: "MARKET",
         validity: "DAY",
         security_id: "CE123",
-        quantity: 150
+        quantity: 150,
       }
     end
 
@@ -337,7 +337,7 @@ RSpec.describe DhanScalper::Brokers::DhanBroker do
         order_type: "MARKET",
         validity: "DAY",
         security_id: "CE123",
-        quantity: 150
+        quantity: 150,
       }
     end
 
@@ -539,7 +539,7 @@ RSpec.describe DhanScalper::Brokers::DhanBroker do
       {
         segment: "NSE_FNO",
         security_id: "CE123",
-        quantity: 150
+        quantity: 150,
       }
     end
 
@@ -563,7 +563,7 @@ RSpec.describe DhanScalper::Brokers::DhanBroker do
       {
         segment: "NSE_FNO",
         security_id: "CE123",
-        quantity: 150
+        quantity: 150,
       }
     end
 
@@ -581,8 +581,8 @@ RSpec.describe DhanScalper::Brokers::DhanBroker do
           order_type: "MARKET",
           validity: "DAY",
           security_id: "CE123",
-          quantity: 150
-        )
+          quantity: 150,
+        ),
       )
     end
 
@@ -600,8 +600,8 @@ RSpec.describe DhanScalper::Brokers::DhanBroker do
           order_type: "MARKET",
           validity: "DAY",
           security_id: "CE123",
-          quantity: 150
-        )
+          quantity: 150,
+        ),
       )
     end
   end

@@ -108,7 +108,7 @@ module DhanScalper
 
       def set_current_trigger(security_id, trigger_price)
         trigger_key = "trigger:#{security_id}"
-        @cache.set(trigger_key, trigger_price.to_s, ttl: 3600) # 1 hour TTL
+        @cache.set(trigger_key, trigger_price.to_s, ttl: 3_600) # 1 hour TTL
       end
 
       def emergency_exit(position, analysis)
@@ -117,7 +117,7 @@ module DhanScalper
           security_id: position[:security_id],
           reason: "Emergency floor breached: P&L ₹#{analysis[:pnl].round(2)}",
           price: analysis[:current_price],
-          pnl: analysis[:pnl]
+          pnl: analysis[:pnl],
         }
 
         execute_action(action)
@@ -129,7 +129,7 @@ module DhanScalper
           security_id: position[:security_id],
           reason: "Initial stop loss triggered: #{analysis[:pnl_pct].round(2)}%",
           price: analysis[:current_price],
-          pnl: analysis[:pnl]
+          pnl: analysis[:pnl],
         }
 
         execute_action(action)
@@ -141,7 +141,7 @@ module DhanScalper
           security_id: position[:security_id],
           reason: "Breakeven lock: price below entry",
           price: analysis[:current_price],
-          pnl: analysis[:pnl]
+          pnl: analysis[:pnl],
         }
 
         execute_action(action)
@@ -153,7 +153,7 @@ module DhanScalper
           security_id: position[:security_id],
           reason: "Trailing stop triggered",
           price: analysis[:current_price],
-          pnl: analysis[:pnl]
+          pnl: analysis[:pnl],
         }
 
         execute_action(action)
@@ -173,7 +173,7 @@ module DhanScalper
           reason: "Adjusted trailing stop to ₹#{new_trigger.round(2)}",
           old_trigger: get_current_trigger(position[:security_id]),
           new_trigger: new_trigger,
-          peak_price: peak_price
+          peak_price: peak_price,
         }
 
         execute_action(action)
@@ -210,7 +210,7 @@ module DhanScalper
         key = "#{action[:security_id]}:#{action[:type]}"
         @recent_actions[key] = {
           timestamp: Time.now,
-          action: action
+          action: action,
         }
 
         # Clean up old actions

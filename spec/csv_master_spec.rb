@@ -26,7 +26,7 @@ RSpec.describe DhanScalper::CsvMaster do
     double(
       code: "200",
       body: mock_csv_data,
-      success?: true
+      success?: true,
     )
   end
   let(:csv_url) { "https://images.dhan.co/api-data/api-scrip-master-detailed.csv" }
@@ -34,7 +34,7 @@ RSpec.describe DhanScalper::CsvMaster do
 
   before do
     # Mock file operations to avoid actual file I/O
-    allow(File).to receive_messages(exist?: false, mtime: Time.now - 3600, read: mock_csv_data)
+    allow(File).to receive_messages(exist?: false, mtime: Time.now - 3_600, read: mock_csv_data)
     allow(File).to receive(:write)
     allow(File).to receive(:open).and_yield(StringIO.new(mock_csv_data))
 
@@ -109,7 +109,7 @@ RSpec.describe DhanScalper::CsvMaster do
         exchange: "NSE",
         segment: "D",
         exchange_segment: "NSE_FNO",
-        lot_size: 50
+        lot_size: 50,
       )
     end
 
@@ -128,7 +128,7 @@ RSpec.describe DhanScalper::CsvMaster do
         segment: "I",
         exchange_name: "National Stock Exchange",
         segment_name: "Index",
-        exchange_segment: "IDX_I"
+        exchange_segment: "IDX_I",
       )
     end
 
@@ -139,7 +139,7 @@ RSpec.describe DhanScalper::CsvMaster do
         segment: "M",
         exchange_name: "Multi Commodity Exchange",
         segment_name: "Commodity",
-        exchange_segment: "MCX_COMM"
+        exchange_segment: "MCX_COMM",
       )
     end
 
@@ -184,7 +184,7 @@ RSpec.describe DhanScalper::CsvMaster do
         double(
           code: "404",
           body: "Not Found",
-          success?: false
+          success?: false,
         )
       end
 
@@ -201,7 +201,7 @@ RSpec.describe DhanScalper::CsvMaster do
   describe "#load_from_cache" do
     context "when cache file exists and is valid" do
       before do
-        allow(File).to receive_messages(exist?: true, mtime: Time.now - 1800, read: mock_csv_data)
+        allow(File).to receive_messages(exist?: true, mtime: Time.now - 1_800, read: mock_csv_data)
       end
 
       it "loads data from cache successfully" do

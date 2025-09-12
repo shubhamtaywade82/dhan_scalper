@@ -32,7 +32,7 @@ module DhanScalper
         side: @side,
         quantity: @quantity,
         price: @price,
-        timestamp: @timestamp
+        timestamp: @timestamp,
       }
     end
 

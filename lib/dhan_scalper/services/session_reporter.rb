@@ -40,7 +40,7 @@ module DhanScalper
           positions: session_data[:positions] || [],
           trades: session_data[:trades] || [],
           risk_metrics: session_data[:risk_metrics] || {},
-          performance_summary: session_data[:performance_summary] || {}
+          performance_summary: session_data[:performance_summary] || {},
         }
 
         # Save JSON report
@@ -58,7 +58,7 @@ module DhanScalper
           session_id: session_id,
           json_file: json_file,
           csv_file: csv_file,
-          report_data: report_data
+          report_data: report_data,
         }
       end
 
@@ -105,7 +105,7 @@ module DhanScalper
           {
             session_id: data[:session_id],
             created: File.mtime(file).strftime("%Y-%m-%d %H:%M:%S"),
-            size: File.size(file)
+            size: File.size(file),
           }
         end.sort_by { |s| s[:created] }.reverse
       end
@@ -164,7 +164,7 @@ module DhanScalper
                 pos[:entry_price],
                 pos[:current_price],
                 pos[:pnl],
-                pos[:created_at]
+                pos[:created_at],
               ]
             end
             csv << []
@@ -182,7 +182,7 @@ module DhanScalper
                 trade[:quantity],
                 trade[:price],
                 trade[:order_id],
-                trade[:status]
+                trade[:status],
               ]
             end
           end

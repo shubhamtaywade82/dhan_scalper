@@ -6,15 +6,15 @@ RSpec.describe DhanScalper::PaperApp, :unit do
   let(:base_config) do
     {
       "global" => {
-        "min_profit_target" => 1000,
-        "max_day_loss" => 5000,
+        "min_profit_target" => 1_000,
+        "max_day_loss" => 5_000,
         "decision_interval" => 10,
         "log_level" => "INFO",
         "use_multi_timeframe" => true,
-        "secondary_timeframe" => 5
+        "secondary_timeframe" => 5,
       },
       "paper" => {
-        "starting_balance" => 200_000
+        "starting_balance" => 200_000,
       },
       "SYMBOLS" => {
         "NIFTY" => {
@@ -24,9 +24,9 @@ RSpec.describe DhanScalper::PaperApp, :unit do
           "strike_step" => 50,
           "lot_size" => 75,
           "qty_multiplier" => 1,
-          "expiry_wday" => 4
-        }
-      }
+          "expiry_wday" => 4,
+        },
+      },
     }
   end
 
@@ -55,7 +55,7 @@ RSpec.describe DhanScalper::PaperApp, :unit do
                                                                                   open_positions: 0,
                                                                                   closed_positions: 0,
                                                                                   total_pnl: 0.0,
-                                                                                  session_pnl: 0.0
+                                                                                  session_pnl: 0.0,
                                                                                 })
     allow(@mock_position_tracker).to receive(:get_session_stats).and_return({
                                                                               total_trades: 0,
@@ -64,7 +64,7 @@ RSpec.describe DhanScalper::PaperApp, :unit do
                                                                               win_rate: 0.0,
                                                                               total_pnl: 0.0,
                                                                               max_profit: 0.0,
-                                                                              max_drawdown: 0.0
+                                                                              max_drawdown: 0.0,
                                                                             })
     allow(@mock_position_tracker).to receive(:track_underlying)
     allow(@mock_position_tracker).to receive(:add_position)
@@ -91,7 +91,7 @@ RSpec.describe DhanScalper::PaperApp, :unit do
     allow(DhanScalper::TickCache).to receive(:ltp).and_return(25_000.0)
     allow(DhanScalper::TickCache).to receive(:get).and_return({
                                                                 last_price: 25_000.0,
-                                                                timestamp: Time.now.to_i
+                                                                timestamp: Time.now.to_i,
                                                               })
 
     # Mock CandleSeries
@@ -101,7 +101,7 @@ RSpec.describe DhanScalper::PaperApp, :unit do
                                                                    momentum: :strong,
                                                                    adx: 25.0,
                                                                    rsi: 65.0,
-                                                                   macd: :bullish
+                                                                   macd: :bullish,
                                                                  })
     allow(mock_candle_series).to receive(:supertrend_signal).and_return(:bullish)
     allow(mock_candle_series).to receive(:combined_signal).and_return(:bullish)
@@ -111,16 +111,16 @@ RSpec.describe DhanScalper::PaperApp, :unit do
     @mock_option_picker = double("OptionPicker")
     allow(@mock_option_picker).to receive(:pick).and_return({
                                                               ce: { security_id: "CE123", premium: 100.0 },
-                                                              pe: { security_id: "PE123", premium: 80.0 }
+                                                              pe: { security_id: "PE123", premium: 80.0 },
                                                             })
     allow(@mock_option_picker).to receive(:pick_atm_strike).and_return({
                                                                          ce: { security_id: "CE123", premium: 100.0,
                                                                                strike: 25_000 },
                                                                          pe: { security_id: "PE123", premium: 80.0,
-                                                                               strike: 25_000 }
+                                                                               strike: 25_000 },
                                                                        })
     allow(paper_app).to receive(:instance_variable_get).with(:@option_pickers).and_return({
-                                                                                            "NIFTY" => @mock_option_picker
+                                                                                            "NIFTY" => @mock_option_picker,
                                                                                           })
 
     # Mock Paper Broker
@@ -128,12 +128,12 @@ RSpec.describe DhanScalper::PaperApp, :unit do
     allow(@mock_paper_broker).to receive(:buy_market).and_return({
                                                                    order_id: "ORDER123",
                                                                    status: "FILLED",
-                                                                   avg_price: 100.0
+                                                                   avg_price: 100.0,
                                                                  })
     allow(@mock_paper_broker).to receive(:sell_market).and_return({
                                                                     order_id: "ORDER124",
                                                                     status: "FILLED",
-                                                                    avg_price: 120.0
+                                                                    avg_price: 120.0,
                                                                   })
     allow(paper_app).to receive(:instance_variable_get).with(:@paper_broker).and_return(@mock_paper_broker)
   end
@@ -310,7 +310,7 @@ RSpec.describe DhanScalper::PaperApp, :unit do
   describe "#check_risk_limits" do
     context "when within limits" do
       before do
-        allow(@mock_position_tracker).to receive(:get_total_pnl).and_return(-1000.0)
+        allow(@mock_position_tracker).to receive(:get_total_pnl).and_return(-1_000.0)
       end
 
       it "allows trading" do
@@ -320,7 +320,7 @@ RSpec.describe DhanScalper::PaperApp, :unit do
 
     context "when daily loss limit is breached" do
       before do
-        allow(@mock_position_tracker).to receive(:get_total_pnl).and_return(-6000.0)
+        allow(@mock_position_tracker).to receive(:get_total_pnl).and_return(-6_000.0)
       end
 
       it "stops trading" do
@@ -330,7 +330,7 @@ RSpec.describe DhanScalper::PaperApp, :unit do
 
     context "when profit target is reached" do
       before do
-        allow(@mock_position_tracker).to receive(:get_total_pnl).and_return(1500.0)
+        allow(@mock_position_tracker).to receive(:get_total_pnl).and_return(1_500.0)
       end
 
       it "stops trading" do
@@ -396,7 +396,7 @@ RSpec.describe DhanScalper::PaperApp, :unit do
                                                               momentum: :strong,
                                                               adx: 30.0,
                                                               rsi: 70.0,
-                                                              macd: :bullish
+                                                              macd: :bullish,
                                                             })
       allow(mock_series).to receive(:supertrend_signal).and_return(:bullish)
       allow(mock_series).to receive(:combined_signal).and_return(:bullish)
@@ -413,7 +413,7 @@ RSpec.describe DhanScalper::PaperApp, :unit do
                                                               momentum: :strong,
                                                               adx: 30.0,
                                                               rsi: 30.0,
-                                                              macd: :bearish
+                                                              macd: :bearish,
                                                             })
       allow(mock_series).to receive(:supertrend_signal).and_return(:bearish)
       allow(mock_series).to receive(:combined_signal).and_return(:bearish)
@@ -430,7 +430,7 @@ RSpec.describe DhanScalper::PaperApp, :unit do
                                                               momentum: :weak,
                                                               adx: 15.0,
                                                               rsi: 50.0,
-                                                              macd: :neutral
+                                                              macd: :neutral,
                                                             })
       allow(mock_series).to receive(:supertrend_signal).and_return(:none)
       allow(mock_series).to receive(:combined_signal).and_return(:none)
@@ -461,7 +461,7 @@ RSpec.describe DhanScalper::PaperApp, :unit do
                                                                                     open_positions: 1,
                                                                                     closed_positions: 1,
                                                                                     total_pnl: 500.0,
-                                                                                    session_pnl: 300.0
+                                                                                    session_pnl: 300.0,
                                                                                   })
     end
 
@@ -484,9 +484,9 @@ RSpec.describe DhanScalper::PaperApp, :unit do
                                                                                 winning_trades: 3,
                                                                                 losing_trades: 2,
                                                                                 win_rate: 60.0,
-                                                                                total_pnl: 1000.0,
+                                                                                total_pnl: 1_000.0,
                                                                                 max_profit: 800.0,
-                                                                                max_drawdown: -200.0
+                                                                                max_drawdown: -200.0,
                                                                               })
       allow(@mock_balance_provider).to receive(:total_balance).and_return(201_000.0)
       allow(@mock_balance_provider).to receive(:available_balance).and_return(150_000.0)
@@ -552,7 +552,7 @@ RSpec.describe DhanScalper::PaperApp, :unit do
       initial_memory = `ps -o rss= -p #{Process.pid}`.to_i
 
       # Simulate 1000 iterations
-      1000.times do
+      1_000.times do
         paper_app.analyze_and_trade
       end
 

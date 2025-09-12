@@ -93,7 +93,7 @@ module DhanScalper
             current_price: pos["ltp"].to_f,
             pnl: pos["pnl"].to_f,
             product_type: pos["productType"],
-            segment: pos["exchangeSegment"]
+            segment: pos["exchangeSegment"],
           }
         end
       rescue StandardError => e
@@ -112,13 +112,13 @@ module DhanScalper
             discrepancies << {
               type: :missing_in_tracker,
               broker_position: broker_pos,
-              tracker_position: nil
+              tracker_position: nil,
             }
           elsif tracker_pos[:quantity] != broker_pos[:quantity]
             discrepancies << {
               type: :quantity_mismatch,
               broker_position: broker_pos,
-              tracker_position: tracker_pos
+              tracker_position: tracker_pos,
             }
           end
         end
@@ -132,7 +132,7 @@ module DhanScalper
           discrepancies << {
             type: :missing_in_broker,
             broker_position: nil,
-            tracker_position: tracker_pos
+            tracker_position: tracker_pos,
           }
         end
 
@@ -163,7 +163,7 @@ module DhanScalper
           "UNKNOWN", # We don't know expiry from broker data
           broker_position[:security_id],
           broker_position[:quantity],
-          broker_position[:current_price]
+          broker_position[:current_price],
         )
 
         @logger.info "[POSITION_RECONCILER] Added missing position to tracker"
@@ -179,8 +179,8 @@ module DhanScalper
           {
             exit_price: tracker_position[:current_price],
             exit_reason: "reconciled_missing",
-            exit_timestamp: Time.now
-          }
+            exit_timestamp: Time.now,
+          },
         )
 
         @logger.info "[POSITION_RECONCILER] Closed missing position in tracker"
@@ -193,7 +193,7 @@ module DhanScalper
         # Update tracker with broker quantity
         @position_tracker.update_position(
           tracker_position[:security_id],
-          { quantity: broker_position[:quantity] }
+          { quantity: broker_position[:quantity] },
         )
 
         @logger.info "[POSITION_RECONCILER] Updated quantity in tracker"

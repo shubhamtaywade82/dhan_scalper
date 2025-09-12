@@ -22,14 +22,14 @@ module DhanScalper
         # Calculate total cost
         total_cost = DhanScalper::Support::Money.add(
           DhanScalper::Support::Money.multiply(price_bd, quantity_bd),
-          fee_bd
+          fee_bd,
         )
 
         # Check balance before atomic operation
         if @balance_provider.available_balance < total_cost
           return {
             success: false,
-            error: "Insufficient balance. Required: ₹#{DhanScalper::Support::Money.dec(total_cost)}, Available: ₹#{DhanScalper::Support::Money.dec(@balance_provider.available_balance)}"
+            error: "Insufficient balance. Required: ₹#{DhanScalper::Support::Money.dec(total_cost)}, Available: ₹#{DhanScalper::Support::Money.dec(@balance_provider.available_balance)}",
           }
         end
 
@@ -59,13 +59,13 @@ module DhanScalper
         position = @position_tracker.get_position(
           exchange_segment: exchange_segment,
           security_id: security_id,
-          side: side
+          side: side,
         )
 
         unless position && DhanScalper::Support::Money.positive?(position[:net_qty])
           return {
             success: false,
-            error: "No position found for #{security_id}"
+            error: "No position found for #{security_id}",
           }
         end
 
@@ -75,7 +75,7 @@ module DhanScalper
         if DhanScalper::Support::Money.zero?(sellable_quantity)
           return {
             success: false,
-            error: "No quantity available to sell for #{security_id}"
+            error: "No quantity available to sell for #{security_id}",
           }
         end
 
@@ -86,7 +86,7 @@ module DhanScalper
           net_proceeds = DhanScalper::Support::Money.subtract(gross_proceeds, fee_bd)
           realized_pnl = DhanScalper::Support::Money.multiply(
             DhanScalper::Support::Money.subtract(price_bd, position[:buy_avg]),
-            sellable_quantity
+            sellable_quantity,
           )
 
           # Credit balance
@@ -101,7 +101,7 @@ module DhanScalper
           {
             net_proceeds: net_proceeds,
             realized_pnl: realized_pnl,
-            sold_quantity: sellable_quantity
+            sold_quantity: sellable_quantity,
           }
         end
 
@@ -129,13 +129,11 @@ module DhanScalper
       private
 
       # Execute operations atomically using Redis MULTI/EXEC
-      def execute_atomic
+      def execute_atomic(&)
         return { success: false, error: "Redis not available" } unless @redis_store&.redis
 
         begin
-          results = @redis_store.redis.multi do |redis|
-            yield(redis)
-          end
+          results = @redis_store.redis.multi(&)
 
           # MULTI/EXEC returns an array of results
           # For now, assume success if we get here
@@ -251,17 +249,16 @@ module DhanScalper
         LUA
 
         result = redis.eval(lua_script,
-          keys: [position_key],
-          argv: [
-            DhanScalper::Support::Money.dec(quantity),
-            DhanScalper::Support::Money.dec(price),
-            DhanScalper::Support::Money.dec(fee),
-            exchange_segment,
-            security_id,
-            side,
-            Time.now.to_i
-          ]
-        )
+                            keys: [position_key],
+                            argv: [
+                              DhanScalper::Support::Money.dec(quantity),
+                              DhanScalper::Support::Money.dec(price),
+                              DhanScalper::Support::Money.dec(fee),
+                              exchange_segment,
+                              security_id,
+                              side,
+                              Time.now.to_i,
+                            ])
 
         if result[0] == "ok"
           { success: true, position: result[1] }
@@ -314,14 +311,13 @@ module DhanScalper
         LUA
 
         result = redis.eval(lua_script,
-          keys: [position_key],
-          argv: [
-            DhanScalper::Support::Money.dec(quantity),
-            DhanScalper::Support::Money.dec(price),
-            DhanScalper::Support::Money.dec(fee),
-            Time.now.to_i
-          ]
-        )
+                            keys: [position_key],
+                            argv: [
+                              DhanScalper::Support::Money.dec(quantity),
+                              DhanScalper::Support::Money.dec(price),
+                              DhanScalper::Support::Money.dec(fee),
+                              Time.now.to_i,
+                            ])
 
         if result[0] == "ok"
           { success: true, position: result[1] }
@@ -336,7 +332,7 @@ module DhanScalper
 
         redis.hincrbyfloat(pnl_key, "total", DhanScalper::Support::Money.dec(pnl))
         redis.hset(pnl_key, "last_updated", Time.now.to_i)
-        redis.expire(pnl_key, 86400) # 24 hours TTL
+        redis.expire(pnl_key, 86_400) # 24 hours TTL
 
         { success: true }
       end
@@ -353,7 +349,7 @@ module DhanScalper
             success: true,
             available: DhanScalper::Support::Money.bd(data["available"] || 0),
             used: DhanScalper::Support::Money.bd(data["used"] || 0),
-            total: DhanScalper::Support::Money.bd(data["total"] || 0)
+            total: DhanScalper::Support::Money.bd(data["total"] || 0),
           }
         end
       end
@@ -377,8 +373,8 @@ module DhanScalper
               net_qty: DhanScalper::Support::Money.bd(data["net_qty"] || 0),
               sell_qty: DhanScalper::Support::Money.bd(data["sell_qty"] || 0),
               sell_avg: DhanScalper::Support::Money.bd(data["sell_avg"] || 0),
-              current_price: DhanScalper::Support::Money.bd(data["current_price"] || 0)
-            }
+              current_price: DhanScalper::Support::Money.bd(data["current_price"] || 0),
+            },
           }
         end
       end

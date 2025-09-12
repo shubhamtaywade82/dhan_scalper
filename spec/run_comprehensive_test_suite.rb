@@ -9,28 +9,28 @@ class ComprehensiveTestSuite
     unit: {
       name: "Unit Tests",
       pattern: "spec/unit/**/*_spec.rb",
-      description: "Individual component testing with mocks and edge cases"
+      description: "Individual component testing with mocks and edge cases",
     },
     integration: {
       name: "Integration Tests",
       pattern: "spec/integration/**/*_spec.rb",
-      description: "Component interaction testing with realistic data flow"
+      description: "Component interaction testing with realistic data flow",
     },
     e2e: {
       name: "End-to-End Tests",
       pattern: "spec/end_to_end/**/*_spec.rb",
-      description: "Complete workflow testing with full system simulation"
+      description: "Complete workflow testing with full system simulation",
     },
     performance: {
       name: "Performance Tests",
       pattern: "spec/performance/**/*_spec.rb",
-      description: "High-frequency trading and scalability testing"
+      description: "High-frequency trading and scalability testing",
     },
     all: {
       name: "All Tests",
       pattern: "spec/**/*_spec.rb",
-      description: "Complete test suite execution"
-    }
+      description: "Complete test suite execution",
+    },
   }.freeze
 
   def initialize
@@ -70,7 +70,7 @@ class ComprehensiveTestSuite
     @results[category] = {
       duration: duration,
       result: result,
-      pattern: category_info[:pattern]
+      pattern: category_info[:pattern],
     }
 
     print_category_summary(category, duration, result)
@@ -87,7 +87,7 @@ class ComprehensiveTestSuite
     $?.success?
   end
 
-  def print_category_summary(category, duration, success)
+  def print_category_summary(_category, duration, success)
     status = success ? "✅ PASSED" : "❌ FAILED"
     color = success ? :green : :red
 

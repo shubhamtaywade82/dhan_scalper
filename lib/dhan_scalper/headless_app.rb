@@ -79,12 +79,12 @@ module DhanScalper
       @broker = if @mode == :paper
                   Brokers::PaperBroker.new(
                     virtual_data_manager: @position_tracker,
-                    balance_provider: @balance_provider
+                    balance_provider: @balance_provider,
                   )
                 else
                   Brokers::DhanBroker.new(
                     virtual_data_manager: @position_tracker,
-                    balance_provider: @balance_provider
+                    balance_provider: @balance_provider,
                   )
                 end
 
@@ -102,7 +102,7 @@ module DhanScalper
         logger: @logger,
         heartbeat_interval: @config.dig("websocket", "heartbeat_interval") || 30,
         max_reconnect_attempts: @config.dig("websocket", "max_reconnect_attempts") || 10,
-        base_reconnect_delay: @config.dig("websocket", "base_reconnect_delay") || 1
+        base_reconnect_delay: @config.dig("websocket", "base_reconnect_delay") || 1,
       )
 
       # Initialize order monitor for live trading
@@ -117,8 +117,8 @@ module DhanScalper
       @decision_interval = @config.dig("global", "decision_interval") || 10
       @min_signal_strength = @config.dig("global", "min_signal_strength") || 0.6
       @max_positions = @config.dig("global", "max_positions") || 5
-      @session_target = @config.dig("global", "min_profit_target") || 1000.0
-      @max_day_loss = @config.dig("global", "max_day_loss") || 1500.0
+      @session_target = @config.dig("global", "min_profit_target") || 1_000.0
+      @max_day_loss = @config.dig("global", "max_day_loss") || 1_500.0
     end
 
     def setup_signal_handlers
@@ -144,7 +144,7 @@ module DhanScalper
 
           @websocket_manager.add_baseline_subscription(
             symbol_config["idx_sid"],
-            "INDEX"
+            "INDEX",
           )
         end
 
@@ -175,11 +175,10 @@ module DhanScalper
 
         @websocket_manager.add_position_subscription(
           position[:security_id].to_s,
-          "OPTION"
+          "OPTION",
         )
       end
     end
-
 
     def main_trading_loop
       last_decision = Time.at(0)
@@ -360,7 +359,7 @@ module DhanScalper
         order = @broker.buy_market(
           segment: symbol_config["seg_opt"],
           security_id: security_id,
-          quantity: quantity
+          quantity: quantity,
         )
 
         if order
@@ -382,7 +381,7 @@ module DhanScalper
               expiry: option_data[:expiry],
               security_id: security_id,
               quantity: quantity,
-              price: order.avg_price
+              price: order.avg_price,
             }
             @order_monitor.add_pending_order(order.order_id, order_data)
 
@@ -450,7 +449,7 @@ module DhanScalper
         config_summary = {
           mode: @mode,
           symbols: @config["SYMBOLS"]&.keys,
-          starting_balance: @balance_provider.total_balance - @position_tracker.get_total_pnl
+          starting_balance: @balance_provider.total_balance - @position_tracker.get_total_pnl,
         }
 
         @session_reporter.generate_session_report(@position_tracker, @balance_provider, config_summary)

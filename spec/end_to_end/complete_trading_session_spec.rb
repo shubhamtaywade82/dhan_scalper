@@ -6,15 +6,15 @@ RSpec.describe "Complete Trading Session End-to-End", :e2e, :slow do
   let(:config) do
     {
       "global" => {
-        "min_profit_target" => 2000,
-        "max_day_loss" => 8000,
+        "min_profit_target" => 2_000,
+        "max_day_loss" => 8_000,
         "decision_interval" => 3,
         "log_level" => "INFO",
         "use_multi_timeframe" => true,
-        "secondary_timeframe" => 5
+        "secondary_timeframe" => 5,
       },
       "paper" => {
-        "starting_balance" => 500_000
+        "starting_balance" => 500_000,
       },
       "SYMBOLS" => {
         "NIFTY" => {
@@ -24,7 +24,7 @@ RSpec.describe "Complete Trading Session End-to-End", :e2e, :slow do
           "strike_step" => 50,
           "lot_size" => 75,
           "qty_multiplier" => 1,
-          "expiry_wday" => 4
+          "expiry_wday" => 4,
         },
         "BANKNIFTY" => {
           "idx_sid" => "25",
@@ -33,9 +33,9 @@ RSpec.describe "Complete Trading Session End-to-End", :e2e, :slow do
           "strike_step" => 100,
           "lot_size" => 25,
           "qty_multiplier" => 1,
-          "expiry_wday" => 4
-        }
-      }
+          "expiry_wday" => 4,
+        },
+      },
     }
   end
 
@@ -52,14 +52,14 @@ RSpec.describe "Complete Trading Session End-to-End", :e2e, :slow do
         current_price: 25_000.0,
         price_history: [],
         trend: :bullish,
-        volatility: 0.15
+        volatility: 0.15,
       },
       "BANKNIFTY" => {
         current_price: 50_000.0,
         price_history: [],
         trend: :bearish,
-        volatility: 0.18
-      }
+        volatility: 0.18,
+      },
     }
 
     # Initialize realistic position tracking
@@ -73,7 +73,7 @@ RSpec.describe "Complete Trading Session End-to-End", :e2e, :slow do
       total_pnl: 0.0,
       max_profit: 0.0,
       max_drawdown: 0.0,
-      current_drawdown: 0.0
+      current_drawdown: 0.0,
     }
 
     setup_realistic_mocks
@@ -108,7 +108,7 @@ RSpec.describe "Complete Trading Session End-to-End", :e2e, :slow do
         open_positions: open_positions.length,
         closed_positions: closed_positions.length,
         total_pnl: total_pnl,
-        session_pnl: @session_stats[:total_pnl]
+        session_pnl: @session_stats[:total_pnl],
       }
     end
     allow(@mock_position_tracker).to receive(:get_session_stats).and_return(@session_stats)
@@ -117,7 +117,7 @@ RSpec.describe "Complete Trading Session End-to-End", :e2e, :slow do
         status: "open",
         pnl: 0.0,
         entry_time: Time.now,
-        position_id: "POS_#{@positions.length + 1}"
+        position_id: "POS_#{@positions.length + 1}",
       )
       @positions << position
       update_session_stats(position)
@@ -150,37 +150,37 @@ RSpec.describe "Complete Trading Session End-to-End", :e2e, :slow do
     # Mock CSV Master with realistic data
     @mock_csv_master = double("CsvMaster")
     allow(@mock_csv_master).to receive(:get_expiry_dates).and_return(%w[2024-12-26 2025-01-02 2025-01-09])
-    allow(@mock_csv_master).to receive(:get_security_id) do |symbol, expiry, strike, option_type|
+    allow(@mock_csv_master).to receive(:get_security_id) do |_symbol, expiry, strike, option_type|
       "#{option_type}_#{strike}_#{expiry.delete("-")}"
     end
     allow(@mock_csv_master).to receive(:get_lot_size) do |security_id|
       security_id.include?("NIFTY") ? 75 : 25
     end
-    allow(@mock_csv_master).to receive(:get_available_strikes) do |symbol, expiry|
+    allow(@mock_csv_master).to receive(:get_available_strikes) do |symbol, _expiry|
       case symbol
       when "NIFTY"
         base = 25_000
         (base - 500..base + 500).step(50).to_a
       when "BANKNIFTY"
         base = 50_000
-        (base - 1000..base + 1000).step(100).to_a
+        (base - 1_000..base + 1_000).step(100).to_a
       end
     end
     allow(paper_app).to receive(:instance_variable_get).with(:@csv_master).and_return(@mock_csv_master)
 
     # Mock TickCache with realistic price simulation
-    allow(DhanScalper::TickCache).to receive(:ltp) do |segment, security_id|
+    allow(DhanScalper::TickCache).to receive(:ltp) do |_segment, security_id|
       case security_id
       when "13" then simulate_price_movement("NIFTY")
       when "25" then simulate_price_movement("BANKNIFTY")
       else 100.0
       end
     end
-    allow(DhanScalper::TickCache).to receive(:get) do |segment, security_id|
+    allow(DhanScalper::TickCache).to receive(:get) do |_segment, security_id|
       {
         last_price: simulate_price_movement(security_id == "13" ? "NIFTY" : "BANKNIFTY"),
         timestamp: Time.now.to_i,
-        volume: rand(1000..10_000)
+        volume: rand(1_000..10_000),
       }
     end
 
@@ -208,18 +208,18 @@ RSpec.describe "Complete Trading Session End-to-End", :e2e, :slow do
         ce: {
           security_id: "CE_#{strike}_#{Time.now.strftime("%Y%m%d")}",
           premium: calculate_option_premium(spot_price, strike, "CE", volatility),
-          strike: strike
+          strike: strike,
         },
         pe: {
           security_id: "PE_#{strike}_#{Time.now.strftime("%Y%m%d")}",
           premium: calculate_option_premium(spot_price, strike, "PE", volatility),
-          strike: strike
-        }
+          strike: strike,
+        },
       }
     end
     allow(paper_app).to receive(:instance_variable_get).with(:@option_pickers).and_return({
                                                                                             "NIFTY" => @mock_option_picker,
-                                                                                            "BANKNIFTY" => @mock_option_picker
+                                                                                            "BANKNIFTY" => @mock_option_picker,
                                                                                           })
 
     # Mock Paper Broker with realistic order execution
@@ -233,7 +233,7 @@ RSpec.describe "Complete Trading Session End-to-End", :e2e, :slow do
         avg_price: args[:price] || 100.0,
         quantity: args[:quantity],
         timestamp: Time.now,
-        side: "BUY"
+        side: "BUY",
       }
       @orders << order
       order
@@ -246,7 +246,7 @@ RSpec.describe "Complete Trading Session End-to-End", :e2e, :slow do
         avg_price: args[:price] || 120.0,
         quantity: args[:quantity],
         timestamp: Time.now,
-        side: "SELL"
+        side: "SELL",
       }
       @orders << order
       order
@@ -281,7 +281,7 @@ RSpec.describe "Complete Trading Session End-to-End", :e2e, :slow do
 
   def simulate_indicators(symbol)
     data = @market_data[symbol]
-    price = data[:current_price]
+    data[:current_price]
 
     # Simulate realistic indicator values based on trend
     case data[:trend]
@@ -292,10 +292,10 @@ RSpec.describe "Complete Trading Session End-to-End", :e2e, :slow do
           momentum: :strong,
           adx: rand(25..40),
           rsi: rand(60..80),
-          macd: :bullish
+          macd: :bullish,
         },
         supertrend: :bullish,
-        combined: :bullish
+        combined: :bullish,
       }
     when :bearish
       {
@@ -304,10 +304,10 @@ RSpec.describe "Complete Trading Session End-to-End", :e2e, :slow do
           momentum: :strong,
           adx: rand(25..40),
           rsi: rand(20..40),
-          macd: :bearish
+          macd: :bearish,
         },
         supertrend: :bearish,
-        combined: :bearish
+        combined: :bearish,
       }
     else
       {
@@ -316,10 +316,10 @@ RSpec.describe "Complete Trading Session End-to-End", :e2e, :slow do
           momentum: :weak,
           adx: rand(15..25),
           rsi: rand(40..60),
-          macd: :neutral
+          macd: :neutral,
         },
         supertrend: :none,
-        combined: :none
+        combined: :none,
       }
     end
   end
@@ -340,12 +340,12 @@ RSpec.describe "Complete Trading Session End-to-End", :e2e, :slow do
 
   def calculate_option_premium(spot_price, strike, option_type, volatility)
     # Simplified Black-Scholes approximation
-    moneyness = (strike - spot_price) / spot_price
+
     time_value = 50.0 # Base time value
     intrinsic_value = [option_type == "CE" ? spot_price - strike : strike - spot_price, 0].max
 
     base_premium = intrinsic_value + time_value
-    volatility_adjustment = volatility * 1000
+    volatility_adjustment = volatility * 1_000
 
     (base_premium + volatility_adjustment).round(2)
   end
@@ -407,7 +407,7 @@ RSpec.describe "Complete Trading Session End-to-End", :e2e, :slow do
       @market_data["BANKNIFTY"][:volatility] = 0.30
 
       # Simulate 50 cycles with frequent trend changes
-      50.times do |cycle|
+      50.times do |_cycle|
         # Random trend changes
         if rand < 0.2 # 20% chance of trend change
           @market_data["NIFTY"][:trend] = %i[bullish bearish neutral].sample
@@ -426,19 +426,19 @@ RSpec.describe "Complete Trading Session End-to-End", :e2e, :slow do
     it "manages risk effectively across multiple positions" do
       # Create multiple positions to test risk management
       @positions = [
-        { symbol: "NIFTY", security_id: "CE_25000", pnl: 1000.0, status: "open" },
+        { symbol: "NIFTY", security_id: "CE_25000", pnl: 1_000.0, status: "open" },
         { symbol: "BANKNIFTY", security_id: "PE_50000", pnl: -500.0, status: "open" },
-        { symbol: "NIFTY", security_id: "CE_25100", pnl: -2000.0, status: "open" }
+        { symbol: "NIFTY", security_id: "CE_25100", pnl: -2_000.0, status: "open" },
       ]
 
-      @session_stats[:total_pnl] = -1500.0
+      @session_stats[:total_pnl] = -1_500.0
 
       # Test risk limit check
       result = paper_app.check_risk_limits
       expect(result).to be true # Should still be within limits
 
       # Test breach scenario
-      @session_stats[:total_pnl] = -9000.0
+      @session_stats[:total_pnl] = -9_000.0
       result = paper_app.check_risk_limits
       expect(result).to be false # Should breach limits
     end
@@ -446,19 +446,19 @@ RSpec.describe "Complete Trading Session End-to-End", :e2e, :slow do
     it "generates comprehensive session reports" do
       # Set up realistic session data
       @session_stats = {
-        start_time: Time.now - 3600, # 1 hour ago
+        start_time: Time.now - 3_600, # 1 hour ago
         total_trades: 25,
         winning_trades: 15,
         losing_trades: 10,
-        total_pnl: 3500.0,
-        max_profit: 5000.0,
-        max_drawdown: -1500.0,
-        current_drawdown: -500.0
+        total_pnl: 3_500.0,
+        max_profit: 5_000.0,
+        max_drawdown: -1_500.0,
+        current_drawdown: -500.0,
       }
 
       @positions = [
-        { symbol: "NIFTY", status: "open", pnl: 500.0, entry_time: Time.now - 1800 },
-        { symbol: "BANKNIFTY", status: "closed", pnl: 3000.0, entry_time: Time.now - 3600, exit_time: Time.now - 1800 }
+        { symbol: "NIFTY", status: "open", pnl: 500.0, entry_time: Time.now - 1_800 },
+        { symbol: "BANKNIFTY", status: "closed", pnl: 3_000.0, entry_time: Time.now - 3_600, exit_time: Time.now - 1_800 },
       ]
 
       # Test report generation
@@ -478,7 +478,7 @@ RSpec.describe "Complete Trading Session End-to-End", :e2e, :slow do
       start_time = Time.now
 
       # Simulate 1000 rapid trading cycles
-      1000.times do
+      1_000.times do
         paper_app.analyze_and_trade
         manage_positions
       end
@@ -491,7 +491,7 @@ RSpec.describe "Complete Trading Session End-to-End", :e2e, :slow do
       initial_memory = `ps -o rss= -p #{Process.pid}`.to_i
 
       # Simulate 2-hour session (7200 cycles at 1-second intervals)
-      7200.times do |cycle|
+      7_200.times do |cycle|
         paper_app.analyze_and_trade
         manage_positions
 
@@ -523,7 +523,7 @@ RSpec.describe "Complete Trading Session End-to-End", :e2e, :slow do
       position[:pnl] = (current_price - entry_price) * (position[:quantity] || 75)
 
       # Simulate position closing based on P&L
-      next unless position[:pnl] > 2000 || position[:pnl] < -1000
+      next unless position[:pnl] > 2_000 || position[:pnl] < -1_000
 
       position[:status] = "closed"
       position[:exit_time] = Time.now

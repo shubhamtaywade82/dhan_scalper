@@ -26,7 +26,7 @@ tick_data = {
   day_high: 19_600.0,
   day_low: 19_400.0,
   atp: 19_520.0,
-  vol: 1000
+  vol: 1_000,
 }
 
 redis_store.store_tick("IDX_I", "13", tick_data)

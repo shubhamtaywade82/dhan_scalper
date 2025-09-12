@@ -10,7 +10,7 @@ RSpec.describe Candle do
       high: 105.0,
       low: 98.0,
       close: 103.0,
-      volume: 1000
+      volume: 1_000,
     }
   end
 
@@ -23,7 +23,7 @@ RSpec.describe Candle do
       expect(candle.high).to eq(105.0)
       expect(candle.low).to eq(98.0)
       expect(candle.close).to eq(103.0)
-      expect(candle.volume).to eq(1000)
+      expect(candle.volume).to eq(1_000)
     end
 
     it "converts string values to appropriate types" do
@@ -33,14 +33,14 @@ RSpec.describe Candle do
         high: "105.5",
         low: "98.5",
         close: "103.5",
-        volume: "1500"
+        volume: "1500",
       )
 
       expect(candle.open).to eq(100.5)
       expect(candle.high).to eq(105.5)
       expect(candle.low).to eq(98.5)
       expect(candle.close).to eq(103.5)
-      expect(candle.volume).to eq(1500)
+      expect(candle.volume).to eq(1_500)
     end
 
     it "handles integer values" do
@@ -50,14 +50,14 @@ RSpec.describe Candle do
         high: 105,
         low: 98,
         close: 103,
-        volume: 1000
+        volume: 1_000,
       )
 
       expect(candle.open).to eq(100.0)
       expect(candle.high).to eq(105.0)
       expect(candle.low).to eq(98.0)
       expect(candle.close).to eq(103.0)
-      expect(candle.volume).to eq(1000)
+      expect(candle.volume).to eq(1_000)
     end
   end
 
@@ -103,7 +103,7 @@ RSpec.describe Candle do
         high: 0,
         low: 0,
         close: 0,
-        volume: 0
+        volume: 0,
       )
 
       expect(candle.open).to eq(0.0)
@@ -122,14 +122,14 @@ RSpec.describe Candle do
         high: -95,
         low: -105,
         close: -98,
-        volume: 1000
+        volume: 1_000,
       )
 
       expect(candle.open).to eq(-100.0)
       expect(candle.high).to eq(-95.0)
       expect(candle.low).to eq(-105.0)
       expect(candle.close).to eq(-98.0)
-      expect(candle.volume).to eq(1000)
+      expect(candle.volume).to eq(1_000)
       expect(candle.bullish?).to be true
       expect(candle.bearish?).to be false
     end
@@ -139,15 +139,15 @@ RSpec.describe Candle do
       candle = described_class.new(
         ts: Time.now,
         open: large_number,
-        high: large_number + 1000,
-        low: large_number - 1000,
+        high: large_number + 1_000,
+        low: large_number - 1_000,
         close: large_number + 500,
-        volume: 1_000_000
+        volume: 1_000_000,
       )
 
       expect(candle.open).to eq(large_number)
-      expect(candle.high).to eq(large_number + 1000)
-      expect(candle.low).to eq(large_number - 1000)
+      expect(candle.high).to eq(large_number + 1_000)
+      expect(candle.low).to eq(large_number - 1_000)
       expect(candle.close).to eq(large_number + 500)
       expect(candle.volume).to eq(1_000_000)
     end

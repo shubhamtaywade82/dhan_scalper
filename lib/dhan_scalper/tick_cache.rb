@@ -171,7 +171,7 @@ module DhanScalper
             total_ticks: MAP.size,
             segments: MAP.values.map { |t| t[:segment] }.uniq,
             oldest_tick: MAP.values.map { |t| t[:timestamp] }.compact.min,
-            newest_tick: MAP.values.map { |t| t[:timestamp] }.compact.max
+            newest_tick: MAP.values.map { |t| t[:timestamp] }.compact.max,
           }
         end
       end
@@ -203,7 +203,7 @@ module DhanScalper
           end
 
           nil
-        rescue StandardError => e
+        rescue StandardError
           # Silently fail to avoid disrupting normal operation
           nil
         end

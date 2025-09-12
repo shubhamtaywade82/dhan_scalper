@@ -110,7 +110,7 @@ module DhanScalper
         lot_size: @lot_size,
         strike_price: @strike_price,
         expiry_date: @expiry_date,
-        underlying_symbol: @underlying_symbol
+        underlying_symbol: @underlying_symbol,
       }
     end
 

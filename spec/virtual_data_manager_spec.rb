@@ -309,7 +309,7 @@ RSpec.describe DhanScalper::VirtualDataManager do
 
     it "allows balance to reach zero" do
       # Place order exactly equal to balance
-      result = virtual_data_manager.place_order("NIFTY", "BUY", 1000, 100.0)
+      result = virtual_data_manager.place_order("NIFTY", "BUY", 1_000, 100.0)
 
       expect(result[:status]).to eq("SUCCESS")
       expect(virtual_data_manager.get_balance).to eq(0.0)
@@ -340,8 +340,8 @@ RSpec.describe DhanScalper::VirtualDataManager do
       final_balance = virtual_data_manager.get_balance
 
       # Verify balance changes
-      expect(buy_balance).to eq(initial_balance - 5000.0)
-      expect(final_balance).to eq(buy_balance + 5500.0)
+      expect(buy_balance).to eq(initial_balance - 5_000.0)
+      expect(final_balance).to eq(buy_balance + 5_500.0)
       expect(final_balance).to eq(initial_balance + 500.0) # Net profit
     end
   end

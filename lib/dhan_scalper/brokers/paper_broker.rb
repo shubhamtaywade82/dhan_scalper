@@ -111,7 +111,7 @@ module DhanScalper
           # Calculate the proportion of entry fee for this partial exit
           total_position_qty = position[:buy_qty]
           entry_fee_proportion = DhanScalper::Support::Money.divide(sold_quantity, total_position_qty)
-          proportional_entry_fee = DhanScalper::Support::Money.multiply(
+          DhanScalper::Support::Money.multiply(
             position[:entry_fee] || DhanScalper::Support::Money.bd(0), entry_fee_proportion
           )
 

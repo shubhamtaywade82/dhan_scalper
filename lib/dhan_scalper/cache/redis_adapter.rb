@@ -131,7 +131,7 @@ module DhanScalper
       def set_position(security_id, position_data)
         key = "position:#{security_id}"
         @redis.hset(key, position_data.transform_values(&:to_s))
-        @redis.expire(key, 3600) # 1 hour TTL
+        @redis.expire(key, 3_600) # 1 hour TTL
         true
       rescue Redis::BaseError => e
         @logger.error "[REDIS] Set position error: #{e.message}"
@@ -156,7 +156,7 @@ module DhanScalper
 
       def load_lua_scripts
         @lua_scripts = {
-          update_peak: <<~LUA
+          update_peak: <<~LUA,
               local key = KEYS[1]
               local current_price = tonumber(ARGV[1])
               local entry_price = tonumber(ARGV[2])

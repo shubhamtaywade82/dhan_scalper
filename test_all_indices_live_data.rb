@@ -11,7 +11,7 @@ puts "=" * 80
 ENV["DHAN_LOG_LEVEL"] = "DEBUG"
 
 # Check environment variables
-required_env_vars = ["CLIENT_ID", "ACCESS_TOKEN"]
+required_env_vars = %w[CLIENT_ID ACCESS_TOKEN]
 missing_vars = required_env_vars.select { |var| ENV[var].nil? || ENV[var].empty? }
 
 if missing_vars.any?
@@ -27,7 +27,7 @@ puts "\n📊 STEP 1: GETTING REAL DERIVATIVES DATA FOR ALL INDICES"
 puts "-" * 70
 
 csv_master = DhanScalper::CsvMaster.new
-symbols = ["NIFTY", "BANKNIFTY", "SENSEX"]
+symbols = %w[NIFTY BANKNIFTY SENSEX]
 real_instruments = []
 
 symbols.each do |symbol|
@@ -36,49 +36,49 @@ symbols.each do |symbol|
   expiries = csv_master.get_expiry_dates(symbol)
   puts "  Expiries: #{expiries.length} found"
 
-  if expiries.any?
-    first_expiry = expiries.first
-    puts "  First expiry: #{first_expiry}"
+  next unless expiries.any?
 
-    strikes = csv_master.get_available_strikes(symbol, first_expiry)
-    puts "  Total strikes: #{strikes.length}"
+  first_expiry = expiries.first
+  puts "  First expiry: #{first_expiry}"
 
-    if strikes.any?
-      # Get strikes around the middle
-      mid_index = strikes.length / 2
-      test_strikes = strikes[mid_index - 1..mid_index + 1] || strikes.first(3)
+  strikes = csv_master.get_available_strikes(symbol, first_expiry)
+  puts "  Total strikes: #{strikes.length}"
 
-      test_strikes.each do |strike|
-        ce_sid = csv_master.get_security_id(symbol, first_expiry, strike, "CE")
-        pe_sid = csv_master.get_security_id(symbol, first_expiry, strike, "PE")
+  next unless strikes.any?
 
-        if ce_sid
-          ce_segment = csv_master.get_exchange_segment(ce_sid)
-          real_instruments << {
-            symbol: symbol,
-            security_id: ce_sid,
-            segment: ce_segment,
-            type: "CE",
-            strike: strike,
-            expiry: first_expiry
-          }
-          puts "    CE #{strike}: #{ce_sid} → #{ce_segment}"
-        end
+  # Get strikes around the middle
+  mid_index = strikes.length / 2
+  test_strikes = strikes[mid_index - 1..mid_index + 1] || strikes.first(3)
 
-        if pe_sid
-          pe_segment = csv_master.get_exchange_segment(pe_sid)
-          real_instruments << {
-            symbol: symbol,
-            security_id: pe_sid,
-            segment: pe_segment,
-            type: "PE",
-            strike: strike,
-            expiry: first_expiry
-          }
-          puts "    PE #{strike}: #{pe_sid} → #{pe_segment}"
-        end
-      end
+  test_strikes.each do |strike|
+    ce_sid = csv_master.get_security_id(symbol, first_expiry, strike, "CE")
+    pe_sid = csv_master.get_security_id(symbol, first_expiry, strike, "PE")
+
+    if ce_sid
+      ce_segment = csv_master.get_exchange_segment(ce_sid)
+      real_instruments << {
+        symbol: symbol,
+        security_id: ce_sid,
+        segment: ce_segment,
+        type: "CE",
+        strike: strike,
+        expiry: first_expiry,
+      }
+      puts "    CE #{strike}: #{ce_sid} → #{ce_segment}"
     end
+
+    next unless pe_sid
+
+    pe_segment = csv_master.get_exchange_segment(pe_sid)
+    real_instruments << {
+      symbol: symbol,
+      security_id: pe_sid,
+      segment: pe_segment,
+      type: "PE",
+      strike: strike,
+      expiry: first_expiry,
+    }
+    puts "    PE #{strike}: #{pe_sid} → #{pe_segment}"
   end
 end
 
@@ -93,7 +93,7 @@ puts "\n📊 Instruments by symbol:"
 instruments_by_symbol.each do |symbol, instruments|
   puts "  #{symbol}: #{instruments.length} instruments"
   segments = instruments.map { |inst| inst[:segment] }.uniq
-  puts "    Segments: #{segments.join(', ')}"
+  puts "    Segments: #{segments.join(", ")}"
 end
 
 # Test 2: Use MarketFeed for live data
@@ -109,7 +109,7 @@ begin
   instruments_to_subscribe = real_instruments.map do |inst|
     {
       segment: inst[:segment],
-      security_id: inst[:security_id]
+      security_id: inst[:security_id],
     }
   end
 
@@ -138,7 +138,7 @@ begin
       cache_data = DhanScalper::TickCache.all
 
       if cache_data && !cache_data.empty?
-        new_ticks = cache_data.select do |key, tick|
+        new_ticks = cache_data.select do |_key, tick|
           tick[:timestamp] && (Time.now - tick[:timestamp]) < 5 # Last 5 seconds
         end
 
@@ -163,13 +163,13 @@ begin
 
       # Show periodic summary
       if (Time.now - start_time).to_i % 15 == 0
-        puts "\n  📈 LIVE DATA SUMMARY (#{Time.now.strftime('%H:%M:%S')}):"
+        puts "\n  📈 LIVE DATA SUMMARY (#{Time.now.strftime("%H:%M:%S")}):"
         puts "    Total ticks received: #{tick_count}"
         puts "    Cache entries: #{cache_data&.size || 0}"
 
         if cache_data && !cache_data.empty?
           segments = cache_data.values.map { |tick| tick[:segment] }.uniq
-          puts "    Segments: #{segments.join(', ')}"
+          puts "    Segments: #{segments.join(", ")}"
         end
 
         # Show data by symbol
@@ -263,10 +263,10 @@ begin
         data = redis.hgetall(key)
         ttl = redis.ttl(key)
         puts "    #{key}: TTL=#{ttl}s"
-        puts "      LTP: #{data['ltp']}"
-        puts "      Volume: #{data['volume']}"
-        puts "      Timestamp: #{data['timestamp']}"
-        puts "      Segment: #{data['segment']}"
+        puts "      LTP: #{data["ltp"]}"
+        puts "      Volume: #{data["volume"]}"
+        puts "      Timestamp: #{data["timestamp"]}"
+        puts "      Segment: #{data["segment"]}"
       end
     end
   rescue StandardError => e
@@ -299,7 +299,7 @@ begin
 
     # Check segments used
     segments_used = symbol_instruments.map { |inst| inst[:segment] }.uniq
-    puts "    Segments used: #{segments_used.join(', ')}"
+    puts "    Segments used: #{segments_used.join(", ")}"
   end
 
   # Test 8: Final TickCache analysis
@@ -315,7 +315,7 @@ begin
     end
 
     # Analyze data freshness
-    fresh_ticks = cache_data.select do |key, tick|
+    fresh_ticks = cache_data.select do |_key, tick|
       tick[:timestamp] && (Time.now - tick[:timestamp]) < 60 # Last minute
     end
 
@@ -331,7 +331,7 @@ begin
     # Analyze by symbol
     puts "    Data by symbol:"
     symbols.each do |symbol|
-      symbol_ticks = cache_data.select do |key, tick|
+      symbol_ticks = cache_data.select do |_key, tick|
         real_instruments.any? { |inst| inst[:security_id] == tick[:security_id] && inst[:symbol] == symbol }
       end
       puts "      #{symbol}: #{symbol_ticks.size} entries"
@@ -350,13 +350,12 @@ begin
   rescue StandardError => e
     puts "  Stop error: #{e.message}"
   end
-
 rescue StandardError => e
   puts "  ❌ MarketFeed error: #{e.message}"
   puts "  Backtrace: #{e.backtrace.first(5).join("\n")}"
 end
 
-puts "\n" + "=" * 80
+puts "\n" + ("=" * 80)
 puts "✅ LIVE MARKET DATA TEST COMPLETE - ALL INDICES"
 puts "This test shows how real market data flows through the system for all three indices:"
 puts "  📡 NIFTY: NSE_FNO segment with live option data"

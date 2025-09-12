@@ -267,7 +267,7 @@ RSpec.describe "CSV Master Integration with Real Data", :slow do
       expiries = csv_master.get_expiry_dates("NIFTY")
       first_expiry = expiries.first
 
-      result = csv_master.get_security_id("NIFTY", first_expiry, -1000, "CE")
+      result = csv_master.get_security_id("NIFTY", first_expiry, -1_000, "CE")
       expect(result).to be_nil
     end
   end

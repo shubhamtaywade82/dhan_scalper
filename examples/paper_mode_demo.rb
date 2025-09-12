@@ -64,7 +64,7 @@ test_cases = [
   %w[NSE E Equity],
   %w[NSE D Derivatives],
   %w[BSE E Equity],
-  %w[MCX M Commodity]
+  %w[MCX M Commodity],
 ]
 
 test_cases.each do |exchange, segment, description|
@@ -96,7 +96,7 @@ begin
     cfg,
     quiet: false,
     enhanced: true,
-    timeout_minutes: 5 # 5-minute demo session
+    timeout_minutes: 5, # 5-minute demo session
   )
 
   paper_app.start

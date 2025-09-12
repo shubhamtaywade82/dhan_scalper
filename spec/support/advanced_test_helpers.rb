@@ -9,18 +9,18 @@ module AdvancedTestHelpers
     def self.create_realistic_market_data(symbols: ["NIFTY"], periods: 200)
       symbols.each_with_object({}) do |symbol, data|
         base_price = case symbol
-                    when "NIFTY" then 25000
-                    when "BANKNIFTY" then 50000
-                    when "FINNIFTY" then 20000
-                    else 25000
-                    end
+                     when "NIFTY" then 25_000
+                     when "BANKNIFTY" then 50_000
+                     when "FINNIFTY" then 20_000
+                     else 25_000
+                     end
 
         data[symbol] = {
           current_price: base_price,
           price_history: generate_price_history(base_price, periods),
-          trend: [:bullish, :bearish, :neutral].sample,
+          trend: %i[bullish bearish neutral].sample,
           volatility: rand(0.1..0.3),
-          volume: rand(10000..100000)
+          volume: rand(10_000..100_000),
         }
       end
     end
@@ -31,21 +31,21 @@ module AdvancedTestHelpers
         {
           position_id: "POS_#{i}",
           symbol: symbol,
-          security_id: "#{symbol}_#{25000 + i * 50}",
-          status: ["open", "closed"].sample,
-          side: ["BUY", "SELL"].sample,
+          security_id: "#{symbol}_#{25_000 + (i * 50)}",
+          status: %w[open closed].sample,
+          side: %w[BUY SELL].sample,
           quantity: case symbol
-                   when "NIFTY" then 75
-                   when "BANKNIFTY" then 25
-                   when "FINNIFTY" then 50
-                   else 75
-                   end,
+                    when "NIFTY" then 75
+                    when "BANKNIFTY" then 25
+                    when "FINNIFTY" then 50
+                    else 75
+                    end,
           entry_price: rand(50..200),
           current_price: rand(50..200),
-          pnl: rand(-2000..2000),
-          entry_time: Time.now - rand(0..3600),
-          exit_time: rand < 0.5 ? Time.now - rand(0..1800) : nil,
-          exit_reason: ["profit_target", "stop_loss", "timeout"].sample
+          pnl: rand(-2_000..2_000),
+          entry_time: Time.now - rand(0..3_600),
+          exit_time: rand < 0.5 ? Time.now - rand(0..1_800) : nil,
+          exit_reason: %w[profit_target stop_loss timeout].sample,
         }
       end
     end
@@ -54,46 +54,44 @@ module AdvancedTestHelpers
       (1..count).map do |i|
         {
           order_id: "ORDER_#{i}",
-          symbol: ["NIFTY", "BANKNIFTY", "FINNIFTY"].sample,
+          symbol: %w[NIFTY BANKNIFTY FINNIFTY].sample,
           security_id: "SEC_#{i}",
-          side: ["BUY", "SELL"].sample,
+          side: %w[BUY SELL].sample,
           quantity: rand(25..100),
           price: rand(50..200),
-          status: ["PENDING", "FILLED", "CANCELLED", "REJECTED"].sample,
-          timestamp: Time.now - rand(0..3600),
+          status: %w[PENDING FILLED CANCELLED REJECTED].sample,
+          timestamp: Time.now - rand(0..3_600),
           avg_price: rand(50..200),
-          filled_quantity: rand(0..100)
+          filled_quantity: rand(0..100),
         }
       end
     end
 
     def self.create_realistic_session_stats
       {
-        start_time: Time.now - rand(3600..7200),
+        start_time: Time.now - rand(3_600..7_200),
         end_time: Time.now,
         total_trades: rand(10..100),
         winning_trades: rand(5..50),
         losing_trades: rand(5..50),
         win_rate: rand(30.0..80.0),
-        total_pnl: rand(-5000..10000),
-        max_profit: rand(1000..5000),
-        max_drawdown: rand(-5000..-1000),
-        current_drawdown: rand(-2000..0),
-        avg_trade_duration: rand(300..1800),
-        max_concurrent_positions: rand(1..10)
+        total_pnl: rand(-5_000..10_000),
+        max_profit: rand(1_000..5_000),
+        max_drawdown: rand(-5_000..-1_000),
+        current_drawdown: rand(-2_000..0),
+        avg_trade_duration: rand(300..1_800),
+        max_concurrent_positions: rand(1..10),
       }
     end
-
-    private
 
     def self.generate_price_history(base_price, periods)
       prices = [base_price]
       trend = rand(-0.01..0.01) # Small trend component
       volatility = rand(0.05..0.15)
 
-      (1...periods).each do |i|
+      (1...periods).each do |_i|
         # Random walk with trend
-        change = trend + (rand - 0.5) * volatility
+        change = trend + ((rand - 0.5) * volatility)
         new_price = prices.last * (1 + change)
         prices << new_price.round(2)
       end
@@ -125,21 +123,25 @@ module AdvancedTestHelpers
 
     def duration
       return nil unless @start_time && @end_time
+
       @end_time - @start_time
     end
 
     def memory_usage
       return nil if @memory_samples.empty?
+
       @memory_samples.max - @memory_samples.min
     end
 
     def cpu_usage
       return nil if @cpu_samples.empty?
+
       @cpu_samples.max - @cpu_samples.min
     end
 
     def throughput(operations)
       return nil unless duration
+
       operations / duration
     end
 
@@ -180,7 +182,7 @@ module AdvancedTestHelpers
               thread_id: i,
               operation_id: j,
               result: result,
-              duration: duration
+              duration: duration,
             }
           end
 
@@ -223,22 +225,22 @@ module AdvancedTestHelpers
       volatility = @volatility
 
       # Random walk with trend
-      change = trend + (rand - 0.5) * volatility * 0.1
+      change = trend + ((rand - 0.5) * volatility * 0.1)
       new_price = current_price * (1 + change)
 
       @prices[symbol] = new_price.round(2)
-      @volumes[symbol] = rand(1000..10000)
+      @volumes[symbol] = rand(1_000..10_000)
 
       new_price
     end
 
     def set_trend(symbol, trend)
       @trends[symbol] = case trend
-                       when :bullish then 0.001
-                       when :bearish then -0.001
-                       when :neutral then 0.0
-                       else 0.0
-                       end
+                        when :bullish then 0.001
+                        when :bearish then -0.001
+                        when :neutral then 0.0
+                        else 0.0
+                        end
     end
 
     def get_current_price(symbol)
@@ -268,15 +270,15 @@ module AdvancedTestHelpers
     def initialize_market_data
       @symbols.each do |symbol|
         base_price = case symbol
-                    when "NIFTY" then 25000
-                    when "BANKNIFTY" then 50000
-                    when "FINNIFTY" then 20000
-                    else 25000
-                    end
+                     when "NIFTY" then 25_000
+                     when "BANKNIFTY" then 50_000
+                     when "FINNIFTY" then 20_000
+                     else 25_000
+                     end
 
         @prices[symbol] = base_price
         @trends[symbol] = 0.0
-        @volumes[symbol] = rand(1000..10000)
+        @volumes[symbol] = rand(1_000..10_000)
       end
     end
   end
@@ -304,17 +306,17 @@ module AdvancedTestHelpers
   class TestDataGenerator
     def self.generate_candle_series(symbol: "NIFTY", count: 200, trend: :neutral)
       base_price = case symbol
-                  when "NIFTY" then 25000
-                  when "BANKNIFTY" then 50000
-                  when "FINNIFTY" then 20000
-                  else 25000
-                  end
+                   when "NIFTY" then 25_000
+                   when "BANKNIFTY" then 50_000
+                   when "FINNIFTY" then 20_000
+                   else 25_000
+                   end
 
       trend_multiplier = case trend
-                        when :bullish then 1.001
-                        when :bearish then 0.999
-                        else 1.0
-                        end
+                         when :bullish then 1.001
+                         when :bearish then 0.999
+                         else 1.0
+                         end
 
       candles = []
       current_price = base_price
@@ -325,15 +327,15 @@ module AdvancedTestHelpers
         high = open + rand(0..50)
         low = open - rand(0..50)
         close = low + rand(0..(high - low))
-        volume = rand(1000..10000)
+        volume = rand(1_000..10_000)
 
         candles << DhanScalper::Candle.new(
-          ts: Time.now - (count - i) * 60,
+          ts: Time.now - ((count - i) * 60),
           open: open,
           high: high,
           low: low,
           close: close,
-          volume: volume
+          volume: volume,
         )
 
         current_price = close * trend_multiplier
@@ -342,28 +344,28 @@ module AdvancedTestHelpers
       candles
     end
 
-    def self.generate_tick_data(symbol: "NIFTY", count: 1000)
+    def self.generate_tick_data(symbol: "NIFTY", count: 1_000)
       base_price = case symbol
-                  when "NIFTY" then 25000
-                  when "BANKNIFTY" then 50000
-                  when "FINNIFTY" then 20000
-                  else 25000
-                  end
+                   when "NIFTY" then 25_000
+                   when "BANKNIFTY" then 50_000
+                   when "FINNIFTY" then 20_000
+                   else 25_000
+                   end
 
       (1..count).map do |i|
         {
           security_id: case symbol
-                      when "NIFTY" then "13"
-                      when "BANKNIFTY" then "25"
-                      when "FINNIFTY" then "26"
-                      else "13"
-                      end,
+                       when "NIFTY" then "13"
+                       when "BANKNIFTY" then "25"
+                       when "FINNIFTY" then "26"
+                       else "13"
+                       end,
           last_price: base_price + rand(-100..100),
           timestamp: Time.now - (count - i),
-          volume: rand(1000..10000),
+          volume: rand(1_000..10_000),
           high: base_price + rand(0..100),
           low: base_price - rand(0..100),
-          open: base_price + rand(-50..50)
+          open: base_price + rand(-50..50),
         }
       end
     end
@@ -377,7 +379,7 @@ module AdvancedTestHelpers
 
     def self.assert_memory_usage_reasonable(initial_memory, final_memory, max_increase_mb: 100)
       increase_kb = final_memory - initial_memory
-      increase_mb = increase_kb / 1024.0
+      increase_mb = increase_kb / 1_024.0
       expect(increase_mb).to be < max_increase_mb
     end
 
@@ -402,14 +404,14 @@ module AdvancedTestHelpers
       iterations.times do
         start_time = Time.now
         operation.call
-        durations << Time.now - start_time
+        durations << (Time.now - start_time)
       end
 
       {
         min: durations.min,
         max: durations.max,
         avg: durations.sum / durations.length,
-        total: durations.sum
+        total: durations.sum,
       }
     end
 

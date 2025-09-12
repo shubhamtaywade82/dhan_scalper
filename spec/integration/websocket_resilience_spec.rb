@@ -27,7 +27,7 @@ RSpec.describe "WebSocket Resilience Integration", :integration do
       @handlers[:tick]&.call(tick_data)
     end
 
-    def emit_close(code = 1000, reason = "Normal closure")
+    def emit_close(code = 1_000, reason = "Normal closure")
       @handlers[:close]&.call(code, reason)
       @connected = false
       @closed = true
@@ -64,7 +64,7 @@ RSpec.describe "WebSocket Resilience Integration", :integration do
       logger: logger,
       heartbeat_interval: 1, # Fast heartbeat for testing
       max_reconnect_attempts: 3,
-      base_reconnect_delay: 0.1 # Fast reconnection for testing
+      base_reconnect_delay: 0.1, # Fast reconnection for testing
     )
   end
 
@@ -172,7 +172,7 @@ RSpec.describe "WebSocket Resilience Integration", :integration do
       expect(stats[:total_subscriptions]).to eq(2)
 
       # Simulate connection loss and reconnection
-      manager.instance_variable_get(:@connection).emit_close(1006, "Abnormal closure")
+      manager.instance_variable_get(:@connection).emit_close(1_006, "Abnormal closure")
 
       # Wait for reconnection
       sleep(0.5)
@@ -194,7 +194,7 @@ RSpec.describe "WebSocket Resilience Integration", :integration do
       manager.add_baseline_subscription("13", "INDEX")
 
       # Simulate connection loss and reconnection
-      manager.instance_variable_get(:@connection).emit_close(1006, "Abnormal closure")
+      manager.instance_variable_get(:@connection).emit_close(1_006, "Abnormal closure")
 
       # Wait for reconnection
       sleep(0.5)
@@ -209,18 +209,18 @@ RSpec.describe "WebSocket Resilience Integration", :integration do
       manager.add_baseline_subscription("13", "INDEX")
 
       tick_received = false
-      manager.on_price_update do |price_data|
+      manager.on_price_update do |_price_data|
         tick_received = true
       end
 
       # Emit a tick
       current_time = Time.now.to_i
       manager.instance_variable_get(:@connection).emit_tick({
-        security_id: "13",
-        ltp: 25000.0,
-        ts: current_time,
-        symbol: "NIFTY"
-      })
+                                                              security_id: "13",
+                                                              ltp: 25_000.0,
+                                                              ts: current_time,
+                                                              symbol: "NIFTY",
+                                                            })
 
       expect(tick_received).to be true
     end
@@ -230,7 +230,7 @@ RSpec.describe "WebSocket Resilience Integration", :integration do
       manager.add_baseline_subscription("13", "INDEX")
 
       tick_count = 0
-      manager.on_price_update do |price_data|
+      manager.on_price_update do |_price_data|
         tick_count += 1
       end
 
@@ -238,19 +238,19 @@ RSpec.describe "WebSocket Resilience Integration", :integration do
 
       # Emit newer tick first
       manager.instance_variable_get(:@connection).emit_tick({
-        security_id: "13",
-        ltp: 25000.0,
-        ts: current_time + 10,
-        symbol: "NIFTY"
-      })
+                                                              security_id: "13",
+                                                              ltp: 25_000.0,
+                                                              ts: current_time + 10,
+                                                              symbol: "NIFTY",
+                                                            })
 
       # Emit older tick (should be ignored)
       manager.instance_variable_get(:@connection).emit_tick({
-        security_id: "13",
-        ltp: 24900.0,
-        ts: current_time + 5,
-        symbol: "NIFTY"
-      })
+                                                              security_id: "13",
+                                                              ltp: 24_900.0,
+                                                              ts: current_time + 5,
+                                                              symbol: "NIFTY",
+                                                            })
 
       expect(tick_count).to eq(1)
     end
@@ -260,18 +260,18 @@ RSpec.describe "WebSocket Resilience Integration", :integration do
       manager.add_baseline_subscription("13", "INDEX")
 
       tick_count = 0
-      manager.on_price_update do |price_data|
+      manager.on_price_update do |_price_data|
         tick_count += 1
       end
 
       # Emit very old tick (beyond deduplication window)
       old_time = Time.now.to_i - 10
       manager.instance_variable_get(:@connection).emit_tick({
-        security_id: "13",
-        ltp: 25000.0,
-        ts: old_time,
-        symbol: "NIFTY"
-      })
+                                                              security_id: "13",
+                                                              ltp: 25_000.0,
+                                                              ts: old_time,
+                                                              symbol: "NIFTY",
+                                                            })
 
       # Wait a bit for processing
       sleep(0.1)
@@ -361,7 +361,7 @@ RSpec.describe "WebSocket Resilience Integration", :integration do
       manager.stop
 
       # Simulate connection loss after stop
-      manager.instance_variable_get(:@connection)&.emit_close(1006, "Abnormal closure")
+      manager.instance_variable_get(:@connection)&.emit_close(1_006, "Abnormal closure")
 
       # Wait to ensure no reconnection happens
       sleep(0.5)
@@ -381,11 +381,11 @@ RSpec.describe "WebSocket Resilience Integration", :integration do
 
       # Should not crash the application - the error should be caught internally
       manager.instance_variable_get(:@connection).emit_tick({
-        security_id: "13",
-        ltp: 25000.0,
-        ts: Time.now.to_i,
-        symbol: "NIFTY"
-      })
+                                                              security_id: "13",
+                                                              ltp: 25_000.0,
+                                                              ts: Time.now.to_i,
+                                                              symbol: "NIFTY",
+                                                            })
 
       # Wait for error handling
       sleep(0.1)
@@ -411,9 +411,9 @@ RSpec.describe "WebSocket Resilience Integration", :integration do
       # Mock position tracker
       position_tracker = double("PositionTracker")
       allow(position_tracker).to receive(:get_open_positions).and_return([
-        { security_id: "OPT123", symbol: "NIFTY", quantity: 100 },
-        { security_id: "OPT456", symbol: "BANKNIFTY", quantity: 50 }
-      ])
+                                                                           { security_id: "OPT123", symbol: "NIFTY", quantity: 100 },
+                                                                           { security_id: "OPT456", symbol: "BANKNIFTY", quantity: 50 },
+                                                                         ])
 
       manager.start
 
@@ -426,7 +426,7 @@ RSpec.describe "WebSocket Resilience Integration", :integration do
       end
 
       # Simulate connection loss and reconnection
-      manager.instance_variable_get(:@connection).emit_close(1006, "Abnormal closure")
+      manager.instance_variable_get(:@connection).emit_close(1_006, "Abnormal closure")
 
       # Wait for reconnection
       sleep(0.5)

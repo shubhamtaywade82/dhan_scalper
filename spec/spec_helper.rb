@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-unless ["false", "0"].include?(ENV["COVERAGE"]&.downcase)
+unless %w[false 0].include?(ENV["COVERAGE"]&.downcase)
   require "simplecov"
   SimpleCov.start do
     add_filter "/spec/"
@@ -68,7 +68,7 @@ RSpec.configure do |config|
     stub_const("DhanHQ::Models::Funds", funds_class)
     allow(funds_class).to receive(:fetch).and_return(double(
                                                        available_balance: 100_000.0,
-                                                       utilized_amount: 50_000.0
+                                                       utilized_amount: 50_000.0,
                                                      ))
 
     # Mock DhanHQ::WS

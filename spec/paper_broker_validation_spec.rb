@@ -28,7 +28,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
           segment: segment,
           security_id: security_id,
           quantity: 100,
-          charge_per_order: 20
+          charge_per_order: 20,
         )
 
         expect(result).to be_a(Hash)
@@ -48,7 +48,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
           segment: segment,
           security_id: security_id,
           quantity: 100,
-          charge_per_order: 20
+          charge_per_order: 20,
         )
 
         # Total cost should be (100 * 100) + 20 = 10020
@@ -70,7 +70,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
           segment: segment,
           security_id: security_id,
           quantity: 100,
-          charge_per_order: 20
+          charge_per_order: 20,
         )
 
         expect(result).to be_a(Hash)
@@ -97,7 +97,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
           segment: segment,
           security_id: security_id,
           quantity: 100,
-          charge_per_order: 20
+          charge_per_order: 20,
         )
 
         expect(result).to be_a(Hash)
@@ -117,7 +117,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
           segment: segment,
           security_id: security_id,
           quantity: 100,
-          charge_per_order: 20
+          charge_per_order: 20,
         )
 
         expect(result).to be_a(DhanScalper::Brokers::Order)
@@ -138,7 +138,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
           segment: segment,
           security_id: security_id,
           quantity: 100,
-          charge_per_order: 20
+          charge_per_order: 20,
         )
 
         expect(result).to be_a(Hash)
@@ -163,7 +163,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
           side: "LONG",
           quantity: 50, # Less than what we're trying to sell
           price: 100.0,
-          fee: 20
+          fee: 20,
         )
       end
 
@@ -175,7 +175,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
           segment: segment,
           security_id: security_id,
           quantity: 100, # More than available
-          charge_per_order: 20
+          charge_per_order: 20,
         )
 
         expect(result).to be_a(Hash)
@@ -200,7 +200,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
           side: "LONG",
           quantity: 100,
           price: 100.0,
-          fee: 20
+          fee: 20,
         )
         allow(DhanScalper::TickCache).to receive(:ltp).with(segment, security_id).and_return(nil)
       end
@@ -213,7 +213,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
           segment: segment,
           security_id: security_id,
           quantity: 50,
-          charge_per_order: 20
+          charge_per_order: 20,
         )
 
         expect(result).to be_a(Hash)
@@ -236,7 +236,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
           side: "LONG",
           quantity: 100,
           price: 100.0,
-          fee: 20
+          fee: 20,
         )
       end
 
@@ -245,7 +245,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
           segment: segment,
           security_id: security_id,
           quantity: 50,
-          charge_per_order: 20
+          charge_per_order: 20,
         )
 
         expect(result).to be_a(DhanScalper::Brokers::Order)
@@ -268,7 +268,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
           instrument_id: security_id,
           side: "BUY",
           quantity: 100,
-          price: 100.0
+          price: 100.0,
         )
 
         expect(result).to be_a(Hash)
@@ -285,7 +285,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
           instrument_id: security_id,
           side: "SELL",
           quantity: 100,
-          price: 100.0
+          price: 100.0,
         )
 
         expect(result).to be_a(Hash)
@@ -309,7 +309,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
         segment: segment,
         security_id: security_id,
         quantity: 100,
-        charge_per_order: 20
+        charge_per_order: 20,
       )
 
       # Verify state is unchanged
@@ -329,7 +329,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
         segment: segment,
         security_id: security_id,
         quantity: 100,
-        charge_per_order: 20
+        charge_per_order: 20,
       )
 
       # Verify state is unchanged

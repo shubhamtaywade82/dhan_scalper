@@ -28,7 +28,7 @@ module DhanScalper
 
       # New risk manager features
       @time_stop_seconds = config.dig("global", "time_stop_seconds") || 300
-      @max_daily_loss_rs = DhanScalper::Support::Money.bd(config.dig("global", "max_daily_loss_rs") || 2000.0)
+      @max_daily_loss_rs = DhanScalper::Support::Money.bd(config.dig("global", "max_daily_loss_rs") || 2_000.0)
       @cooldown_after_loss_seconds = config.dig("global", "cooldown_after_loss_seconds") || 180
       @enable_time_stop = config.dig("global", "enable_time_stop") != false
       @enable_daily_loss_cap = config.dig("global", "enable_daily_loss_cap") != false
@@ -53,16 +53,14 @@ module DhanScalper
 
       @running = true
       # Only set session start equity if it hasn't been set yet
-      unless @session_start_equity
-        @session_start_equity = get_current_equity
-      end
+      @session_start_equity ||= get_current_equity
       @last_loss_time = nil
       @in_cooldown = false
 
       @logger.info "[RISK] Starting enhanced risk management loop (interval: #{@risk_check_interval}s)"
-      @logger.info "[RISK] Time stop: #{@enable_time_stop ? "#{@time_stop_seconds}s" : 'disabled'}"
-      @logger.info "[RISK] Daily loss cap: #{@enable_daily_loss_cap ? "₹#{DhanScalper::Support::Money.dec(@max_daily_loss_rs)}" : 'disabled'}"
-      @logger.info "[RISK] Cooldown: #{@enable_cooldown ? "#{@cooldown_after_loss_seconds}s" : 'disabled'}"
+      @logger.info "[RISK] Time stop: #{@enable_time_stop ? "#{@time_stop_seconds}s" : "disabled"}"
+      @logger.info "[RISK] Daily loss cap: #{@enable_daily_loss_cap ? "₹#{DhanScalper::Support::Money.dec(@max_daily_loss_rs)}" : "disabled"}"
+      @logger.info "[RISK] Cooldown: #{@enable_cooldown ? "#{@cooldown_after_loss_seconds}s" : "disabled"}"
 
       @risk_thread = Thread.new do
         risk_loop
@@ -113,9 +111,7 @@ module DhanScalper
           check_daily_loss_cap
 
           # Skip individual position checks if in cooldown
-          unless check_cooldown_status
-            check_all_positions
-          end
+          check_all_positions unless check_cooldown_status
 
           sleep(@risk_check_interval)
         rescue StandardError => e
@@ -146,7 +142,7 @@ module DhanScalper
         exchange_segment: position[:exchange_segment] || "NSE_EQ",
         security_id: security_id,
         side: position[:side] || "LONG",
-        current_price: current_price
+        current_price: current_price,
       )
 
       # Calculate PnL
@@ -179,12 +175,12 @@ module DhanScalper
 
       @logger.debug "[RISK] Daily loss cap check: start=₹#{DhanScalper::Support::Money.dec(@session_start_equity)}, current=₹#{DhanScalper::Support::Money.dec(current_equity)}, drawdown=₹#{DhanScalper::Support::Money.dec(equity_drawdown)}, max=₹#{DhanScalper::Support::Money.dec(@max_daily_loss_rs)}"
 
-      if DhanScalper::Support::Money.greater_than?(equity_drawdown, @max_daily_loss_rs)
-        @logger.warn "[RISK] Daily loss cap exceeded! Drawdown: ₹#{DhanScalper::Support::Money.dec(equity_drawdown)} (max: ₹#{DhanScalper::Support::Money.dec(@max_daily_loss_rs)})"
+      return unless DhanScalper::Support::Money.greater_than?(equity_drawdown, @max_daily_loss_rs)
 
-        # Close all positions
-        close_all_positions("DAILY_LOSS_CAP")
-      end
+      @logger.warn "[RISK] Daily loss cap exceeded! Drawdown: ₹#{DhanScalper::Support::Money.dec(equity_drawdown)} (max: ₹#{DhanScalper::Support::Money.dec(@max_daily_loss_rs)})"
+
+      # Close all positions
+      close_all_positions("DAILY_LOSS_CAP")
     end
 
     def check_cooldown_status
@@ -214,7 +210,7 @@ module DhanScalper
       # For long positions, PnL = (current_price - entry_price) * quantity
       DhanScalper::Support::Money.multiply(
         DhanScalper::Support::Money.subtract(current_price, entry_price),
-        quantity
+        quantity,
       )
     end
 
@@ -225,7 +221,7 @@ module DhanScalper
       pnl = DhanScalper::Support::Money.subtract(current_price, entry_price)
       DhanScalper::Support::Money.multiply(
         DhanScalper::Support::Money.divide(pnl, entry_price),
-        DhanScalper::Support::Money.bd(100)
+        DhanScalper::Support::Money.bd(100),
       )
     end
 
@@ -240,17 +236,19 @@ module DhanScalper
       @position_entry_times[security_id] = position[:created_at] || Time.now
     end
 
-    def determine_exit_reason(position, current_price, pnl, pnl_pct)
+    def determine_exit_reason(position, current_price, _pnl, pnl_pct)
       security_id = position[:security_id]
 
       # Skip if in cooldown (except for emergency exits)
       return nil if in_cooldown?
 
       # Take Profit
-      return "TP" if DhanScalper::Support::Money.greater_than_or_equal?(pnl_pct, DhanScalper::Support::Money.bd(@tp_pct * 100))
+      return "TP" if DhanScalper::Support::Money.greater_than_or_equal?(pnl_pct,
+                                                                        DhanScalper::Support::Money.bd(@tp_pct * 100))
 
       # Stop Loss
-      return "SL" if DhanScalper::Support::Money.less_than_or_equal?(pnl_pct, DhanScalper::Support::Money.bd(-@sl_pct * 100))
+      return "SL" if DhanScalper::Support::Money.less_than_or_equal?(pnl_pct,
+                                                                     DhanScalper::Support::Money.bd(-@sl_pct * 100))
 
       # Time Stop
       return "TIME_STOP" if should_time_stop?(security_id)
@@ -278,14 +276,14 @@ module DhanScalper
       # Check if we've hit the trailing trigger
       trail_trigger_price = DhanScalper::Support::Money.multiply(
         entry_price,
-        DhanScalper::Support::Money.bd(1.0 + @trail_pct)
+        DhanScalper::Support::Money.bd(1.0 + @trail_pct),
       )
 
       if DhanScalper::Support::Money.greater_than_or_equal?(position_high, trail_trigger_price)
         # We're in profit, check if current price has fallen below trailing stop
         trail_stop_price = DhanScalper::Support::Money.multiply(
           position_high,
-          DhanScalper::Support::Money.bd(1.0 - (@trail_pct / 2.0))
+          DhanScalper::Support::Money.bd(1.0 - (@trail_pct / 2.0)),
         )
         return DhanScalper::Support::Money.less_than_or_equal?(current_price, trail_stop_price)
       end
@@ -311,14 +309,14 @@ module DhanScalper
           quantity: quantity,
           price: current_price,
           order_type: "MARKET",
-          idempotency_key: idempotency_key
+          idempotency_key: idempotency_key,
         )
 
         if order_result && order_result[:order_status] == "FILLED"
           # Calculate final PnL including charges
           final_pnl = DhanScalper::Support::Money.subtract(
             calculate_pnl(position, current_price),
-            @charge_per_order
+            @charge_per_order,
           )
 
           # Update position tracker
@@ -327,7 +325,7 @@ module DhanScalper
             security_id: security_id,
             side: position[:side] || "LONG",
             quantity: quantity,
-            price: current_price
+            price: current_price,
           )
 
           # Track loss for cooldown

@@ -41,7 +41,7 @@ module DhanScalper
             access_token_present: !ENV["ACCESS_TOKEN"].nil?,
             base_url: ENV["BASE_URL"] || "https://api.dhan.co/v2",
             log_level: ENV["LOG_LEVEL"] || "INFO",
-            configured: configured?
+            configured: configured?,
           }
         end
 

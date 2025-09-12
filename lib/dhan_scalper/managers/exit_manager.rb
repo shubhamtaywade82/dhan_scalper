@@ -66,7 +66,7 @@ module DhanScalper
           price: action[:price],
           order_type: "MARKET",
           reason: action[:reason],
-          exit_type: action[:type]
+          exit_type: action[:type],
         }
 
         result = @order_manager.place_order(order_data)

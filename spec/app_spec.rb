@@ -13,22 +13,22 @@ RSpec.describe DhanScalper::App do
           "strike_step" => 50,
           "lot_size" => 75,
           "qty_multiplier" => 1,
-          "expiry_wday" => 4
-        }
+          "expiry_wday" => 4,
+        },
       },
       "global" => {
-        "min_profit_target" => 1000.0,
-        "max_day_loss" => 1500.0,
+        "min_profit_target" => 1_000.0,
+        "max_day_loss" => 1_500.0,
         "decision_interval" => 10,
         "tp_pct" => 0.35,
         "sl_pct" => 0.18,
         "trail_pct" => 0.12,
         "charge_per_order" => 20.0,
-        "log_level" => "INFO"
+        "log_level" => "INFO",
       },
       "paper" => {
-        "starting_balance" => 200_000.0
-      }
+        "starting_balance" => 200_000.0,
+      },
     }
   end
 
@@ -92,7 +92,7 @@ RSpec.describe DhanScalper::App do
     # Mock OptionPicker
     allow(DhanScalper::OptionPicker).to receive(:new).and_return(double(
                                                                    pick: { expiry: "2024-01-25", strikes: [19_500, 19_550, 19_600], ce_sid: { 19_500 => "CE123" },
-                                                                           pe_sid: { 19_500 => "PE123" } }
+                                                                           pe_sid: { 19_500 => "PE123" } },
                                                                  ))
 
     # Mock Trend
@@ -109,7 +109,7 @@ RSpec.describe DhanScalper::App do
     # Mock CandleSeries
     stub_const("DhanScalper::CandleSeries", double)
     allow(DhanScalper::CandleSeries).to receive(:load_from_dhan_intraday).and_return(
-      double(closes: [19_500.0, 19_501.0, 19_502.0])
+      double(closes: [19_500.0, 19_501.0, 19_502.0]),
     )
 
     # Mock Thread
@@ -132,7 +132,7 @@ RSpec.describe DhanScalper::App do
       it "creates a PaperBroker" do
         expect(DhanScalper::Brokers::PaperBroker).to have_received(:new).with(
           virtual_data_manager: mock_vdm,
-          balance_provider: mock_balance_provider
+          balance_provider: mock_balance_provider,
         )
       end
     end
@@ -151,7 +151,7 @@ RSpec.describe DhanScalper::App do
       it "creates a DhanBroker" do
         expect(DhanScalper::Brokers::DhanBroker).to have_received(:new).with(
           virtual_data_manager: mock_vdm,
-          balance_provider: mock_balance_provider
+          balance_provider: mock_balance_provider,
         )
       end
     end
@@ -174,8 +174,8 @@ RSpec.describe DhanScalper::App do
       described_class.new(config)
       expect(DhanScalper::State).to have_received(:new).with(
         symbols: ["NIFTY"],
-        session_target: 1000.0,
-        max_day_loss: 1500.0
+        session_target: 1_000.0,
+        max_day_loss: 1_500.0,
       )
     end
 
@@ -191,7 +191,7 @@ RSpec.describe DhanScalper::App do
     before do
       # Mock WebSocket creation
       allow(app).to receive_messages(create_websocket_client: mock_websocket,
-                                     setup_traders: [{ "NIFTY" => mock_trader }, {}, {}], sym_cfg: config["SYMBOLS"]["NIFTY"], wait_for_spot: 19_500.0, total_pnl_preview: 0.0, instance_open?: false, session_target: 1000.0)
+                                     setup_traders: [{ "NIFTY" => mock_trader }, {}, {}], sym_cfg: config["SYMBOLS"]["NIFTY"], wait_for_spot: 19_500.0, total_pnl_preview: 0.0, instance_open?: false, session_target: 1_000.0)
     end
 
     it "configures DhanHQ" do
@@ -331,7 +331,7 @@ RSpec.describe DhanScalper::App do
       app.send(:setup_traders, mock_websocket)
       expect(mock_websocket).to have_received(:subscribe_one).with(
         segment: "IDX_I",
-        security_id: "13"
+        security_id: "13",
       )
     end
 
@@ -377,7 +377,7 @@ RSpec.describe DhanScalper::App do
         allow(DhanScalper::TickCache).to receive(:ltp).and_return(nil)
         allow(Time).to receive(:now).and_return(Time.at(0), Time.at(15))
         allow(DhanScalper::CandleSeries).to receive(:load_from_dhan_intraday).and_return(
-          double(closes: [19_500.0, 19_501.0, 19_502.0])
+          double(closes: [19_500.0, 19_501.0, 19_502.0]),
         )
       end
 

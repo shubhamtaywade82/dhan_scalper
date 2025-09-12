@@ -7,7 +7,7 @@ RSpec.describe DhanScalper::OptionPicker do
     {
       "idx_sid" => "13",
       "strike_step" => 50,
-      "expiry_wday" => 4
+      "expiry_wday" => 4,
     }
   end
   let(:csv_master) { instance_double(DhanScalper::CsvMaster) }
@@ -26,7 +26,7 @@ RSpec.describe DhanScalper::OptionPicker do
 
   describe "#nearest_weekly" do
     it "returns next target weekday" do
-      allow(Time).to receive(:now).and_return(Time.new(2023, 9, 11, 10, 0, 0)) # Monday
+      allow(Time).to receive(:now).and_return(Time.new(2_023, 9, 11, 10, 0, 0)) # Monday
       expect(picker.nearest_weekly(4)).to eq("2023-09-14")
     end
   end
@@ -54,12 +54,12 @@ RSpec.describe DhanScalper::OptionPicker do
 
   describe "#fallback_expiry" do
     it "computes next expiry based on weekday" do
-      allow(Time).to receive(:now).and_return(Time.new(2023, 9, 11, 10)) # Monday
+      allow(Time).to receive(:now).and_return(Time.new(2_023, 9, 11, 10)) # Monday
       expect(picker.fallback_expiry).to eq("2023-09-14")
     end
 
     it "rolls to next week after 3pm" do
-      allow(Time).to receive(:now).and_return(Time.new(2023, 9, 14, 15, 0, 0)) # Thursday 3pm
+      allow(Time).to receive(:now).and_return(Time.new(2_023, 9, 14, 15, 0, 0)) # Thursday 3pm
       expect(picker.fallback_expiry).to eq("2023-09-21")
     end
   end

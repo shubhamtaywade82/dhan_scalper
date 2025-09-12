@@ -5,12 +5,12 @@ require "spec_helper"
 RSpec.describe DhanScalper::Indicators::HolyGrail, :unit do
   let(:candle_data) do
     {
-      timestamps: (1..200).map { |i| Time.now - (200 - i) * 60 },
-      opens: (1..200).map { |i| 25000 + rand(-100..100) },
-      highs: (1..200).map { |i| 25000 + rand(50..150) },
-      lows: (1..200).map { |i| 25000 + rand(-150..-50) },
-      closes: (1..200).map { |i| 25000 + rand(-50..50) },
-      volumes: (1..200).map { |i| rand(1000..10000) }
+      timestamps: (1..200).map { |i| Time.now - ((200 - i) * 60) },
+      opens: (1..200).map { |_i| rand(24_900..25_100) },
+      highs: (1..200).map { |_i| rand(25_050..25_150) },
+      lows: (1..200).map { |_i| rand(24_850..24_950) },
+      closes: (1..200).map { |_i| rand(24_950..25_050) },
+      volumes: (1..200).map { |_i| rand(1_000..10_000) },
     }
   end
 
@@ -20,7 +20,7 @@ RSpec.describe DhanScalper::Indicators::HolyGrail, :unit do
     context "with bullish market conditions" do
       before do
         # Create bullish candle data
-        bullish_closes = (1..200).map { |i| 25000 + i * 2 } # Upward trend
+        bullish_closes = (1..200).map { |i| 25_000 + (i * 2) } # Upward trend
         bullish_highs = bullish_closes.map { |c| c + rand(10..30) }
         bullish_lows = bullish_closes.map { |c| c - rand(5..15) }
 
@@ -58,7 +58,7 @@ RSpec.describe DhanScalper::Indicators::HolyGrail, :unit do
     context "with bearish market conditions" do
       before do
         # Create bearish candle data
-        bearish_closes = (1..200).map { |i| 25000 - i * 2 } # Downward trend
+        bearish_closes = (1..200).map { |i| 25_000 - (i * 2) } # Downward trend
         bearish_highs = bearish_closes.map { |c| c + rand(5..15) }
         bearish_lows = bearish_closes.map { |c| c - rand(10..30) }
 
@@ -96,7 +96,7 @@ RSpec.describe DhanScalper::Indicators::HolyGrail, :unit do
     context "with sideways market conditions" do
       before do
         # Create sideways candle data
-        sideways_closes = (1..200).map { |i| 25000 + Math.sin(i * 0.1) * 50 } # Sideways oscillation
+        sideways_closes = (1..200).map { |i| 25_000 + (Math.sin(i * 0.1) * 50) } # Sideways oscillation
         sideways_highs = sideways_closes.map { |c| c + rand(5..20) }
         sideways_lows = sideways_closes.map { |c| c - rand(5..20) }
 
@@ -134,12 +134,12 @@ RSpec.describe DhanScalper::Indicators::HolyGrail, :unit do
     context "with insufficient data" do
       let(:insufficient_data) do
         {
-          timestamps: (1..50).map { |i| Time.now - (50 - i) * 60 },
-          opens: (1..50).map { |i| 25000 + rand(-100..100) },
-          highs: (1..50).map { |i| 25000 + rand(50..150) },
-          lows: (1..50).map { |i| 25000 + rand(-150..-50) },
-          closes: (1..50).map { |i| 25000 + rand(-50..50) },
-          volumes: (1..50).map { |i| rand(1000..10000) }
+          timestamps: (1..50).map { |i| Time.now - ((50 - i) * 60) },
+          opens: (1..50).map { |_i| rand(24_900..25_100) },
+          highs: (1..50).map { |_i| rand(25_050..25_150) },
+          lows: (1..50).map { |_i| rand(24_850..24_950) },
+          closes: (1..50).map { |_i| rand(24_950..25_050) },
+          volumes: (1..50).map { |_i| rand(1_000..10_000) },
         }
       end
 
@@ -213,12 +213,12 @@ RSpec.describe DhanScalper::Indicators::HolyGrail, :unit do
   describe "performance characteristics" do
     it "processes large datasets efficiently" do
       large_candle_data = {
-        timestamps: (1..1000).map { |i| Time.now - (1000 - i) * 60 },
-        opens: (1..1000).map { |i| 25000 + rand(-100..100) },
-        highs: (1..1000).map { |i| 25000 + rand(50..150) },
-        lows: (1..1000).map { |i| 25000 + rand(-150..-50) },
-        closes: (1..1000).map { |i| 25000 + rand(-50..50) },
-        volumes: (1..1000).map { |i| rand(1000..10000) }
+        timestamps: (1..1_000).map { |i| Time.now - ((1_000 - i) * 60) },
+        opens: (1..1_000).map { |_i| rand(24_900..25_100) },
+        highs: (1..1_000).map { |_i| rand(25_050..25_150) },
+        lows: (1..1_000).map { |_i| rand(24_850..24_950) },
+        closes: (1..1_000).map { |_i| rand(24_950..25_050) },
+        volumes: (1..1_000).map { |_i| rand(1_000..10_000) },
       }
 
       large_holy_grail = described_class.new(candles: large_candle_data)
@@ -235,7 +235,7 @@ RSpec.describe DhanScalper::Indicators::HolyGrail, :unit do
       threads = []
       results = []
 
-      10.times do |i|
+      10.times do |_i|
         threads << Thread.new do
           holy_grail_instance = described_class.new(candles: candle_data)
           results << holy_grail_instance.call
@@ -253,9 +253,9 @@ end
 RSpec.describe DhanScalper::Indicators::Supertrend, :unit do
   let(:candle_series) do
     series = double("CandleSeries")
-    allow(series).to receive(:highs).and_return((1..100).map { |i| 25000 + i * 2 })
-    allow(series).to receive(:lows).and_return((1..100).map { |i| 25000 + i * 2 - 50 })
-    allow(series).to receive(:closes).and_return((1..100).map { |i| 25000 + i * 2 - 25 })
+    allow(series).to receive(:highs).and_return((1..100).map { |i| 25_000 + (i * 2) })
+    allow(series).to receive(:lows).and_return((1..100).map { |i| 25_000 + (i * 2) - 50 })
+    allow(series).to receive(:closes).and_return((1..100).map { |i| 25_000 + (i * 2) - 25 })
     series
   end
 
@@ -284,9 +284,9 @@ RSpec.describe DhanScalper::Indicators::Supertrend, :unit do
     it "handles edge cases" do
       # Test with insufficient data
       short_series = double("CandleSeries")
-      allow(short_series).to receive(:highs).and_return([25000])
-      allow(short_series).to receive(:lows).and_return([24950])
-      allow(short_series).to receive(:closes).and_return([24975])
+      allow(short_series).to receive(:highs).and_return([25_000])
+      allow(short_series).to receive(:lows).and_return([24_950])
+      allow(short_series).to receive(:closes).and_return([24_975])
 
       short_supertrend = described_class.new(series: short_series, period: 10, multiplier: 3.0)
       result = short_supertrend.call
@@ -297,9 +297,9 @@ RSpec.describe DhanScalper::Indicators::Supertrend, :unit do
   describe "performance" do
     it "calculates efficiently for large datasets" do
       large_series = double("CandleSeries")
-      allow(large_series).to receive(:highs).and_return((1..1000).map { |i| 25000 + i })
-      allow(large_series).to receive(:lows).and_return((1..1000).map { |i| 25000 + i - 50 })
-      allow(large_series).to receive(:closes).and_return((1..1000).map { |i| 25000 + i - 25 })
+      allow(large_series).to receive(:highs).and_return((1..1_000).map { |i| 25_000 + i })
+      allow(large_series).to receive(:lows).and_return((1..1_000).map { |i| 25_000 + i - 50 })
+      allow(large_series).to receive(:closes).and_return((1..1_000).map { |i| 25_000 + i - 25 })
 
       large_supertrend = described_class.new(series: large_series, period: 20, multiplier: 3.0)
 
@@ -308,7 +308,7 @@ RSpec.describe DhanScalper::Indicators::Supertrend, :unit do
       duration = Time.now - start_time
 
       expect(duration).to be < 0.5 # Should complete within 0.5 seconds
-      expect(result.length).to eq(1000)
+      expect(result.length).to eq(1_000)
     end
   end
 end
@@ -316,12 +316,12 @@ end
 RSpec.describe DhanScalper::CandleSeries, :unit do
   let(:candle_data) do
     {
-      timestamps: (1..100).map { |i| Time.now - (100 - i) * 60 },
-      opens: (1..100).map { |i| 25000 + rand(-50..50) },
-      highs: (1..100).map { |i| 25000 + rand(0..100) },
-      lows: (1..100).map { |i| 25000 + rand(-100..0) },
-      closes: (1..100).map { |i| 25000 + rand(-25..25) },
-      volumes: (1..100).map { |i| rand(1000..10000) }
+      timestamps: (1..100).map { |i| Time.now - ((100 - i) * 60) },
+      opens: (1..100).map { |_i| rand(24_950..25_050) },
+      highs: (1..100).map { |_i| rand(25_000..25_100) },
+      lows: (1..100).map { |_i| rand(24_900..25_000) },
+      closes: (1..100).map { |_i| rand(24_975..25_025) },
+      volumes: (1..100).map { |_i| rand(1_000..10_000) },
     }
   end
 
@@ -334,10 +334,10 @@ RSpec.describe DhanScalper::CandleSeries, :unit do
         candle_data[:highs],
         candle_data[:lows],
         candle_data[:closes],
-        candle_data[:volumes]
+        candle_data[:volumes],
       ).map do |ts, o, h, l, c, v|
         DhanScalper::Candle.new(ts: ts, open: o, high: h, low: l, close: c, volume: v)
-      end
+      end,
     )
   end
 
@@ -352,14 +352,14 @@ RSpec.describe DhanScalper::CandleSeries, :unit do
   describe "#supertrend_signal" do
     it "returns supertrend signal" do
       result = candle_series.supertrend_signal
-      expect(result).to be_in([:bullish, :bearish, :none])
+      expect(result).to be_in(%i[bullish bearish none])
     end
   end
 
   describe "#combined_signal" do
     it "combines multiple signals correctly" do
       result = candle_series.combined_signal
-      expect(result).to be_in([:bullish, :bearish, :none])
+      expect(result).to be_in(%i[bullish bearish none])
     end
   end
 
@@ -408,12 +408,12 @@ RSpec.describe DhanScalper::CandleSeries, :unit do
   describe "performance characteristics" do
     it "handles large datasets efficiently" do
       large_candle_data = {
-        timestamps: (1..1000).map { |i| Time.now - (1000 - i) * 60 },
-        opens: (1..1000).map { |i| 25000 + rand(-50..50) },
-        highs: (1..1000).map { |i| 25000 + rand(0..100) },
-        lows: (1..1000).map { |i| 25000 + rand(-100..0) },
-        closes: (1..1000).map { |i| 25000 + rand(-25..25) },
-        volumes: (1..1000).map { |i| rand(1000..10000) }
+        timestamps: (1..1_000).map { |i| Time.now - ((1_000 - i) * 60) },
+        opens: (1..1_000).map { |_i| rand(24_950..25_050) },
+        highs: (1..1_000).map { |_i| rand(25_000..25_100) },
+        lows: (1..1_000).map { |_i| rand(24_900..25_000) },
+        closes: (1..1_000).map { |_i| rand(24_975..25_025) },
+        volumes: (1..1_000).map { |_i| rand(1_000..10_000) },
       }
 
       large_series = described_class.new(symbol: "NIFTY", interval: "1m")
@@ -423,10 +423,10 @@ RSpec.describe DhanScalper::CandleSeries, :unit do
           large_candle_data[:highs],
           large_candle_data[:lows],
           large_candle_data[:closes],
-          large_candle_data[:volumes]
+          large_candle_data[:volumes],
         ).map do |ts, o, h, l, c, v|
           DhanScalper::Candle.new(ts: ts, open: o, high: h, low: l, close: c, volume: v)
-        end
+        end,
       )
 
       start_time = Time.now

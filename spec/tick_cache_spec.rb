@@ -6,6 +6,7 @@ RSpec.describe DhanScalper::TickCache do
   before do
     described_class.clear
   end
+
   describe ".put" do
     it "stores tick data in the cache" do
       tick_data = {
@@ -13,7 +14,7 @@ RSpec.describe DhanScalper::TickCache do
         security_id: "13",
         ltp: 19_500.0,
         ts: Time.now.to_i,
-        symbol: "NIFTY"
+        symbol: "NIFTY",
       }
 
       described_class.put(tick_data)
@@ -28,7 +29,7 @@ RSpec.describe DhanScalper::TickCache do
         security_id: "13",
         ltp: 19_500.0,
         ts: Time.now.to_i,
-        symbol: "NIFTY"
+        symbol: "NIFTY",
       }
 
       tick_data2 = {
@@ -36,7 +37,7 @@ RSpec.describe DhanScalper::TickCache do
         security_id: "13",
         ltp: 19_600.0,
         ts: Time.now.to_i,
-        symbol: "NIFTY"
+        symbol: "NIFTY",
       }
 
       described_class.put(tick_data1)
@@ -51,7 +52,7 @@ RSpec.describe DhanScalper::TickCache do
         security_id: "13",
         ltp: 19_500.0,
         ts: Time.now.to_i,
-        symbol: "NIFTY"
+        symbol: "NIFTY",
       }
 
       tick_data2 = {
@@ -59,7 +60,7 @@ RSpec.describe DhanScalper::TickCache do
         security_id: "12345",
         ltp: 150.0,
         ts: Time.now.to_i,
-        symbol: "OPTION"
+        symbol: "OPTION",
       }
 
       described_class.put(tick_data1)
@@ -75,7 +76,7 @@ RSpec.describe DhanScalper::TickCache do
         security_id: "13",
         ltp: nil,
         ts: Time.now.to_i,
-        symbol: "NIFTY"
+        symbol: "NIFTY",
       }
 
       described_class.put(tick_data)
@@ -89,7 +90,7 @@ RSpec.describe DhanScalper::TickCache do
         security_id: "13",
         ltp: 0.0,
         ts: Time.now.to_i,
-        symbol: "NIFTY"
+        symbol: "NIFTY",
       }
 
       described_class.put(tick_data)
@@ -103,7 +104,7 @@ RSpec.describe DhanScalper::TickCache do
         security_id: "13",
         ltp: -100.0,
         ts: Time.now.to_i,
-        symbol: "NIFTY"
+        symbol: "NIFTY",
       }
 
       described_class.put(tick_data)
@@ -117,7 +118,7 @@ RSpec.describe DhanScalper::TickCache do
         security_id: "13",
         ltp: "19500.50",
         ts: Time.now.to_i,
-        symbol: "NIFTY"
+        symbol: "NIFTY",
       }
 
       described_class.put(tick_data)
@@ -141,7 +142,7 @@ RSpec.describe DhanScalper::TickCache do
         security_id: "13",
         ltp: 19_500.0,
         ts: Time.now.to_i,
-        symbol: "NIFTY"
+        symbol: "NIFTY",
       }
 
       described_class.put(tick_data)
@@ -155,7 +156,7 @@ RSpec.describe DhanScalper::TickCache do
         security_id: "13",
         ltp: 19_500,
         ts: Time.now.to_i,
-        symbol: "NIFTY"
+        symbol: "NIFTY",
       }
 
       described_class.put(tick_data)
@@ -169,7 +170,7 @@ RSpec.describe DhanScalper::TickCache do
         security_id: "13",
         ltp: 19_500.0,
         ts: Time.now.to_i,
-        symbol: "NIFTY"
+        symbol: "NIFTY",
       }
 
       described_class.put(tick_data)
@@ -191,7 +192,7 @@ RSpec.describe DhanScalper::TickCache do
             security_id: "13",
             ltp: 19_500.0 + i,
             ts: Time.now.to_i,
-            symbol: "NIFTY"
+            symbol: "NIFTY",
           }
           described_class.put(tick_data)
         end
@@ -209,7 +210,7 @@ RSpec.describe DhanScalper::TickCache do
         security_id: "13",
         ltp: 19_500.0,
         ts: Time.now.to_i,
-        symbol: "NIFTY"
+        symbol: "NIFTY",
       }
 
       described_class.put(tick_data)
@@ -234,7 +235,7 @@ RSpec.describe DhanScalper::TickCache do
               security_id: "13",
               ltp: 19_500.0 + i + j,
               ts: Time.now.to_i,
-              symbol: "NIFTY"
+              symbol: "NIFTY",
             }
             described_class.put(new_tick_data)
           end
@@ -255,7 +256,7 @@ RSpec.describe DhanScalper::TickCache do
         security_id: "13",
         ltp: 19_500.0,
         ts: Time.now.to_i,
-        symbol: "NIFTY"
+        symbol: "NIFTY",
       }
 
       described_class.put(tick_data)
@@ -269,7 +270,7 @@ RSpec.describe DhanScalper::TickCache do
         security_id: "",
         ltp: 19_500.0,
         ts: Time.now.to_i,
-        symbol: "NIFTY"
+        symbol: "NIFTY",
       }
 
       described_class.put(tick_data)
@@ -283,7 +284,7 @@ RSpec.describe DhanScalper::TickCache do
         security_id: "13",
         ltp: 999_999_999.99,
         ts: Time.now.to_i,
-        symbol: "NIFTY"
+        symbol: "NIFTY",
       }
 
       described_class.put(tick_data)
@@ -297,7 +298,7 @@ RSpec.describe DhanScalper::TickCache do
         security_id: "13",
         ltp: 0.0001,
         ts: Time.now.to_i,
-        symbol: "NIFTY"
+        symbol: "NIFTY",
       }
 
       described_class.put(tick_data)
@@ -311,7 +312,7 @@ RSpec.describe DhanScalper::TickCache do
         security_id: "13_SPECIAL",
         ltp: 19_500.0,
         ts: Time.now.to_i,
-        symbol: "NIFTY"
+        symbol: "NIFTY",
       }
 
       described_class.put(tick_data)

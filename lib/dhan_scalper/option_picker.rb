@@ -50,12 +50,12 @@ module DhanScalper
           ce_sid: {
             (atm - step) => "PAPER_CE_#{atm - step}",
             atm => "PAPER_CE_#{atm}",
-            (atm + step) => "PAPER_CE_#{atm + step}"
+            (atm + step) => "PAPER_CE_#{atm + step}",
           },
           pe_sid: {
             (atm - step) => "PAPER_PE_#{atm - step}",
             atm => "PAPER_PE_#{atm}",
-            (atm + step) => "PAPER_PE_#{atm + step}"
+            (atm + step) => "PAPER_PE_#{atm + step}",
           }
         }
 
@@ -89,7 +89,7 @@ module DhanScalper
           expiry: expiry,
           ce_security_id: ce_security_id || "PAPER_CE_#{selected_strike}",
           pe_security_id: pe_security_id || "PAPER_PE_#{selected_strike}",
-          premium: premium
+          premium: premium,
         }
       rescue StandardError => e
         raise "Failed to fetch option data for live trading: #{e.message}" unless @mode == :paper
@@ -104,7 +104,7 @@ module DhanScalper
           expiry: expiry,
           ce_security_id: "PAPER_CE_#{selected_strike}",
           pe_security_id: "PAPER_PE_#{selected_strike}",
-          premium: premium
+          premium: premium,
         }
       end
     end

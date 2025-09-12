@@ -48,7 +48,7 @@ RSpec.describe DhanScalper::CandleSeries do
 
   describe ".load_from_dhan_intraday" do
     let(:mock_series) { double("CandleSeries") }
-    let(:mock_data) { [{ timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1000 }] }
+    let(:mock_data) { [{ timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1_000 }] }
 
     before do
       allow(mock_series).to receive(:load_from_raw).and_return(mock_series)
@@ -60,7 +60,7 @@ RSpec.describe DhanScalper::CandleSeries do
         seg: "IDX_I",
         sid: "13",
         interval: "5",
-        symbol: "INDEX"
+        symbol: "INDEX",
       )
 
       expect(described_class).to have_received(:new).with(symbol: "INDEX", interval: "5")
@@ -77,7 +77,7 @@ RSpec.describe DhanScalper::CandleSeries do
 
     context "when first method succeeds" do
       let(:mock_data) do
-        [{ timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1000 }]
+        [{ timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1_000 }]
       end
 
       before do
@@ -95,14 +95,14 @@ RSpec.describe DhanScalper::CandleSeries do
           security_id: "13",
           exchange_segment: "IDX_I",
           instrument: "INDEX",
-          interval: "5"
+          interval: "5",
         )
       end
     end
 
     context "when first method fails, second succeeds" do
       let(:mock_data) do
-        [{ timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1000 }]
+        [{ timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1_000 }]
       end
 
       before do
@@ -118,7 +118,7 @@ RSpec.describe DhanScalper::CandleSeries do
 
     context "when first two methods fail, third succeeds" do
       let(:mock_data) do
-        [{ timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1000 }]
+        [{ timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1_000 }]
       end
 
       before do
@@ -135,7 +135,7 @@ RSpec.describe DhanScalper::CandleSeries do
 
     context "when first three methods fail, fourth succeeds" do
       let(:mock_data) do
-        [{ timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1000 }]
+        [{ timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1_000 }]
       end
 
       before do
@@ -153,7 +153,7 @@ RSpec.describe DhanScalper::CandleSeries do
 
     context "when first four methods fail, fifth succeeds" do
       let(:mock_data) do
-        [{ timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1000 }]
+        [{ timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1_000 }]
       end
 
       before do
@@ -172,7 +172,7 @@ RSpec.describe DhanScalper::CandleSeries do
 
     context "when first five methods fail, sixth succeeds" do
       let(:mock_data) do
-        [{ timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1000 }]
+        [{ timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1_000 }]
       end
 
       before do
@@ -213,7 +213,7 @@ RSpec.describe DhanScalper::CandleSeries do
 
       it "tries next method" do
         allow(DhanHQ::HistoricalData).to receive(:intraday).and_return([{ timestamp: Time.now.to_i, open: 100.0,
-                                                                          high: 105.0, low: 98.0, close: 103.0, volume: 1000 }])
+                                                                          high: 105.0, low: 98.0, close: 103.0, volume: 1_000 }])
         result = described_class.fetch_historical_data(seg, sid, interval)
         expect(result).not_to be_nil
       end
@@ -226,7 +226,7 @@ RSpec.describe DhanScalper::CandleSeries do
 
       it "tries next method" do
         allow(DhanHQ::HistoricalData).to receive(:intraday).and_return([{ timestamp: Time.now.to_i, open: 100.0,
-                                                                          high: 105.0, low: 98.0, close: 103.0, volume: 1000 }])
+                                                                          high: 105.0, low: 98.0, close: 103.0, volume: 1_000 }])
         result = described_class.fetch_historical_data(seg, sid, interval)
         expect(result).not_to eq("invalid_data")
       end
@@ -243,8 +243,8 @@ RSpec.describe DhanScalper::CandleSeries do
     context "with array response" do
       let(:raw_data) do
         [
-          { timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1000 },
-          { timestamp: Time.now.to_i, open: 103.0, high: 107.0, low: 102.0, close: 106.0, volume: 1200 }
+          { timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1_000 },
+          { timestamp: Time.now.to_i, open: 103.0, high: 107.0, low: 102.0, close: 106.0, volume: 1_200 },
         ]
       end
 
@@ -267,7 +267,7 @@ RSpec.describe DhanScalper::CandleSeries do
           "high" => [105.0, 107.0],
           "low" => [98.0, 102.0],
           "close" => [103.0, 106.0],
-          "volume" => [1000, 1200]
+          "volume" => [1_000, 1_200],
         }
       end
 
@@ -312,7 +312,7 @@ RSpec.describe DhanScalper::CandleSeries do
     context "with array response" do
       let(:raw_data) do
         [
-          { timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1000 }
+          { timestamp: Time.now.to_i, open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1_000 },
         ]
       end
 
@@ -330,7 +330,7 @@ RSpec.describe DhanScalper::CandleSeries do
           "high" => [105.0],
           "low" => [98.0],
           "close" => [103.0],
-          "volume" => [1000]
+          "volume" => [1_000],
         }
       end
 
@@ -351,7 +351,7 @@ RSpec.describe DhanScalper::CandleSeries do
           high: 105.0,
           low: 98.0,
           close: 103.0,
-          volume: 1000
+          volume: 1_000,
         }
       end
 
@@ -361,7 +361,7 @@ RSpec.describe DhanScalper::CandleSeries do
         expect(result[:high]).to eq(105.0)
         expect(result[:low]).to eq(98.0)
         expect(result[:close]).to eq(103.0)
-        expect(result[:volume]).to eq(1000)
+        expect(result[:volume]).to eq(1_000)
       end
 
       it "handles string keys" do
@@ -371,7 +371,7 @@ RSpec.describe DhanScalper::CandleSeries do
           "high" => "105.0",
           "low" => "98.0",
           "close" => "103.0",
-          "volume" => "1000"
+          "volume" => "1000",
         }
         result = series.send(:slice_candle, candle_with_strings)
         expect(result[:open]).to eq("100.0")
@@ -379,7 +379,7 @@ RSpec.describe DhanScalper::CandleSeries do
     end
 
     context "with array format" do
-      let(:candle_array) { [Time.now.to_i, 100.0, 105.0, 98.0, 103.0, 1000] }
+      let(:candle_array) { [Time.now.to_i, 100.0, 105.0, 98.0, 103.0, 1_000] }
 
       it "extracts values from array" do
         result = series.send(:slice_candle, candle_array)
@@ -388,7 +388,7 @@ RSpec.describe DhanScalper::CandleSeries do
         expect(result[:high]).to eq(105.0)
         expect(result[:low]).to eq(98.0)
         expect(result[:close]).to eq(103.0)
-        expect(result[:volume]).to eq(1000)
+        expect(result[:volume]).to eq(1_000)
       end
 
       it "handles array without volume" do
@@ -412,8 +412,8 @@ RSpec.describe DhanScalper::CandleSeries do
   describe "accessor methods" do
     let(:candles) do
       [
-        double("Candle", open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1000),
-        double("Candle", open: 103.0, high: 107.0, low: 102.0, close: 106.0, volume: 1200)
+        double("Candle", open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1_000),
+        double("Candle", open: 103.0, high: 107.0, low: 102.0, close: 106.0, volume: 1_200),
       ]
     end
 
@@ -447,7 +447,7 @@ RSpec.describe DhanScalper::CandleSeries do
 
     describe "#volumes" do
       it "returns array of volumes" do
-        expect(series.volumes).to eq([1000, 1200])
+        expect(series.volumes).to eq([1_000, 1_200])
       end
     end
   end
@@ -455,8 +455,8 @@ RSpec.describe DhanScalper::CandleSeries do
   describe "#to_hash" do
     let(:candles) do
       [
-        double("Candle", timestamp: Time.at(1000), open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1000),
-        double("Candle", timestamp: Time.at(2000), open: 103.0, high: 107.0, low: 102.0, close: 106.0, volume: 1200)
+        double("Candle", timestamp: Time.at(1_000), open: 100.0, high: 105.0, low: 98.0, close: 103.0, volume: 1_000),
+        double("Candle", timestamp: Time.at(2_000), open: 103.0, high: 107.0, low: 102.0, close: 106.0, volume: 1_200),
       ]
     end
 
@@ -467,20 +467,20 @@ RSpec.describe DhanScalper::CandleSeries do
     it "returns hash with all candle data" do
       result = series.to_hash
       expect(result).to include("timestamp", "open", "high", "low", "close", "volume")
-      expect(result["timestamp"]).to eq([1000, 2000])
+      expect(result["timestamp"]).to eq([1_000, 2_000])
       expect(result["open"]).to eq([100.0, 103.0])
       expect(result["high"]).to eq([105.0, 107.0])
       expect(result["low"]).to eq([98.0, 102.0])
       expect(result["close"]).to eq([103.0, 106.0])
-      expect(result["volume"]).to eq([1000, 1200])
+      expect(result["volume"]).to eq([1_000, 1_200])
     end
   end
 
   describe "#hlc" do
     let(:candles) do
       [
-        double("Candle", timestamp: Time.at(1000), high: 105.0, low: 98.0, close: 103.0),
-        double("Candle", timestamp: Time.at(2000), high: 107.0, low: 102.0, close: 106.0)
+        double("Candle", timestamp: Time.at(1_000), high: 105.0, low: 98.0, close: 103.0),
+        double("Candle", timestamp: Time.at(2_000), high: 107.0, low: 102.0, close: 106.0),
       ]
     end
 
@@ -505,7 +505,7 @@ RSpec.describe DhanScalper::CandleSeries do
         double("Candle", high: 105.0, low: 95.0),
         double("Candle", high: 110.0, low: 100.0),
         double("Candle", high: 108.0, low: 98.0),
-        double("Candle", high: 112.0, low: 102.0)
+        double("Candle", high: 112.0, low: 102.0),
       ]
     end
 
@@ -544,7 +544,7 @@ RSpec.describe DhanScalper::CandleSeries do
         double("Candle", close: 101.0),
         double("Candle", close: 102.0),
         double("Candle", close: 103.0),
-        double("Candle", close: 104.0)
+        double("Candle", close: 104.0),
       ]
     end
 

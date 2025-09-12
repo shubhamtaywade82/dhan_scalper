@@ -16,7 +16,7 @@ RSpec.describe DhanScalper::Position do
         side: side,
         entry_price: entry_price,
         quantity: quantity,
-        symbol: symbol
+        symbol: symbol,
       )
 
       expect(position.symbol).to eq(symbol)
@@ -33,7 +33,7 @@ RSpec.describe DhanScalper::Position do
         security_id: security_id,
         side: side,
         entry_price: entry_price,
-        quantity: quantity
+        quantity: quantity,
       )
 
       expect(position.current_price).to eq(entry_price)
@@ -45,7 +45,7 @@ RSpec.describe DhanScalper::Position do
         side: side,
         entry_price: entry_price,
         quantity: quantity,
-        current_price: 160.0
+        current_price: 160.0,
       )
 
       expect(position.current_price).to eq(160.0)
@@ -57,10 +57,10 @@ RSpec.describe DhanScalper::Position do
         side: side,
         entry_price: entry_price,
         quantity: quantity,
-        pnl: 1000.0
+        pnl: 1_000.0,
       )
 
-      expect(position.pnl).to eq(1000.0)
+      expect(position.pnl).to eq(1_000.0)
     end
   end
 
@@ -70,7 +70,7 @@ RSpec.describe DhanScalper::Position do
         security_id: security_id,
         side: side,
         entry_price: entry_price,
-        quantity: quantity
+        quantity: quantity,
       )
     end
 
@@ -78,14 +78,14 @@ RSpec.describe DhanScalper::Position do
       position.update_price(160.0)
 
       expect(position.current_price).to eq(160.0)
-      expect(position.pnl).to eq(1000.0) # (160 - 150) * 100
+      expect(position.pnl).to eq(1_000.0) # (160 - 150) * 100
     end
 
     it "handles price decrease" do
       position.update_price(140.0)
 
       expect(position.current_price).to eq(140.0)
-      expect(position.pnl).to eq(-1000.0) # (140 - 150) * 100
+      expect(position.pnl).to eq(-1_000.0) # (140 - 150) * 100
     end
 
     it "handles zero price" do
@@ -103,18 +103,18 @@ RSpec.describe DhanScalper::Position do
           security_id: security_id,
           side: "BUY",
           entry_price: 150.0,
-          quantity: 100
+          quantity: 100,
         )
       end
 
       it "calculates profit correctly" do
         position.current_price = 160.0
-        expect(position.calculate_pnl).to eq(1000.0)
+        expect(position.calculate_pnl).to eq(1_000.0)
       end
 
       it "calculates loss correctly" do
         position.current_price = 140.0
-        expect(position.calculate_pnl).to eq(-1000.0)
+        expect(position.calculate_pnl).to eq(-1_000.0)
       end
 
       it "calculates breakeven correctly" do
@@ -129,18 +129,18 @@ RSpec.describe DhanScalper::Position do
           security_id: security_id,
           side: "SELL",
           entry_price: 150.0,
-          quantity: 100
+          quantity: 100,
         )
       end
 
       it "calculates profit when price goes down" do
         position.current_price = 140.0
-        expect(position.calculate_pnl).to eq(1000.0) # (150 - 140) * 100
+        expect(position.calculate_pnl).to eq(1_000.0) # (150 - 140) * 100
       end
 
       it "calculates loss when price goes up" do
         position.current_price = 160.0
-        expect(position.calculate_pnl).to eq(-1000.0) # (150 - 160) * 100
+        expect(position.calculate_pnl).to eq(-1_000.0) # (150 - 160) * 100
       end
 
       it "calculates breakeven correctly" do
@@ -154,7 +154,7 @@ RSpec.describe DhanScalper::Position do
         security_id: security_id,
         side: "UNKNOWN",
         entry_price: 150.0,
-        quantity: 100
+        quantity: 100,
       )
 
       expect(position.calculate_pnl).to eq(0.0)
@@ -165,11 +165,11 @@ RSpec.describe DhanScalper::Position do
         security_id: security_id,
         side: "buy",
         entry_price: 150.0,
-        quantity: 100
+        quantity: 100,
       )
       position.current_price = 160.0
 
-      expect(position.calculate_pnl).to eq(1000.0)
+      expect(position.calculate_pnl).to eq(1_000.0)
     end
   end
 
@@ -182,7 +182,7 @@ RSpec.describe DhanScalper::Position do
         quantity: quantity,
         symbol: symbol,
         current_price: 160.0,
-        pnl: 1000.0
+        pnl: 1_000.0,
       )
 
       hash = position.to_h
@@ -193,7 +193,7 @@ RSpec.describe DhanScalper::Position do
       expect(hash[:entry_price]).to eq(entry_price)
       expect(hash[:quantity]).to eq(quantity)
       expect(hash[:current_price]).to eq(160.0)
-      expect(hash[:pnl]).to eq(1000.0)
+      expect(hash[:pnl]).to eq(1_000.0)
     end
   end
 
@@ -206,7 +206,7 @@ RSpec.describe DhanScalper::Position do
         quantity: quantity,
         symbol: symbol,
         current_price: 160.0,
-        pnl: 1000.0
+        pnl: 1_000.0,
       )
 
       expect(position.to_s).to eq("BUY 100 NIFTY @ 150.0 (Current: 160.0, P&L: 1000.0)")
@@ -218,7 +218,7 @@ RSpec.describe DhanScalper::Position do
         side: side,
         entry_price: entry_price,
         quantity: quantity,
-        symbol: nil
+        symbol: nil,
       )
 
       expect(position.to_s).to include(security_id)
@@ -231,7 +231,7 @@ RSpec.describe DhanScalper::Position do
         security_id: security_id,
         side: side,
         entry_price: entry_price,
-        quantity: 0
+        quantity: 0,
       )
 
       expect(position.calculate_pnl).to eq(0.0)
@@ -242,7 +242,7 @@ RSpec.describe DhanScalper::Position do
         security_id: security_id,
         side: side,
         entry_price: entry_price,
-        quantity: -100
+        quantity: -100,
       )
 
       expect(position.calculate_pnl).to eq(0.0) # Should handle gracefully
@@ -253,7 +253,7 @@ RSpec.describe DhanScalper::Position do
         security_id: security_id,
         side: side,
         entry_price: 1_000_000.0,
-        quantity: 1_000_000
+        quantity: 1_000_000,
       )
       position.current_price = 1_000_100.0
 
@@ -265,7 +265,7 @@ RSpec.describe DhanScalper::Position do
         security_id: security_id,
         side: side,
         entry_price: 150.123,
-        quantity: 100
+        quantity: 100,
       )
       position.current_price = 150.456
 

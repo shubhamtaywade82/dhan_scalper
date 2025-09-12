@@ -2,7 +2,6 @@
 
 require "json"
 require "logger"
-require "set"
 require "securerandom"
 
 module DhanScalper
@@ -204,16 +203,16 @@ module DhanScalper
         when "INDEX"
           # For indices, determine based on the instrument ID
           case instrument_id.to_s
-          when "13" then "IDX_I"  # NIFTY
-          when "25", "23" then "IDX_I"  # BANKNIFTY
-          when "51" then "IDX_I"  # SENSEX
-          else "IDX_I"  # Default to IDX_I for indices
+          when "13" then "IDX_I" # NIFTY
+          when "25", "23" then "IDX_I" # BANKNIFTY
+          when "51" then "IDX_I" # SENSEX
+          else "IDX_I" # Default to IDX_I for indices
           end
         when "OPTION"
           # For options, use CSV master to determine the correct segment
           determine_option_segment(instrument_id)
         else
-          "NSE_EQ"  # Default for equity
+          "NSE_EQ" # Default for equity
         end
       end
 
@@ -233,10 +232,10 @@ module DhanScalper
 
         # Fallback: try to determine based on common patterns
         # BSE options typically have longer IDs and different patterns
-        if instrument_id.to_s.length > 4  # BSE options typically have longer IDs
+        if instrument_id.to_s.length > 4 # BSE options typically have longer IDs
           "BSE_FNO"
         else
-          "NSE_FNO"  # Default to NSE for most options
+          "NSE_FNO" # Default to NSE for most options
         end
       end
 
@@ -246,22 +245,20 @@ module DhanScalper
         @monitor_thread = Thread.new do
           Thread.current.abort_on_exception = false
           loop do
-            begin
-              sleep(@heartbeat_interval)
-              # If not connected, try reconnect with backoff
-              unless @connected
-                attempt_reconnect!
-                next
-              end
-
-              # Heartbeat: reconnect if ticks stale
-              if Time.now - @last_tick_at > @heartbeat_timeout
-                @logger.warn "[WebSocket] Heartbeat timeout (#{@heartbeat_timeout}s). Reconnecting..."
-                attempt_reconnect!
-              end
-            rescue StandardError => e
-              @logger.error "[WebSocket] Monitor error: #{e.message}"
+            sleep(@heartbeat_interval)
+            # If not connected, try reconnect with backoff
+            unless @connected
+              attempt_reconnect!
+              next
             end
+
+            # Heartbeat: reconnect if ticks stale
+            if Time.now - @last_tick_at > @heartbeat_timeout
+              @logger.warn "[WebSocket] Heartbeat timeout (#{@heartbeat_timeout}s). Reconnecting..."
+              attempt_reconnect!
+            end
+          rescue StandardError => e
+            @logger.error "[WebSocket] Monitor error: #{e.message}"
           end
         end
       end
@@ -269,9 +266,7 @@ module DhanScalper
       def attempt_reconnect!
         # Disconnect stale connection first
         begin
-          if @connected
-            @connection&.disconnect!
-          end
+          @connection&.disconnect! if @connected
         rescue StandardError
           # ignore
         ensure
@@ -301,16 +296,16 @@ module DhanScalper
         end
 
         # Active instruments from provider (e.g., netQty>0)
-        if @active_instruments_provider
-          begin
-            list = Array(@active_instruments_provider.call)
-            list.each do |item|
-              id, type = item
-              subscribe_to_instrument(id.to_s, type || "EQUITY")
-            end
-          rescue StandardError => e
-            @logger.error "[WebSocket] Active instruments provider error: #{e.message}"
+        return unless @active_instruments_provider
+
+        begin
+          list = Array(@active_instruments_provider.call)
+          list.each do |item|
+            id, type = item
+            subscribe_to_instrument(id.to_s, type || "EQUITY")
           end
+        rescue StandardError => e
+          @logger.error "[WebSocket] Active instruments provider error: #{e.message}"
         end
       end
 
@@ -347,7 +342,7 @@ module DhanScalper
           day_high: tick_data[:high].to_f, # Use high as day_high fallback
           day_low: tick_data[:low].to_f,   # Use low as day_low fallback
           atp: tick_data[:ltp].to_f,       # Use ltp as atp fallback
-          vol: tick_data[:volume].to_i
+          vol: tick_data[:volume].to_i,
         }
 
         # Store in TickCache
@@ -365,7 +360,7 @@ module DhanScalper
           volume: tick_data[:volume].to_i,
           timestamp: tick_data[:ts],
           segment: segment,
-          exchange: "NSE" # Default to NSE for now
+          exchange: "NSE", # Default to NSE for now
         }
 
         # Debug: Log the processed price data

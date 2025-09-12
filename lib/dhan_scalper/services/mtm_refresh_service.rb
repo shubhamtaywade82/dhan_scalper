@@ -19,7 +19,7 @@ module DhanScalper
         position = @equity_calculator.instance_variable_get(:@position_tracker).get_position(
           exchange_segment: exchange_segment,
           security_id: security_id,
-          side: "LONG"
+          side: "LONG",
         )
 
         return unless position && DhanScalper::Support::Money.positive?(position[:net_qty])
@@ -28,9 +28,7 @@ module DhanScalper
         key = "#{exchange_segment}_#{security_id}"
         now = Time.now.to_f
 
-        if @last_refresh[key] && (now - @last_refresh[key]) < @refresh_interval
-          return
-        end
+        return if @last_refresh[key] && (now - @last_refresh[key]) < @refresh_interval
 
         @last_refresh[key] = now
 
@@ -39,22 +37,21 @@ module DhanScalper
           exchange_segment: exchange_segment,
           security_id: security_id,
           side: "LONG",
-          current_price: ltp
+          current_price: ltp,
         )
 
         # Refresh unrealized PnL for this position
         result = @equity_calculator.refresh_unrealized!(
           exchange_segment: exchange_segment,
           security_id: security_id,
-          current_ltp: ltp
+          current_ltp: ltp,
         )
 
-        if result[:success]
+        return unless result[:success]
 
-          # Log equity update
-          equity = @equity_calculator.calculate_equity
-          @logger.debug("[TICK] #{security_id} | LTP: ₹#{DhanScalper::Support::Money.dec(ltp)} | Equity: ₹#{DhanScalper::Support::Money.dec(equity[:total_equity])}")
-        end
+        # Log equity update
+        equity = @equity_calculator.calculate_equity
+        @logger.debug("[TICK] #{security_id} | LTP: ₹#{DhanScalper::Support::Money.dec(ltp)} | Equity: ₹#{DhanScalper::Support::Money.dec(equity[:total_equity])}")
       end
 
       # Refresh MTM for all positions (useful for batch updates)

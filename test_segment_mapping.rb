@@ -23,7 +23,7 @@ if sensex_expiries.any?
 
   # Get some strikes for SENSEX
   strikes = csv_master.get_available_strikes("SENSEX", first_expiry)
-  puts "Available strikes: #{strikes.first(5).join(", ")}#{strikes.length > 5 ? "..." : ""}"
+  puts "Available strikes: #{strikes.first(5).join(", ")}#{"..." if strikes.length > 5}"
 
   if strikes.any?
     # Test a few strikes
@@ -36,7 +36,7 @@ if sensex_expiries.any?
       if ce_security_id
         segment = csv_master.get_exchange_segment(ce_security_id)
         puts "  CE Option: Security ID #{ce_security_id} → Segment: #{segment}"
-        puts "  ✅ Correct segment: #{segment == 'BSE_FNO' ? 'YES' : 'NO'}"
+        puts "  ✅ Correct segment: #{segment == "BSE_FNO" ? "YES" : "NO"}"
       else
         puts "  CE Option: Not found"
       end
@@ -46,7 +46,7 @@ if sensex_expiries.any?
       if pe_security_id
         segment = csv_master.get_exchange_segment(pe_security_id)
         puts "  PE Option: Security ID #{pe_security_id} → Segment: #{segment}"
-        puts "  ✅ Correct segment: #{segment == 'BSE_FNO' ? 'YES' : 'NO'}"
+        puts "  ✅ Correct segment: #{segment == "BSE_FNO" ? "YES" : "NO"}"
       else
         puts "  PE Option: Not found"
       end
@@ -58,7 +58,7 @@ end
 puts "\n🔌 Testing WebSocket Manager segment determination:"
 
 # Create a mock WebSocket manager
-ws_manager = DhanScalper::Services::WebSocketManager.new
+DhanScalper::Services::WebSocketManager.new
 
 # Test with a SENSEX option security ID (if we found one)
 if sensex_expiries.any? && strikes.any?
@@ -73,12 +73,12 @@ if sensex_expiries.any? && strikes.any?
       segment = csv_master.get_exchange_segment(ce_security_id)
       puts "CSV Master lookup: #{segment}"
       puts "Expected: BSE_FNO"
-      puts "✅ Correct: #{segment == 'BSE_FNO' ? 'YES' : 'NO'}"
+      puts "✅ Correct: #{segment == "BSE_FNO" ? "YES" : "NO"}"
     rescue StandardError => e
       puts "❌ Error: #{e.message}"
     end
   end
 end
 
-puts "\n" + "=" * 60
+puts "\n" + ("=" * 60)
 puts "Segment mapping test complete!"

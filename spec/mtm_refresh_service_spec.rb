@@ -28,21 +28,21 @@ RSpec.describe DhanScalper::Services::MtmRefreshService do
         side: "LONG",
         quantity: 75,
         price: 100.0,
-        fee: 20
+        fee: 20,
       )
 
       # Simulate tick received
       mtm_service.on_tick_received(
         exchange_segment: exchange_segment,
         security_id: security_id,
-        ltp: 120.0
+        ltp: 120.0,
       )
 
       # Check that position was updated
       position = position_tracker.get_position(
         exchange_segment: exchange_segment,
         security_id: security_id,
-        side: "LONG"
+        side: "LONG",
       )
 
       expect(position[:current_price]).to eq(DhanScalper::Support::Money.bd(120.0))
@@ -56,7 +56,7 @@ RSpec.describe DhanScalper::Services::MtmRefreshService do
       mtm_service.on_tick_received(
         exchange_segment: exchange_segment,
         security_id: "NONEXISTENT",
-        ltp: 120.0
+        ltp: 120.0,
       )
 
       # Should not raise any errors
@@ -75,7 +75,7 @@ RSpec.describe DhanScalper::Services::MtmRefreshService do
         side: "LONG",
         quantity: 75,
         price: 100.0,
-        fee: 20
+        fee: 20,
       )
 
       position_tracker.partial_exit(
@@ -84,21 +84,21 @@ RSpec.describe DhanScalper::Services::MtmRefreshService do
         side: "LONG",
         quantity: 75,
         price: 120.0,
-        fee: 20
+        fee: 20,
       )
 
       # Simulate tick received
       mtm_service.on_tick_received(
         exchange_segment: exchange_segment,
         security_id: security_id,
-        ltp: 130.0
+        ltp: 130.0,
       )
 
       # Should not update anything since position is closed
       position = position_tracker.get_position(
         exchange_segment: exchange_segment,
         security_id: security_id,
-        side: "LONG"
+        side: "LONG",
       )
 
       expect(position).to be_nil
@@ -112,7 +112,7 @@ RSpec.describe DhanScalper::Services::MtmRefreshService do
         side: "LONG",
         quantity: 75,
         price: 100.0,
-        fee: 20
+        fee: 20,
       )
 
       # Set refresh interval to 2 seconds
@@ -122,21 +122,21 @@ RSpec.describe DhanScalper::Services::MtmRefreshService do
       mtm_service.on_tick_received(
         exchange_segment: exchange_segment,
         security_id: security_id,
-        ltp: 120.0
+        ltp: 120.0,
       )
 
       # Second tick immediately should be ignored
       mtm_service.on_tick_received(
         exchange_segment: exchange_segment,
         security_id: security_id,
-        ltp: 130.0
+        ltp: 130.0,
       )
 
       # Position should still have the first LTP
       position = position_tracker.get_position(
         exchange_segment: exchange_segment,
         security_id: security_id,
-        side: "LONG"
+        side: "LONG",
       )
 
       expect(position[:current_price]).to eq(DhanScalper::Support::Money.bd(120.0))
@@ -152,7 +152,7 @@ RSpec.describe DhanScalper::Services::MtmRefreshService do
         side: "LONG",
         quantity: 50,
         price: 100.0,
-        fee: 20
+        fee: 20,
       )
 
       position_tracker.add_position(
@@ -161,15 +161,14 @@ RSpec.describe DhanScalper::Services::MtmRefreshService do
         side: "LONG",
         quantity: 25,
         price: 200.0,
-        fee: 20
+        fee: 20,
       )
 
       # Mock LTP provider
-      ltp_provider = lambda do |segment, security_id|
+      ltp_provider = lambda do |_segment, security_id|
         case security_id
         when "TEST123" then 120.0
         when "TEST456" then 180.0
-        else nil
         end
       end
 
@@ -188,14 +187,14 @@ RSpec.describe DhanScalper::Services::MtmRefreshService do
         side: "LONG",
         quantity: 75,
         price: 100.0,
-        fee: 20
+        fee: 20,
       )
 
       position_tracker.update_current_price(
         exchange_segment: exchange_segment,
         security_id: security_id,
         side: "LONG",
-        current_price: 120.0
+        current_price: 120.0,
       )
 
       result = mtm_service.refresh_all_positions
@@ -218,14 +217,14 @@ RSpec.describe DhanScalper::Services::MtmRefreshService do
         side: "LONG",
         quantity: 75,
         price: 100.0,
-        fee: 20
+        fee: 20,
       )
 
       position_tracker.update_current_price(
         exchange_segment: exchange_segment,
         security_id: security_id,
         side: "LONG",
-        current_price: 120.0
+        current_price: 120.0,
       )
 
       equity = mtm_service.get_current_equity
@@ -249,14 +248,14 @@ RSpec.describe DhanScalper::Services::MtmRefreshService do
         side: "LONG",
         quantity: 75,
         price: 100.0,
-        fee: 20
+        fee: 20,
       )
 
       position_tracker.update_current_price(
         exchange_segment: exchange_segment,
         security_id: security_id,
         side: "LONG",
-        current_price: 120.0
+        current_price: 120.0,
       )
 
       breakdown = mtm_service.get_equity_breakdown

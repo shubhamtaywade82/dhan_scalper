@@ -6,15 +6,15 @@ RSpec.describe "High-Frequency Trading Performance", :performance, :slow do
   let(:config) do
     {
       "global" => {
-        "min_profit_target" => 1000,
-        "max_day_loss" => 5000,
+        "min_profit_target" => 1_000,
+        "max_day_loss" => 5_000,
         "decision_interval" => 1, # 1 second for high frequency
         "log_level" => "WARN", # Reduce logging for performance
         "use_multi_timeframe" => true,
-        "secondary_timeframe" => 5
+        "secondary_timeframe" => 5,
       },
       "paper" => {
-        "starting_balance" => 1_000_000
+        "starting_balance" => 1_000_000,
       },
       "SYMBOLS" => {
         "NIFTY" => {
@@ -24,7 +24,7 @@ RSpec.describe "High-Frequency Trading Performance", :performance, :slow do
           "strike_step" => 50,
           "lot_size" => 75,
           "qty_multiplier" => 1,
-          "expiry_wday" => 4
+          "expiry_wday" => 4,
         },
         "BANKNIFTY" => {
           "idx_sid" => "25",
@@ -33,7 +33,7 @@ RSpec.describe "High-Frequency Trading Performance", :performance, :slow do
           "strike_step" => 100,
           "lot_size" => 25,
           "qty_multiplier" => 1,
-          "expiry_wday" => 4
+          "expiry_wday" => 4,
         },
         "FINNIFTY" => {
           "idx_sid" => "26",
@@ -42,9 +42,9 @@ RSpec.describe "High-Frequency Trading Performance", :performance, :slow do
           "strike_step" => 50,
           "lot_size" => 50,
           "qty_multiplier" => 1,
-          "expiry_wday" => 4
-        }
-      }
+          "expiry_wday" => 4,
+        },
+      },
     }
   end
 
@@ -73,7 +73,7 @@ RSpec.describe "High-Frequency Trading Performance", :performance, :slow do
                                             losing_trades: 0,
                                             total_pnl: 0.0,
                                             max_profit: 0.0,
-                                            max_drawdown: 0.0
+                                            max_drawdown: 0.0,
                                           })
 
     allow(@mock_position_tracker).to receive(:setup_websocket_handlers)
@@ -91,7 +91,7 @@ RSpec.describe "High-Frequency Trading Performance", :performance, :slow do
         open_positions: open_positions.length,
         closed_positions: closed_positions.length,
         total_pnl: total_pnl,
-        session_pnl: @session_stats[:total_pnl]
+        session_pnl: @session_stats[:total_pnl],
       }
     end
     allow(@mock_position_tracker).to receive(:get_session_stats).and_return(@session_stats)
@@ -100,7 +100,7 @@ RSpec.describe "High-Frequency Trading Performance", :performance, :slow do
         status: "open",
         pnl: 0.0,
         entry_time: Time.now,
-        position_id: "POS_#{@positions.length + 1}"
+        position_id: "POS_#{@positions.length + 1}",
       )
       @positions << position
     end
@@ -139,14 +139,14 @@ RSpec.describe "High-Frequency Trading Performance", :performance, :slow do
 
     # Mock TickCache with high-performance price simulation
     @price_cache = Concurrent::Hash.new
-    allow(DhanScalper::TickCache).to receive(:ltp) do |segment, security_id|
+    allow(DhanScalper::TickCache).to receive(:ltp) do |_segment, security_id|
       @price_cache[security_id] ||= 25_000.0 + rand(-100..100)
     end
-    allow(DhanScalper::TickCache).to receive(:get) do |segment, security_id|
+    allow(DhanScalper::TickCache).to receive(:get) do |_segment, security_id|
       {
         last_price: @price_cache[security_id] ||= 25_000.0 + rand(-100..100),
         timestamp: Time.now.to_i,
-        volume: rand(1000..10_000)
+        volume: rand(1_000..10_000),
       }
     end
 
@@ -161,7 +161,7 @@ RSpec.describe "High-Frequency Trading Performance", :performance, :slow do
                                                                 momentum: %i[strong weak].sample,
                                                                 adx: rand(15..40),
                                                                 rsi: rand(20..80),
-                                                                macd: %i[bullish bearish neutral].sample
+                                                                macd: %i[bullish bearish neutral].sample,
                                                               })
         allow(mock_series).to receive(:supertrend_signal).and_return(%i[bullish bearish none].sample)
         allow(mock_series).to receive(:combined_signal).and_return(%i[bullish bearish none].sample)
@@ -176,13 +176,13 @@ RSpec.describe "High-Frequency Trading Performance", :performance, :slow do
       cache_key = "#{spot_price}_#{signal}"
       @option_cache[cache_key] ||= {
         ce: { security_id: "CE_#{spot_price.to_i}", premium: 100.0, strike: spot_price.to_i },
-        pe: { security_id: "PE_#{spot_price.to_i}", premium: 80.0, strike: spot_price.to_i }
+        pe: { security_id: "PE_#{spot_price.to_i}", premium: 80.0, strike: spot_price.to_i },
       }
     end
     allow(paper_app).to receive(:instance_variable_get).with(:@option_pickers).and_return({
                                                                                             "NIFTY" => @mock_option_picker,
                                                                                             "BANKNIFTY" => @mock_option_picker,
-                                                                                            "FINNIFTY" => @mock_option_picker
+                                                                                            "FINNIFTY" => @mock_option_picker,
                                                                                           })
 
     # Mock Paper Broker with high-performance order execution
@@ -195,7 +195,7 @@ RSpec.describe "High-Frequency Trading Performance", :performance, :slow do
         status: "FILLED",
         avg_price: 100.0,
         quantity: args[:quantity],
-        timestamp: Time.now
+        timestamp: Time.now,
       }
     end
     allow(@mock_paper_broker).to receive(:sell_market) do |args|
@@ -205,7 +205,7 @@ RSpec.describe "High-Frequency Trading Performance", :performance, :slow do
         status: "FILLED",
         avg_price: 120.0,
         quantity: args[:quantity],
-        timestamp: Time.now
+        timestamp: Time.now,
       }
     end
     allow(paper_app).to receive(:instance_variable_get).with(:@paper_broker).and_return(@mock_paper_broker)
@@ -216,7 +216,7 @@ RSpec.describe "High-Frequency Trading Performance", :performance, :slow do
       start_time = Time.now
       iterations = 100
 
-      iterations.times do |i|
+      iterations.times do |_i|
         paper_app.analyze_and_trade
         sleep(0.01) # Simulate 1-second interval
       end
@@ -231,7 +231,7 @@ RSpec.describe "High-Frequency Trading Performance", :performance, :slow do
       results = []
 
       # Simulate 10 concurrent trading sessions
-      10.times do |i|
+      10.times do |_i|
         threads << Thread.new do
           session_results = []
           50.times do
@@ -263,8 +263,8 @@ RSpec.describe "High-Frequency Trading Performance", :performance, :slow do
           symbol: "NIFTY",
           security_id: "CE_#{25_000 + i}",
           status: "open",
-          pnl: rand(-1000..1000),
-          entry_time: Time.now
+          pnl: rand(-1_000..1_000),
+          entry_time: Time.now,
         }
       end
 
@@ -283,14 +283,14 @@ RSpec.describe "High-Frequency Trading Performance", :performance, :slow do
       initial_memory = `ps -o rss= -p #{Process.pid}`.to_i
 
       # Simulate 1-hour session (3600 iterations at 1-second intervals)
-      3600.times do |i|
+      3_600.times do |i|
         paper_app.analyze_and_trade
 
         # Simulate memory cleanup every 100 iterations
         next unless i % 100 == 0
 
         @positions = @positions.last(50) # Keep only recent positions
-        @price_cache.clear if @price_cache.size > 1000
+        @price_cache.clear if @price_cache.size > 1_000
         @indicator_cache.clear if @indicator_cache.size > 100
       end
 
@@ -303,15 +303,15 @@ RSpec.describe "High-Frequency Trading Performance", :performance, :slow do
 
     it "handles memory pressure gracefully" do
       # Simulate memory pressure by creating many objects
-      1000.times do |i|
+      1_000.times do |i|
         @positions << {
           position_id: "POS_#{i}",
           symbol: "NIFTY",
           security_id: "CE_#{25_000 + i}",
           status: "open",
-          pnl: rand(-1000..1000),
+          pnl: rand(-1_000..1_000),
           entry_time: Time.now,
-          large_data: "x" * 1000 # Add some memory pressure
+          large_data: "x" * 1_000, # Add some memory pressure
         }
       end
 
@@ -332,7 +332,7 @@ RSpec.describe "High-Frequency Trading Performance", :performance, :slow do
       cpu_before = get_cpu_usage
 
       start_time = Time.now
-      1000.times do |i|
+      1_000.times do |_i|
         paper_app.analyze_and_trade
         sleep(0.001) # 1ms sleep to prevent 100% CPU usage
       end
@@ -348,7 +348,7 @@ RSpec.describe "High-Frequency Trading Performance", :performance, :slow do
 
     it "handles CPU-intensive calculations efficiently" do
       # Simulate CPU-intensive scenario with complex indicators
-      allow(DhanScalper::CandleSeries).to receive(:load_from_dhan_intraday) do |args|
+      allow(DhanScalper::CandleSeries).to receive(:load_from_dhan_intraday) do |_args|
         # Simulate complex calculation
         sleep(0.001) # 1ms delay to simulate complex calculation
         mock_series = double("CandleSeries")
@@ -357,7 +357,7 @@ RSpec.describe "High-Frequency Trading Performance", :performance, :slow do
                                                                 momentum: :strong,
                                                                 adx: 30.0,
                                                                 rsi: 65.0,
-                                                                macd: :bullish
+                                                                macd: :bullish,
                                                               })
         allow(mock_series).to receive(:supertrend_signal).and_return(:bullish)
         allow(mock_series).to receive(:combined_signal).and_return(:bullish)
@@ -377,7 +377,7 @@ RSpec.describe "High-Frequency Trading Performance", :performance, :slow do
   describe "Network Performance" do
     it "handles simulated network latency efficiently" do
       # Simulate network latency
-      allow(DhanScalper::TickCache).to receive(:ltp) do |segment, security_id|
+      allow(DhanScalper::TickCache).to receive(:ltp) do |_segment, security_id|
         sleep(0.005) # 5ms network delay
         @price_cache[security_id] ||= 25_000.0 + rand(-100..100)
       end
@@ -394,7 +394,7 @@ RSpec.describe "High-Frequency Trading Performance", :performance, :slow do
     it "handles network failures gracefully" do
       # Simulate intermittent network failures
       call_count = 0
-      allow(DhanScalper::TickCache).to receive(:ltp) do |segment, security_id|
+      allow(DhanScalper::TickCache).to receive(:ltp) do |_segment, security_id|
         call_count += 1
         raise StandardError, "Network timeout" if call_count % 10 == 0
 
@@ -414,7 +414,7 @@ RSpec.describe "High-Frequency Trading Performance", :performance, :slow do
 
       start_time = Time.now
       100.times do
-        symbols.each do |symbol|
+        symbols.each do |_symbol|
           paper_app.analyze_and_trade
         end
       end

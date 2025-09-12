@@ -77,7 +77,7 @@ module DhanScalper
 
         {
           checksum: data["checksum"],
-          timestamp: data["timestamp"].to_i
+          timestamp: data["timestamp"].to_i,
         }
       end
 
@@ -157,14 +157,14 @@ module DhanScalper
         cache_key = "#{segment}:#{security_id}"
         @hot_cache[cache_key] = {
           data: tick_data,
-          cached_at: Time.now
+          cached_at: Time.now,
         }
 
         # Update LTP hot cache
         ltp_cache_key = "#{segment}:#{security_id}:ltp"
         @hot_cache[ltp_cache_key] = {
           data: tick_data[:ltp],
-          cached_at: Time.now
+          cached_at: Time.now,
         }
       end
 
@@ -189,13 +189,13 @@ module DhanScalper
           atp: data["atp"]&.to_f,
           vol: data["vol"]&.to_i,
           segment: data["segment"],
-          security_id: data["security_id"]
+          security_id: data["security_id"],
         }
 
         # Update hot cache
         @hot_cache[cache_key] = {
           data: tick_data,
-          cached_at: Time.now
+          cached_at: Time.now,
         }
 
         tick_data
@@ -220,7 +220,7 @@ module DhanScalper
         # Update hot cache
         @hot_cache[cache_key] = {
           data: ltp_value,
-          cached_at: Time.now
+          cached_at: Time.now,
         }
 
         ltp_value
@@ -306,7 +306,7 @@ module DhanScalper
       end
 
       # Store session PnL
-      def store_session_pnl(session_id, pnl_data)
+      def store_session_pnl(_session_id, pnl_data)
         key = "#{@namespace}:pnl:session"
         @redis.hset(key, "realized", pnl_data[:realized] || pnl_data["realized"])
         @redis.hset(key, "unrealized", pnl_data[:unrealized] || pnl_data["unrealized"])
@@ -317,7 +317,7 @@ module DhanScalper
       end
 
       # Get session PnL
-      def get_session_pnl(session_id = nil)
+      def get_session_pnl(_session_id = nil)
         key = "#{@namespace}:pnl:session"
         data = @redis.hgetall(key)
         return nil if data.empty?
@@ -327,7 +327,7 @@ module DhanScalper
           unrealized: data["unrealized"].to_f,
           fees: data["fees"].to_f,
           total: data["total"].to_f,
-          timestamp: data["timestamp"].to_i
+          timestamp: data["timestamp"].to_i,
         }
       end
 
@@ -353,7 +353,7 @@ module DhanScalper
           json_path: data["json_path"],
           total_trades: data["total_trades"].to_i,
           total_pnl: data["total_pnl"].to_f,
-          generated_at: data["generated_at"].to_i
+          generated_at: data["generated_at"].to_i,
         }
       end
 
@@ -397,7 +397,7 @@ module DhanScalper
         # Check if existing lock is expired
         existing = @redis.get(key)
         if existing
-          owner_part, expiry_part = existing.split(":")
+          _, expiry_part = existing.split(":")
           if expiry_part && Time.now.to_i > expiry_part.to_i && @redis.set(key, lock_value, xx: true, ex: ttl)
             # Lock is expired, try to replace it
             return true
@@ -447,7 +447,7 @@ module DhanScalper
       def hot_cache_stats
         {
           size: @hot_cache.size,
-          keys: @hot_cache.keys
+          keys: @hot_cache.keys,
         }
       end
 
@@ -462,7 +462,7 @@ module DhanScalper
           key = "#{@namespace}:instruments:#{symbol.downcase}"
 
           # Store as JSON array
-          @redis.setex(key, 3600, JSON.generate(symbol_instruments)) # 1 hour TTL
+          @redis.setex(key, 3_600, JSON.generate(symbol_instruments)) # 1 hour TTL
         end
 
         # Store cache metadata
@@ -470,7 +470,7 @@ module DhanScalper
         @redis.hset(cache_key, {
                       "symbols" => symbols.join(","),
                       "timestamp" => Time.now.to_i,
-                      "count" => instruments.values.sum(&:size)
+                      "count" => instruments.values.sum(&:size),
                     })
       end
 
@@ -490,7 +490,7 @@ module DhanScalper
 
         # Check if cache is still valid (less than 1 hour old)
         cache_timestamp = cache_data["timestamp"]&.to_i
-        return nil unless cache_timestamp && (Time.now.to_i - cache_timestamp) < 3600
+        return nil unless cache_timestamp && (Time.now.to_i - cache_timestamp) < 3_600
 
         # Load cached instruments
         result = {}

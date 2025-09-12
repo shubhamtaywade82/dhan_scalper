@@ -23,7 +23,7 @@ module DhanScalper
           success: !order.nil?,
           order_id: order&.id,
           order: order,
-          position: nil
+          position: nil,
         }
       rescue StandardError => e
         { success: false, error: e.message }
@@ -37,7 +37,7 @@ module DhanScalper
           order_type: "MARKET",
           validity: "DAY",
           security_id: security_id,
-          quantity: quantity
+          quantity: quantity,
         }
 
         order = create_order(order_params)
@@ -57,7 +57,7 @@ module DhanScalper
           side: "BUY",
           entry_price: price,
           quantity: quantity,
-          current_price: price
+          current_price: price,
         )
         log_position(position)
 
@@ -72,7 +72,7 @@ module DhanScalper
           order_type: "MARKET",
           validity: "DAY",
           security_id: security_id,
-          quantity: quantity
+          quantity: quantity,
         }
 
         order = create_order(order_params)
@@ -92,7 +92,7 @@ module DhanScalper
           side: "SELL",
           entry_price: price,
           quantity: quantity,
-          current_price: price
+          current_price: price,
         )
         log_position(position)
 
@@ -106,7 +106,7 @@ module DhanScalper
         methods_to_try = [
           -> { create_order_via_models(params) },
           -> { create_order_via_direct(params) },
-          -> { create_order_via_orders(params) }
+          -> { create_order_via_orders(params) },
         ]
 
         methods_to_try.each do |method|
@@ -174,7 +174,7 @@ module DhanScalper
           -> { DhanHQ::Models::Trade.find_by(order_id: order_id)&.avg_price },
           -> { DhanHQ::Trade.find_by(order_id: order_id)&.avg_price },
           -> { DhanHQ::Models::Trades.find_by_order_id(order_id)&.avg_price },
-          -> { DhanHQ::Trades.find_by_order_id(order_id)&.avg_price }
+          -> { DhanHQ::Trades.find_by_order_id(order_id)&.avg_price },
         ]
 
         methods_to_try.each_with_index do |method, index|
@@ -205,7 +205,7 @@ module DhanScalper
             fill_price: order_data["averagePrice"],
             fill_quantity: order_data["filledQuantity"],
             reason: order_data["rejectionReason"],
-            order_id: order_id
+            order_id: order_id,
           }
         rescue StandardError => e
           @logger&.error "[DHAN_BROKER] Error fetching order status for #{order_id}: #{e.message}"

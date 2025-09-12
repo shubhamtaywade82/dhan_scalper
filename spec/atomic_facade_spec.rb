@@ -14,7 +14,7 @@ RSpec.describe DhanScalper::Atomic do
     DhanScalper::Atomic.initialize(
       redis_store: redis_store,
       balance_provider: balance_provider,
-      position_tracker: position_tracker
+      position_tracker: position_tracker,
     )
   end
 
@@ -26,15 +26,15 @@ RSpec.describe DhanScalper::Atomic do
   describe ".buy!" do
     it "delegates to atomic operations" do
       allow_any_instance_of(DhanScalper::Services::AtomicOperations).to receive(:buy!).and_return({
-        success: true,
-        order_id: "test-order-123"
-      })
+                                                                                                    success: true,
+                                                                                                    order_id: "test-order-123",
+                                                                                                  })
 
       result = DhanScalper::Atomic.buy!(
         exchange_segment: exchange_segment,
         security_id: security_id,
         quantity: 100,
-        price: 100.0
+        price: 100.0,
       )
 
       expect(result[:success]).to be true
@@ -48,7 +48,7 @@ RSpec.describe DhanScalper::Atomic do
         side: "LONG",
         quantity: 100,
         price: 100.0,
-        fee: 20
+        fee: 20,
       ).and_return({ success: true })
 
       DhanScalper::Atomic.buy!(
@@ -56,7 +56,7 @@ RSpec.describe DhanScalper::Atomic do
         security_id: security_id,
         quantity: 100,
         price: 100.0,
-        fee: 20
+        fee: 20,
       )
     end
   end
@@ -64,15 +64,15 @@ RSpec.describe DhanScalper::Atomic do
   describe ".sell!" do
     it "delegates to atomic operations" do
       allow_any_instance_of(DhanScalper::Services::AtomicOperations).to receive(:sell!).and_return({
-        success: true,
-        sold_quantity: DhanScalper::Support::Money.bd(50)
-      })
+                                                                                                     success: true,
+                                                                                                     sold_quantity: DhanScalper::Support::Money.bd(50),
+                                                                                                   })
 
       result = DhanScalper::Atomic.sell!(
         exchange_segment: exchange_segment,
         security_id: security_id,
         quantity: 50,
-        price: 120.0
+        price: 120.0,
       )
 
       expect(result[:success]).to be true
@@ -86,7 +86,7 @@ RSpec.describe DhanScalper::Atomic do
         side: "LONG",
         quantity: 50,
         price: 120.0,
-        fee: 20
+        fee: 20,
       ).and_return({ success: true })
 
       DhanScalper::Atomic.sell!(
@@ -94,7 +94,7 @@ RSpec.describe DhanScalper::Atomic do
         security_id: security_id,
         quantity: 50,
         price: 120.0,
-        fee: 20
+        fee: 20,
       )
     end
   end
@@ -102,11 +102,11 @@ RSpec.describe DhanScalper::Atomic do
   describe ".balance" do
     it "delegates to atomic operations" do
       allow_any_instance_of(DhanScalper::Services::AtomicOperations).to receive(:get_balance).and_return({
-        success: true,
-        available: DhanScalper::Support::Money.bd(100_000),
-        used: DhanScalper::Support::Money.bd(0),
-        total: DhanScalper::Support::Money.bd(100_000)
-      })
+                                                                                                           success: true,
+                                                                                                           available: DhanScalper::Support::Money.bd(100_000),
+                                                                                                           used: DhanScalper::Support::Money.bd(0),
+                                                                                                           total: DhanScalper::Support::Money.bd(100_000),
+                                                                                                         })
 
       result = DhanScalper::Atomic.balance
 
@@ -118,16 +118,16 @@ RSpec.describe DhanScalper::Atomic do
   describe ".position" do
     it "delegates to atomic operations" do
       allow_any_instance_of(DhanScalper::Services::AtomicOperations).to receive(:get_position).and_return({
-        success: true,
-        position: {
-          security_id: security_id,
-          net_qty: DhanScalper::Support::Money.bd(100)
-        }
-      })
+                                                                                                            success: true,
+                                                                                                            position: {
+                                                                                                              security_id: security_id,
+                                                                                                              net_qty: DhanScalper::Support::Money.bd(100),
+                                                                                                            },
+                                                                                                          })
 
       result = DhanScalper::Atomic.position(
         exchange_segment: exchange_segment,
-        security_id: security_id
+        security_id: security_id,
       )
 
       expect(result[:success]).to be true
@@ -150,14 +150,14 @@ RSpec.describe DhanScalper::Atomic do
     it "raises error when not initialized" do
       DhanScalper::Atomic.instance_variable_set(:@atomic_ops, nil)
 
-      expect {
+      expect do
         DhanScalper::Atomic.buy!(
           exchange_segment: exchange_segment,
           security_id: security_id,
           quantity: 100,
-          price: 100.0
+          price: 100.0,
         )
-      }.to raise_error("Atomic operations not initialized. Call Atomic.initialize first.")
+      end.to raise_error("Atomic operations not initialized. Call Atomic.initialize first.")
     end
   end
 
@@ -169,7 +169,7 @@ RSpec.describe DhanScalper::Atomic do
       DhanScalper::Atomic.initialize(
         redis_store: redis_store,
         balance_provider: broker.balance_provider,
-        position_tracker: broker.position_tracker
+        position_tracker: broker.position_tracker,
       )
 
       # Both should work independently

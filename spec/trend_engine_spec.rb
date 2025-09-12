@@ -8,7 +8,7 @@ RSpec.describe TrendEngine do
     double(
       candles: Array.new(60, double), # More than 50 candles
       ema: double(last: 100.0),
-      rsi: double(last: 60.0)
+      rsi: double(last: 60.0),
     )
   end
 

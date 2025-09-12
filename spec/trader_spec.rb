@@ -17,7 +17,7 @@ RSpec.describe DhanScalper::Trader do
       "seg_opt" => "NSE_FNO",
       "strike_step" => 50,
       "lot_size" => 75,
-      "qty_multiplier" => 1
+      "qty_multiplier" => 1,
     }
   end
 
@@ -29,7 +29,7 @@ RSpec.describe DhanScalper::Trader do
       picker: mock_picker,
       gl: mock_gl,
       state: mock_state,
-      quantity_sizer: mock_quantity_sizer
+      quantity_sizer: mock_quantity_sizer,
     )
   end
 
@@ -56,7 +56,7 @@ RSpec.describe DhanScalper::Trader do
 
     # Mock Global (App)
     allow(mock_gl).to receive_messages(instance_variable_get: mock_broker, session_pnl_preview: 0.0,
-                                       session_target: 1000.0)
+                                       session_target: 1_000.0)
 
     # Mock State
     allow(mock_state).to receive(:replace_open!)
@@ -93,7 +93,7 @@ RSpec.describe DhanScalper::Trader do
     it "subscribes to index data" do
       expect(mock_websocket).to have_received(:subscribe_one).with(
         segment: "IDX_I",
-        security_id: "13"
+        security_id: "13",
       )
     end
   end
@@ -103,7 +103,7 @@ RSpec.describe DhanScalper::Trader do
       trader.send(:subscribe_index)
       expect(mock_websocket).to have_received(:subscribe_one).with(
         segment: "IDX_I",
-        security_id: "13"
+        security_id: "13",
       )
     end
   end
@@ -116,11 +116,11 @@ RSpec.describe DhanScalper::Trader do
       trader.subscribe_options(ce_map, pe_map)
       expect(mock_websocket).to have_received(:subscribe_one).with(
         segment: "NSE_FNO",
-        security_id: "CE123"
+        security_id: "CE123",
       )
       expect(mock_websocket).to have_received(:subscribe_one).with(
         segment: "NSE_FNO",
-        security_id: "PE123"
+        security_id: "PE123",
       )
     end
 
@@ -128,7 +128,7 @@ RSpec.describe DhanScalper::Trader do
       trader.subscribe_options({ 19_500 => nil }, { 19_500 => "PE123" })
       expect(mock_websocket).to have_received(:subscribe_one).with(
         segment: "NSE_FNO",
-        security_id: "PE123"
+        security_id: "PE123",
       )
     end
   end
@@ -233,7 +233,7 @@ RSpec.describe DhanScalper::Trader do
         expect(mock_broker).to have_received(:buy_market).with(
           segment: "NSE_FNO",
           security_id: "CE123",
-          quantity: 150
+          quantity: 150,
         )
       end
 
@@ -256,7 +256,7 @@ RSpec.describe DhanScalper::Trader do
         expect(mock_broker).to have_received(:buy_market).with(
           segment: "NSE_FNO",
           security_id: "PE123",
-          quantity: 150
+          quantity: 150,
         )
       end
 
@@ -313,7 +313,7 @@ RSpec.describe DhanScalper::Trader do
         expect(mock_broker).to have_received(:sell_market).with(
           segment: "NSE_FNO",
           security_id: "CE123",
-          quantity: 150
+          quantity: 150,
         )
       end
     end
@@ -328,7 +328,7 @@ RSpec.describe DhanScalper::Trader do
         expect(mock_broker).to have_received(:sell_market).with(
           segment: "NSE_FNO",
           security_id: "CE123",
-          quantity: 150
+          quantity: 150,
         )
       end
     end
@@ -346,7 +346,7 @@ RSpec.describe DhanScalper::Trader do
         expect(mock_broker).to have_received(:sell_market).with(
           segment: "NSE_FNO",
           security_id: "CE123",
-          quantity: 150
+          quantity: 150,
         )
       end
     end
@@ -361,7 +361,7 @@ RSpec.describe DhanScalper::Trader do
         expect(mock_broker).to have_received(:sell_market).with(
           segment: "NSE_FNO",
           security_id: "CE123",
-          quantity: 150
+          quantity: 150,
         )
       end
     end
@@ -437,7 +437,7 @@ RSpec.describe DhanScalper::Trader do
           reason: "TP",
           entry: 50.0,
           exit_price: 55.0,
-          net: 100.0
+          net: 100.0,
         )
         trader.close!("TP", 55.0, 20.0)
       end
@@ -477,7 +477,7 @@ RSpec.describe DhanScalper::Trader do
                                                              entry: 50.0,
                                                              ltp: 55.0,
                                                              net: 100.0,
-                                                             best: 0.0
+                                                             best: 0.0,
                                                            }])
         trader.send(:publish_open_snapshot!)
       end
@@ -511,7 +511,7 @@ RSpec.describe DhanScalper::Trader do
           reason: "TP",
           entry: 50.0,
           exit_price: 55.0,
-          net: 100.0
+          net: 100.0,
         )
         trader.send(:publish_closed!, reason: "TP", exit_price: 55.0, net: 100.0)
       end
@@ -604,7 +604,7 @@ RSpec.describe DhanScalper::Trader do
           ltp: 55.0,
           lot_size: 75,
           qty_lots: 2,
-          charge_per_order: 20.0
+          charge_per_order: 20.0,
         )
         expect(result).to eq(100.0)
       end
@@ -617,7 +617,7 @@ RSpec.describe DhanScalper::Trader do
     before do
       stub_const("DhanScalper::CandleSeries", double)
       allow(DhanScalper::CandleSeries).to receive(:load_from_dhan_intraday).and_return(
-        double(candles: Array.new(60) { double }, ema: [100.0, 101.0], rsi: [55.0, 56.0])
+        double(candles: Array.new(60) { double }, ema: [100.0, 101.0], rsi: [55.0, 56.0]),
       )
     end
 

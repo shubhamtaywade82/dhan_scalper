@@ -4,8 +4,8 @@ module TestData
   # Sample configuration for testing
   SAMPLE_CONFIG = {
     "global" => {
-      "min_profit_target" => 1000,
-      "max_day_loss" => 5000,
+      "min_profit_target" => 1_000,
+      "max_day_loss" => 5_000,
       "decision_interval" => 10,
       "log_level" => "INFO",
       "use_multi_timeframe" => true,
@@ -16,10 +16,10 @@ module TestData
       "max_lots_per_trade" => 10,
       "tp_pct" => 0.35,
       "sl_pct" => 0.18,
-      "trail_pct" => 0.12
+      "trail_pct" => 0.12,
     },
     "paper" => {
-      "starting_balance" => 200_000
+      "starting_balance" => 200_000,
     },
     "SYMBOLS" => {
       "NIFTY" => {
@@ -29,7 +29,7 @@ module TestData
         "strike_step" => 50,
         "lot_size" => 75,
         "qty_multiplier" => 1,
-        "expiry_wday" => 4
+        "expiry_wday" => 4,
       },
       "BANKNIFTY" => {
         "idx_sid" => "25",
@@ -38,9 +38,9 @@ module TestData
         "strike_step" => 100,
         "lot_size" => 25,
         "qty_multiplier" => 1,
-        "expiry_wday" => 4
-      }
-    }
+        "expiry_wday" => 4,
+      },
+    },
   }.freeze
 
   # Sample candle data for testing
@@ -51,7 +51,7 @@ module TestData
       high: 25_050.0,
       low: 24_950.0,
       close: 25_025.0,
-      volume: 1000
+      volume: 1_000,
     },
     {
       timestamp: Time.now - 240,
@@ -59,7 +59,7 @@ module TestData
       high: 25_075.0,
       low: 25_000.0,
       close: 25_050.0,
-      volume: 1200
+      volume: 1_200,
     },
     {
       timestamp: Time.now - 180,
@@ -67,7 +67,7 @@ module TestData
       high: 25_100.0,
       low: 25_025.0,
       close: 25_075.0,
-      volume: 1100
+      volume: 1_100,
     },
     {
       timestamp: Time.now - 120,
@@ -75,7 +75,7 @@ module TestData
       high: 25_125.0,
       low: 25_050.0,
       close: 25_100.0,
-      volume: 1300
+      volume: 1_300,
     },
     {
       timestamp: Time.now - 60,
@@ -83,8 +83,8 @@ module TestData
       high: 25_150.0,
       low: 25_075.0,
       close: 25_125.0,
-      volume: 1400
-    }
+      volume: 1_400,
+    },
   ].freeze
 
   # Sample tick data for testing
@@ -96,12 +96,12 @@ module TestData
     high: 155.0,
     low: 140.0,
     close: 148.0,
-    volume: 1000,
+    volume: 1_000,
     timestamp: Time.now.to_i,
     day_high: 155.0,
     day_low: 140.0,
     atp: 150.0,
-    vol: 1000
+    vol: 1_000,
   }.freeze
 
   # Sample position data for testing
@@ -115,7 +115,7 @@ module TestData
     entry_price: 150.0,
     current_price: 150.0,
     pnl: 0.0,
-    created_at: Time.now
+    created_at: Time.now,
   }.freeze
 
   # Sample order data for testing
@@ -125,14 +125,14 @@ module TestData
     side: "BUY",
     quantity: 75,
     price: 150.0,
-    timestamp: Time.now
+    timestamp: Time.now,
   }.freeze
 
   # Sample balance data for testing
   SAMPLE_BALANCE = {
     available: 200_000.0,
     used: 0.0,
-    total: 200_000.0
+    total: 200_000.0,
   }.freeze
 
   # Sample CSV master data for testing
@@ -146,7 +146,7 @@ module TestData
       "SECURITY_ID" => "TEST123",
       "LOT_SIZE" => "75",
       "EXCHANGE" => "NSE",
-      "SEGMENT" => "FNO"
+      "SEGMENT" => "FNO",
     },
     {
       "UNDERLYING_SYMBOL" => "NIFTY",
@@ -157,7 +157,7 @@ module TestData
       "SECURITY_ID" => "TEST124",
       "LOT_SIZE" => "75",
       "EXCHANGE" => "NSE",
-      "SEGMENT" => "FNO"
+      "SEGMENT" => "FNO",
     },
     {
       "UNDERLYING_SYMBOL" => "NIFTY",
@@ -168,8 +168,8 @@ module TestData
       "SECURITY_ID" => "13",
       "LOT_SIZE" => "75",
       "EXCHANGE" => "NSE",
-      "SEGMENT" => "I"
-    }
+      "SEGMENT" => "I",
+    },
   ].freeze
 
   # Sample Holy Grail signal data
@@ -179,7 +179,7 @@ module TestData
     adx: 25.0,
     rsi: 65.0,
     macd: :bullish,
-    signal_strength: 0.8
+    signal_strength: 0.8,
   }.freeze
 
   # Sample trend analysis data
@@ -188,7 +188,7 @@ module TestData
     secondary_trend: :bullish,
     trend_strength: 0.75,
     trend_duration: 300,
-    signal_quality: :high
+    signal_quality: :high,
   }.freeze
 
   # Sample session statistics
@@ -196,15 +196,15 @@ module TestData
     total_trades: 5,
     successful_trades: 4,
     failed_trades: 1,
-    total_pnl: 1500.0,
-    max_profit: 2000.0,
+    total_pnl: 1_500.0,
+    max_profit: 2_000.0,
     max_drawdown: -500.0,
     win_rate: 0.8,
     avg_trade_pnl: 300.0,
     symbols_traded: Set.new(["NIFTY"]),
-    session_duration: 3600,
-    start_time: Time.now - 3600,
-    end_time: Time.now
+    session_duration: 3_600,
+    start_time: Time.now - 3_600,
+    end_time: Time.now,
   }.freeze
 
   # Sample Redis data for testing
@@ -220,7 +220,7 @@ module TestData
       "day_high" => "155.0",
       "day_low" => "140.0",
       "atp" => "150.0",
-      "vol" => "1000"
+      "vol" => "1000",
     },
     "dhan_scalper:v1:pos:TEST123" => {
       "symbol" => "NIFTY",
@@ -232,8 +232,8 @@ module TestData
       "entry_price" => "150.0",
       "current_price" => "150.0",
       "pnl" => "0.0",
-      "created_at" => Time.now.to_s
-    }
+      "created_at" => Time.now.to_s,
+    },
   }.freeze
 
   # Sample WebSocket message data
@@ -247,13 +247,13 @@ module TestData
       high: 155.0,
       low: 140.0,
       close: 148.0,
-      volume: 1000,
+      volume: 1_000,
       timestamp: Time.now.to_i,
       day_high: 155.0,
       day_low: 140.0,
       atp: 150.0,
-      vol: 1000
-    }
+      vol: 1_000,
+    },
   }.freeze
 
   # Sample error scenarios for testing
@@ -264,7 +264,7 @@ module TestData
     insufficient_balance: StandardError.new("Insufficient balance"),
     invalid_security_id: ArgumentError.new("Invalid security ID"),
     network_timeout: Timeout::Error.new("Request timeout"),
-    json_parsing_error: JSON::ParserError.new("Invalid JSON")
+    json_parsing_error: JSON::ParserError.new("Invalid JSON"),
   }.freeze
 
   # Sample performance metrics
@@ -276,7 +276,7 @@ module TestData
     cpu_usage: 25.0,              # 25%
     network_latency: 0.1,         # 100ms
     cache_hit_ratio: 0.95,        # 95%
-    error_rate: 0.01              # 1%
+    error_rate: 0.01, # 1%
   }.freeze
 
   # Helper methods for creating test data
@@ -292,7 +292,7 @@ module TestData
         high: base_price + (i * 10) + 25,
         low: base_price + (i * 10) - 25,
         close: base_price + (i * 10) + 5,
-        volume: 1000 + (i * 10)
+        volume: 1_000 + (i * 10),
       }
     end
 
@@ -313,7 +313,7 @@ module TestData
         entry_price: 150.0 + (i * 10),
         current_price: 150.0 + (i * 10) + (i * 5),
         pnl: (i * 5) * 75,
-        created_at: Time.now - (i * 300)
+        created_at: Time.now - (i * 300),
       }
     end
 
@@ -330,7 +330,7 @@ module TestData
         side: i.even? ? "BUY" : "SELL",
         quantity: 75,
         price: 150.0 + (i * 5),
-        timestamp: Time.now - (i * 60)
+        timestamp: Time.now - (i * 60),
       }
     end
 
@@ -351,12 +351,12 @@ module TestData
         high: base_price + (i * 0.5) + 2.5,
         low: base_price + (i * 0.5) - 2.5,
         close: base_price + (i * 0.5),
-        volume: 1000 + (i * 10),
+        volume: 1_000 + (i * 10),
         timestamp: base_time + (i * 60),
         day_high: base_price + (i * 0.5) + 2.5,
         day_low: base_price + (i * 0.5) - 2.5,
         atp: base_price + (i * 0.5),
-        vol: 1000 + (i * 10)
+        vol: 1_000 + (i * 10),
       }
     end
 
@@ -367,21 +367,21 @@ module TestData
     {
       session_id: session_id,
       mode: "paper",
-      start_time: Time.now - 3600,
+      start_time: Time.now - 3_600,
       end_time: Time.now,
-      duration: 3600,
+      duration: 3_600,
       symbols: ["NIFTY"],
       total_trades: 10,
       successful_trades: 8,
       failed_trades: 2,
-      total_pnl: 2000.0,
-      max_profit: 3000.0,
+      total_pnl: 2_000.0,
+      max_profit: 3_000.0,
       max_drawdown: -500.0,
       win_rate: 0.8,
       avg_trade_pnl: 200.0,
       starting_balance: 200_000.0,
       ending_balance: 202_000.0,
-      balance_change_pct: 1.0
+      balance_change_pct: 1.0,
     }
   end
 
@@ -392,8 +392,8 @@ module TestData
       "data" => {
         "available_balance" => 200_000.0,
         "utilized_amount" => 0.0,
-        "total_balance" => 200_000.0
-      }
+        "total_balance" => 200_000.0,
+      },
     }
   end
 
@@ -406,12 +406,12 @@ module TestData
       high: 155.0,
       low: 140.0,
       close: 148.0,
-      volume: 1000,
+      volume: 1_000,
       timestamp: Time.now.to_i,
       day_high: 155.0,
       day_low: 140.0,
       atp: 150.0,
-      vol: 1000
+      vol: 1_000,
     }
   end
 
@@ -425,7 +425,7 @@ module TestData
           "high" => 25_050.0,
           "low" => 24_950.0,
           "close" => 25_025.0,
-          "volume" => 1000
+          "volume" => 1_000,
         },
         {
           "timestamp" => (Time.now - 240).to_i,
@@ -433,9 +433,9 @@ module TestData
           "high" => 25_075.0,
           "low" => 25_000.0,
           "close" => 25_050.0,
-          "volume" => 1200
-        }
-      ]
+          "volume" => 1_200,
+        },
+      ],
     }
   end
 end

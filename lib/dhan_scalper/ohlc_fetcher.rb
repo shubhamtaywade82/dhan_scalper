@@ -64,7 +64,7 @@ module DhanScalper
           @last_fetch_times.to_h
         rescue StandardError
           {}
-        end
+        end,
       }
     end
 
@@ -145,7 +145,7 @@ module DhanScalper
           seg: symbol_config["seg_idx"],
           sid: symbol_config["idx_sid"],
           interval: interval,
-          symbol: "INDEX"
+          symbol: "INDEX",
         )
 
         if candle_series&.candles&.any?

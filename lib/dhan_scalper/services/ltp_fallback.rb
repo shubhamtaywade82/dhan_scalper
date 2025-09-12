@@ -57,7 +57,7 @@ module DhanScalper
               cache_key = "#{segment}:#{security_id}"
               @cache[cache_key] = {
                 data: tick_data,
-                timestamp: Time.now
+                timestamp: Time.now,
               }
             end
           rescue StandardError => e
@@ -99,7 +99,7 @@ module DhanScalper
         {
           size: @cache.size,
           keys: @cache.keys,
-          ttl: @cache_ttl
+          ttl: @cache_ttl,
         }
       end
 
@@ -132,14 +132,14 @@ module DhanScalper
                 atp: nil,      # MarketFeed LTP API doesn't provide average_price
                 vol: nil,      # MarketFeed LTP API doesn't provide volume
                 segment: segment,
-                security_id: security_id
+                security_id: security_id,
               }
 
               # Cache the result
               cache_key = "#{segment}:#{security_id}"
               @cache[cache_key] = {
                 data: tick_data,
-                timestamp: Time.now
+                timestamp: Time.now,
               }
 
               @logger.debug "[LTP_FALLBACK] Successfully fetched LTP: #{tick_data[:ltp]}"
@@ -185,7 +185,7 @@ module DhanScalper
                   atp: nil,      # MarketFeed LTP API doesn't provide average_price
                   vol: nil,      # MarketFeed LTP API doesn't provide volume
                   segment: segment,
-                  security_id: security_id
+                  security_id: security_id,
                 }
 
                 results[security_id] = tick_data
@@ -194,7 +194,7 @@ module DhanScalper
                 cache_key = "#{segment}:#{security_id}"
                 @cache[cache_key] = {
                   data: tick_data,
-                  timestamp: Time.now
+                  timestamp: Time.now,
                 }
               else
                 results[security_id] = nil

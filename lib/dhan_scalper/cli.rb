@@ -366,7 +366,7 @@ module DhanScalper
       # Initialize Redis store
       redis_store = DhanScalper::Stores::RedisStore.new(
         namespace: "dhan_scalper:v1",
-        logger: Logger.new($stdout)
+        logger: Logger.new($stdout),
       )
 
       begin
@@ -425,7 +425,7 @@ module DhanScalper
       # Initialize Redis store
       redis_store = DhanScalper::Stores::RedisStore.new(
         namespace: "dhan_scalper:v1",
-        logger: Logger.new($stdout)
+        logger: Logger.new($stdout),
       )
 
       begin
@@ -456,7 +456,7 @@ module DhanScalper
             day_high: tick_info["day_high"],
             day_low: tick_info["day_low"],
             atp: tick_info["atp"],
-            volume: tick_info["vol"]
+            volume: tick_info["vol"],
           }
         end
 
@@ -477,7 +477,7 @@ module DhanScalper
               tick[:day_high],
               tick[:day_low],
               tick[:atp],
-              tick[:volume]
+              tick[:volume],
             ]
           end
         end
@@ -513,8 +513,6 @@ module DhanScalper
       puts "\nTo configure, create a .env file with:"
       puts DhanScalper::Services::DhanHQConfig.sample_env
     end
-
-    private
 
     def parse_instruments(instruments_str)
       return nil unless instruments_str

@@ -38,7 +38,7 @@ module DhanScalper
             -> { DhanHQ::WS.disconnect_all_local! },
             -> { DhanHQ::WebSocket.disconnect_all_local! },
             -> { DhanHQ::WS.disconnect_all! },
-            -> { DhanHQ::WebSocket.disconnect_all! }
+            -> { DhanHQ::WebSocket.disconnect_all! },
           ]
 
           methods_to_try.each do |method|

@@ -121,7 +121,7 @@ module DhanScalper
       def update_unrealized_pnl(ltp_provider)
         total_unrealized = DhanScalper::Support::Money.bd(0)
 
-        @positions.each do |key, position|
+        @positions.each do |_key, position|
           current_price = ltp_provider.call(position[:exchange_segment], position[:security_id])
           next unless current_price&.positive?
 

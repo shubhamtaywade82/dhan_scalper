@@ -12,14 +12,14 @@ RSpec.describe DhanScalper::QuantitySizer do
       "global" => {
         "allocation_pct" => 0.30,
         "slippage_buffer_pct" => 0.01,
-        "max_lots_per_trade" => 10
+        "max_lots_per_trade" => 10,
       },
       "SYMBOLS" => {
         "NIFTY" => {
           "lot_size" => 75,
-          "qty_multiplier" => 5
-        }
-      }
+          "qty_multiplier" => 5,
+        },
+      },
     }
   end
 

@@ -36,7 +36,7 @@ module DhanScalper
           session_id: session_id,
           json_file: json_file,
           csv_file: csv_file,
-          timestamp: timestamp
+          timestamp: timestamp,
         }
       end
 
@@ -72,7 +72,7 @@ module DhanScalper
               position[:timestamp],
               position[:exit_price],
               position[:exit_reason],
-              position[:exit_timestamp]
+              position[:exit_timestamp],
             ]
           end
         end
@@ -108,7 +108,7 @@ module DhanScalper
               order[:status],
               order[:timestamp],
               order[:filled_price],
-              order[:filled_quantity]
+              order[:filled_quantity],
             ]
           end
         end
@@ -151,7 +151,7 @@ module DhanScalper
             timestamp: row["timestamp"],
             exit_price: row["exit_price"]&.to_f,
             exit_reason: row["exit_reason"],
-            exit_timestamp: row["exit_timestamp"]
+            exit_timestamp: row["exit_timestamp"],
           }
         end
 
@@ -179,7 +179,7 @@ module DhanScalper
             status: row["status"],
             timestamp: row["timestamp"],
             filled_price: row["filled_price"]&.to_f,
-            filled_quantity: row["filled_quantity"]&.to_i
+            filled_quantity: row["filled_quantity"]&.to_i,
           }
         end
 
@@ -214,7 +214,7 @@ module DhanScalper
             session_id: session_id,
             timestamp: timestamp,
             json_file: file,
-            csv_file: file.gsub(".json", ".csv")
+            csv_file: file.gsub(".json", ".csv"),
           }
         end
 
@@ -307,7 +307,7 @@ module DhanScalper
                 position[:current_price],
                 position[:quantity],
                 position[:pnl],
-                "#{position[:pnl_percentage]}%"
+                "#{position[:pnl_percentage]}%",
               ]
             end
           end

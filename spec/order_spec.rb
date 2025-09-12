@@ -97,7 +97,7 @@ RSpec.describe DhanScalper::Order do
 
     it "handles fractional quantities" do
       order = described_class.new(order_id, security_id, side, 50, 150.50)
-      expect(order.total_value).to eq(7525.0)
+      expect(order.total_value).to eq(7_525.0)
     end
   end
 

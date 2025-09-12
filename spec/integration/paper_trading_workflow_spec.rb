@@ -6,15 +6,15 @@ RSpec.describe "Paper Trading Workflow Integration", :integration do
   let(:config) do
     {
       "global" => {
-        "min_profit_target" => 1000,
-        "max_day_loss" => 5000,
+        "min_profit_target" => 1_000,
+        "max_day_loss" => 5_000,
         "decision_interval" => 5,
         "log_level" => "INFO",
         "use_multi_timeframe" => true,
-        "secondary_timeframe" => 5
+        "secondary_timeframe" => 5,
       },
       "paper" => {
-        "starting_balance" => 200_000
+        "starting_balance" => 200_000,
       },
       "SYMBOLS" => {
         "NIFTY" => {
@@ -24,7 +24,7 @@ RSpec.describe "Paper Trading Workflow Integration", :integration do
           "strike_step" => 50,
           "lot_size" => 75,
           "qty_multiplier" => 1,
-          "expiry_wday" => 4
+          "expiry_wday" => 4,
         },
         "BANKNIFTY" => {
           "idx_sid" => "25",
@@ -33,9 +33,9 @@ RSpec.describe "Paper Trading Workflow Integration", :integration do
           "strike_step" => 100,
           "lot_size" => 25,
           "qty_multiplier" => 1,
-          "expiry_wday" => 4
-        }
-      }
+          "expiry_wday" => 4,
+        },
+      },
     }
   end
 
@@ -65,7 +65,7 @@ RSpec.describe "Paper Trading Workflow Integration", :integration do
       win_rate: 0.0,
       total_pnl: 0.0,
       max_profit: 0.0,
-      max_drawdown: 0.0
+      max_drawdown: 0.0,
     }
 
     allow(@mock_position_tracker).to receive(:setup_websocket_handlers)
@@ -77,7 +77,7 @@ RSpec.describe "Paper Trading Workflow Integration", :integration do
         open_positions: @positions.count { |p| p[:status] == "open" },
         closed_positions: @positions.count { |p| p[:status] == "closed" },
         total_pnl: @positions.sum { |p| p[:pnl] || 0 },
-        session_pnl: @session_stats[:total_pnl]
+        session_pnl: @session_stats[:total_pnl],
       }
     end
     allow(@mock_position_tracker).to receive(:get_session_stats).and_return(@session_stats)
@@ -120,7 +120,7 @@ RSpec.describe "Paper Trading Workflow Integration", :integration do
     # Mock TickCache with realistic price data
     @price_data = {
       "NIFTY" => 25_000.0,
-      "BANKNIFTY" => 50_000.0
+      "BANKNIFTY" => 50_000.0,
     }
     allow(DhanScalper::TickCache).to receive(:ltp) do |_segment, security_id|
       case security_id
@@ -131,7 +131,7 @@ RSpec.describe "Paper Trading Workflow Integration", :integration do
     end
     allow(DhanScalper::TickCache).to receive(:get).and_return({
                                                                 last_price: 25_000.0,
-                                                                timestamp: Time.now.to_i
+                                                                timestamp: Time.now.to_i,
                                                               })
 
     # Mock CandleSeries with realistic indicator data
@@ -141,15 +141,15 @@ RSpec.describe "Paper Trading Workflow Integration", :integration do
         momentum: :strong,
         adx: 30.0,
         rsi: 65.0,
-        macd: :bullish
+        macd: :bullish,
       },
       "BANKNIFTY" => {
         bias: :bearish,
         momentum: :strong,
         adx: 28.0,
         rsi: 35.0,
-        macd: :bearish
-      }
+        macd: :bearish,
+      },
     }
 
     allow(DhanScalper::CandleSeries).to receive(:load_from_dhan_intraday) do |args|
@@ -167,12 +167,12 @@ RSpec.describe "Paper Trading Workflow Integration", :integration do
       strike = (spot_price / 50).round * 50 # Round to nearest 50
       {
         ce: { security_id: "CE_#{strike}", premium: 100.0, strike: strike },
-        pe: { security_id: "PE_#{strike}", premium: 80.0, strike: strike }
+        pe: { security_id: "PE_#{strike}", premium: 80.0, strike: strike },
       }
     end
     allow(paper_app).to receive(:instance_variable_get).with(:@option_pickers).and_return({
                                                                                             "NIFTY" => @mock_option_picker,
-                                                                                            "BANKNIFTY" => @mock_option_picker
+                                                                                            "BANKNIFTY" => @mock_option_picker,
                                                                                           })
 
     # Mock Paper Broker with realistic order execution
@@ -184,7 +184,7 @@ RSpec.describe "Paper Trading Workflow Integration", :integration do
         order_id: "ORDER_#{@order_counter}",
         status: "FILLED",
         avg_price: 100.0,
-        quantity: args[:quantity]
+        quantity: args[:quantity],
       }
     end
     allow(@mock_paper_broker).to receive(:sell_market) do |args|
@@ -193,7 +193,7 @@ RSpec.describe "Paper Trading Workflow Integration", :integration do
         order_id: "ORDER_#{@order_counter}",
         status: "FILLED",
         avg_price: 120.0,
-        quantity: args[:quantity]
+        quantity: args[:quantity],
       }
     end
     allow(paper_app).to receive(:instance_variable_get).with(:@paper_broker).and_return(@mock_paper_broker)
@@ -242,7 +242,7 @@ RSpec.describe "Paper Trading Workflow Integration", :integration do
 
     it "manages risk limits correctly" do
       # Simulate a losing streak
-      allow(@mock_position_tracker).to receive(:get_total_pnl).and_return(-6000.0)
+      allow(@mock_position_tracker).to receive(:get_total_pnl).and_return(-6_000.0)
 
       # Attempt to trade
       result = paper_app.check_risk_limits
@@ -311,7 +311,7 @@ RSpec.describe "Paper Trading Workflow Integration", :integration do
       # Create multiple positions
       @positions = [
         { symbol: "NIFTY", security_id: "CE_25000", pnl: 500.0, status: "open" },
-        { symbol: "BANKNIFTY", security_id: "PE_50000", pnl: -200.0, status: "open" }
+        { symbol: "BANKNIFTY", security_id: "PE_50000", pnl: -200.0, status: "open" },
       ]
 
       # Update session stats
@@ -383,7 +383,7 @@ RSpec.describe "Paper Trading Workflow Integration", :integration do
       initial_memory = `ps -o rss= -p #{Process.pid}`.to_i
 
       # Simulate 1000 iterations
-      1000.times do
+      1_000.times do
         paper_app.analyze_and_trade
       end
 
@@ -405,7 +405,7 @@ RSpec.describe "Paper Trading Workflow Integration", :integration do
       allow(high_risk_app).to receive(:instance_variable_get).with(:@position_tracker).and_return(@mock_position_tracker)
 
       # Should allow higher losses
-      allow(@mock_position_tracker).to receive(:get_total_pnl).and_return(-8000.0)
+      allow(@mock_position_tracker).to receive(:get_total_pnl).and_return(-8_000.0)
       expect(high_risk_app.check_risk_limits).to be true
     end
 
@@ -414,7 +414,7 @@ RSpec.describe "Paper Trading Workflow Integration", :integration do
       minimal_config = {
         "global" => { "decision_interval" => 10 },
         "paper" => { "starting_balance" => 100_000 },
-        "SYMBOLS" => { "NIFTY" => { "idx_sid" => "13", "seg_idx" => "IDX_I", "seg_opt" => "NSE_FNO" } }
+        "SYMBOLS" => { "NIFTY" => { "idx_sid" => "13", "seg_idx" => "IDX_I", "seg_opt" => "NSE_FNO" } },
       }
 
       minimal_app = DhanScalper::PaperApp.new(minimal_config, quiet: true, enhanced: true)
@@ -430,14 +430,14 @@ RSpec.describe "Paper Trading Workflow Integration", :integration do
         winning_trades: 6,
         losing_trades: 4,
         win_rate: 60.0,
-        total_pnl: 2000.0,
-        max_profit: 1500.0,
-        max_drawdown: -500.0
+        total_pnl: 2_000.0,
+        max_profit: 1_500.0,
+        max_drawdown: -500.0,
       }
 
       @positions = [
         { symbol: "NIFTY", status: "open", pnl: 500.0 },
-        { symbol: "BANKNIFTY", status: "closed", pnl: 1500.0 }
+        { symbol: "BANKNIFTY", status: "closed", pnl: 1_500.0 },
       ]
 
       # Generate report

@@ -36,7 +36,7 @@ module DhanScalper
         if ttl
           @ttl_cache[key] = {
             expires_at: Time.now + ttl,
-            ttl: ttl
+            ttl: ttl,
           }
         end
 
@@ -70,7 +70,7 @@ module DhanScalper
         existing_peak = get(key)&.to_f || entry_price
 
         if current_price > existing_peak
-          set(key, current_price.to_s, ttl: 3600)
+          set(key, current_price.to_s, ttl: 3_600)
           current_price
         else
           existing_peak
@@ -82,7 +82,7 @@ module DhanScalper
         existing_trigger = get(key)&.to_f || current_trigger
 
         if new_trigger > existing_trigger
-          set(key, new_trigger.to_s, ttl: 3600)
+          set(key, new_trigger.to_s, ttl: 3_600)
           new_trigger
         else
           existing_trigger
@@ -139,7 +139,7 @@ module DhanScalper
 
       def set_position(security_id, position_data)
         key = "position:#{security_id}"
-        set(key, position_data, ttl: 3600) # 1 hour TTL
+        set(key, position_data, ttl: 3_600) # 1 hour TTL
         true
       end
 

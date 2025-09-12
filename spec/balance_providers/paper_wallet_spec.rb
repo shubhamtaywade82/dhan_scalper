@@ -31,9 +31,9 @@ RSpec.describe DhanScalper::BalanceProviders::PaperWallet do
     end
 
     it "handles negative starting balance" do
-      negative_wallet = described_class.new(starting_balance: -1000.0)
-      expect(negative_wallet.total_balance).to eq(-1000.0)
-      expect(negative_wallet.available_balance).to eq(-1000.0)
+      negative_wallet = described_class.new(starting_balance: -1_000.0)
+      expect(negative_wallet.total_balance).to eq(-1_000.0)
+      expect(negative_wallet.available_balance).to eq(-1_000.0)
     end
   end
 
@@ -48,7 +48,7 @@ RSpec.describe DhanScalper::BalanceProviders::PaperWallet do
     end
 
     it "never goes below zero" do
-      paper_wallet.update_balance(starting_balance + 1000, type: :debit)
+      paper_wallet.update_balance(starting_balance + 1_000, type: :debit)
       expect(paper_wallet.available_balance).to eq(0.0)
     end
   end
@@ -109,7 +109,7 @@ RSpec.describe DhanScalper::BalanceProviders::PaperWallet do
       end
 
       it "handles debit amounts larger than available balance" do
-        paper_wallet.update_balance(starting_balance + 1000, type: :debit)
+        paper_wallet.update_balance(starting_balance + 1_000, type: :debit)
         expect(paper_wallet.available_balance).to eq(0.0)
         expect(paper_wallet.used_balance).to eq(starting_balance)
       end
@@ -200,9 +200,9 @@ RSpec.describe DhanScalper::BalanceProviders::PaperWallet do
     end
 
     it "handles negative reset amount" do
-      paper_wallet.reset_balance(-1000.0)
-      expect(paper_wallet.total_balance).to eq(-1000.0)
-      expect(paper_wallet.available_balance).to eq(-1000.0)
+      paper_wallet.reset_balance(-1_000.0)
+      expect(paper_wallet.total_balance).to eq(-1_000.0)
+      expect(paper_wallet.available_balance).to eq(-1_000.0)
       expect(paper_wallet.used_balance).to eq(0.0)
     end
   end
@@ -220,7 +220,7 @@ RSpec.describe DhanScalper::BalanceProviders::PaperWallet do
         { amount: 25_000, type: :debit },
         { amount: 10_000, type: :credit },
         { amount: 15_000, type: :debit },
-        { amount: 5_000, type: :credit }
+        { amount: 5_000, type: :credit },
       ]
 
       transactions.each do |tx|

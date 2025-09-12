@@ -8,7 +8,7 @@ RSpec.describe DhanScalper::CLI do
     double(
       get_balance: 100_000.0,
       get_positions: [],
-      get_orders: []
+      get_orders: [],
     )
   end
 
@@ -77,7 +77,7 @@ RSpec.describe DhanScalper::CLI do
     end
 
     it "handles negative balance" do
-      allow(mock_vdm).to receive(:get_balance).and_return(-5000.0)
+      allow(mock_vdm).to receive(:get_balance).and_return(-5_000.0)
 
       result = capture_stdout { cli.balance }
 
@@ -106,7 +106,7 @@ RSpec.describe DhanScalper::CLI do
           side: "LONG",
           entry_price: 50.0,
           current_price: 55.0,
-          pnl: 500.0
+          pnl: 500.0,
         }
       end
 
@@ -146,7 +146,7 @@ RSpec.describe DhanScalper::CLI do
             side: "LONG",
             entry_price: 50.0,
             current_price: 55.0,
-            pnl: 500.0
+            pnl: 500.0,
           },
           {
             symbol: "BANKNIFTY",
@@ -154,8 +154,8 @@ RSpec.describe DhanScalper::CLI do
             side: "SHORT",
             entry_price: 100.0,
             current_price: 95.0,
-            pnl: 250.0
-          }
+            pnl: 250.0,
+          },
         ]
       end
 
@@ -196,7 +196,7 @@ RSpec.describe DhanScalper::CLI do
           quantity: 100,
           price: 50.0,
           status: "COMPLETED",
-          timestamp: Time.now
+          timestamp: Time.now,
         }
       end
 
@@ -238,7 +238,7 @@ RSpec.describe DhanScalper::CLI do
             quantity: 100,
             price: 50.0,
             status: "COMPLETED",
-            timestamp: Time.now
+            timestamp: Time.now,
           },
           {
             order_id: "VIRTUAL_ORDER_2",
@@ -247,8 +247,8 @@ RSpec.describe DhanScalper::CLI do
             quantity: 100,
             price: 55.0,
             status: "COMPLETED",
-            timestamp: Time.now
-          }
+            timestamp: Time.now,
+          },
         ]
       end
 
@@ -314,7 +314,7 @@ RSpec.describe DhanScalper::CLI do
 
   describe "output formatting" do
     it "formats currency values consistently" do
-      allow(mock_vdm).to receive(:get_balance).and_return(1234.5678)
+      allow(mock_vdm).to receive(:get_balance).and_return(1_234.5678)
 
       result = capture_stdout { cli.balance }
 

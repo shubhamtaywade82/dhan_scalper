@@ -127,7 +127,8 @@ class PaperE2ESmokeTest
 
     # Verify final state
     final_balance = @balance_provider.total_balance
-    expected_balance = 100_000.0 + (20.0 * 75) - (20.0 * 2) # +1500 profit - 40 fees
+
+    # +1500 profit - 40 fees
     expected_balance = 101_460.0
 
     puts "  DEBUG: Final balance: #{DhanScalper::Support::Money.format(final_balance)}, Expected: #{DhanScalper::Support::Money.format(expected_balance)}"
@@ -183,7 +184,8 @@ class PaperE2ESmokeTest
 
     # Verify final state
     final_balance = @balance_provider.total_balance
-    expected_balance = 100_000.0 - (10.0 * 75) - (20.0 * 2) # -750 loss - 40 fees
+
+    # -750 loss - 40 fees
     expected_balance = 99_210.0
 
     puts "  DEBUG: Final balance: #{DhanScalper::Support::Money.format(final_balance)}, Expected: #{DhanScalper::Support::Money.format(expected_balance)}"

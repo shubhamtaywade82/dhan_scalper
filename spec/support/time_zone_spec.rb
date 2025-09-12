@@ -28,9 +28,9 @@ RSpec.describe DhanScalper::TimeZone do
       end
 
       it "handles negative timestamp" do
-        result = time_zone.parse(-1000)
+        result = time_zone.parse(-1_000)
         expect(result).to be_a(Time)
-        expect(result.to_i).to eq(-1000)
+        expect(result.to_i).to eq(-1_000)
       end
 
       it "handles very large timestamp" do
@@ -46,7 +46,7 @@ RSpec.describe DhanScalper::TimeZone do
         timestamp = "2024-01-25T10:30:15Z"
         result = time_zone.parse(timestamp)
         expect(result).to be_a(Time)
-        expect(result.year).to eq(2024)
+        expect(result.year).to eq(2_024)
         expect(result.month).to eq(1)
         expect(result.day).to eq(25)
         expect(result.hour).to eq(10)
@@ -58,7 +58,7 @@ RSpec.describe DhanScalper::TimeZone do
         timestamp = "2024-01-25T10:30:15+05:30"
         result = time_zone.parse(timestamp)
         expect(result).to be_a(Time)
-        expect(result.year).to eq(2024)
+        expect(result.year).to eq(2_024)
         expect(result.month).to eq(1)
         expect(result.day).to eq(25)
       end
@@ -67,7 +67,7 @@ RSpec.describe DhanScalper::TimeZone do
         timestamp = "2024-01-25T10:30:15"
         result = time_zone.parse(timestamp)
         expect(result).to be_a(Time)
-        expect(result.year).to eq(2024)
+        expect(result.year).to eq(2_024)
         expect(result.month).to eq(1)
         expect(result.day).to eq(25)
       end
@@ -76,7 +76,7 @@ RSpec.describe DhanScalper::TimeZone do
         timestamp = "2024-01-25"
         result = time_zone.parse(timestamp)
         expect(result).to be_a(Time)
-        expect(result.year).to eq(2024)
+        expect(result.year).to eq(2_024)
         expect(result.month).to eq(1)
         expect(result.day).to eq(25)
       end
@@ -85,7 +85,7 @@ RSpec.describe DhanScalper::TimeZone do
         timestamp = "2024-01-25 10:30:15"
         result = time_zone.parse(timestamp)
         expect(result).to be_a(Time)
-        expect(result.year).to eq(2024)
+        expect(result.year).to eq(2_024)
         expect(result.month).to eq(1)
         expect(result.day).to eq(25)
         expect(result.hour).to eq(10)
@@ -106,7 +106,7 @@ RSpec.describe DhanScalper::TimeZone do
         timestamp = "2024-02-29T10:30:15Z"
         result = time_zone.parse(timestamp)
         expect(result).to be_a(Time)
-        expect(result.year).to eq(2024)
+        expect(result.year).to eq(2_024)
         expect(result.month).to eq(2)
         expect(result.day).to eq(29)
       end
@@ -115,20 +115,20 @@ RSpec.describe DhanScalper::TimeZone do
         timestamp = "1900-01-01T00:00:00Z"
         result = time_zone.parse(timestamp)
         expect(result).to be_a(Time)
-        expect(result.year).to eq(1900)
+        expect(result.year).to eq(1_900)
       end
 
       it "handles very future dates" do
         timestamp = "2100-12-31T23:59:59Z"
         result = time_zone.parse(timestamp)
         expect(result).to be_a(Time)
-        expect(result.year).to eq(2100)
+        expect(result.year).to eq(2_100)
       end
     end
 
     context "with Time object" do
       it "returns Time object as is" do
-        original_time = Time.new(2024, 1, 25, 10, 30, 15)
+        original_time = Time.new(2_024, 1, 25, 10, 30, 15)
         result = time_zone.parse(original_time)
         expect(result).to be_a(Time)
         expect(result).to eq(original_time)
@@ -205,9 +205,9 @@ RSpec.describe DhanScalper::TimeZone do
       end
 
       it "handles negative timestamp" do
-        result = time_zone.at(-1000)
+        result = time_zone.at(-1_000)
         expect(result).to be_a(Time)
-        expect(result.to_i).to eq(-1000)
+        expect(result.to_i).to eq(-1_000)
       end
 
       it "handles very large timestamp" do
@@ -256,7 +256,7 @@ RSpec.describe DhanScalper::TimeZone do
   describe "performance characteristics" do
     it "handles large number of timestamps efficiently" do
       start_time = Time.now
-      1000.times do
+      1_000.times do
         time_zone.parse("2024-01-25T10:30:15Z")
       end
       end_time = Time.now
@@ -269,7 +269,7 @@ RSpec.describe DhanScalper::TimeZone do
         "2024-01-25T10:30:15Z",
         "1706171415",
         "2024-01-25",
-        "2024-01-25 10:30:15"
+        "2024-01-25 10:30:15",
       ]
 
       start_time = Time.now
@@ -338,7 +338,7 @@ RSpec.describe DhanScalper::TimeZone do
       timestamp = "2024-01-25T10:30:15Z"
       result = time_zone.parse(timestamp)
       expect(result).to be_a(Time)
-      expect(result.year).to eq(2024)
+      expect(result.year).to eq(2_024)
     end
   end
 

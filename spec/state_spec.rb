@@ -3,7 +3,7 @@
 require "spec_helper"
 
 RSpec.describe DhanScalper::State do
-  let(:state) { described_class.new(symbols: ["NIFTY"], session_target: 1000.0, max_day_loss: 500.0) }
+  let(:state) { described_class.new(symbols: ["NIFTY"], session_target: 1_000.0, max_day_loss: 500.0) }
 
   it "changes status" do
     state.set_status(:paused)

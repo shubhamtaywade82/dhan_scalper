@@ -6,15 +6,15 @@ RSpec.describe "Paper Trading Integration", :slow do
   let(:config) do
     {
       "global" => {
-        "min_profit_target" => 1000,
-        "max_day_loss" => 5000,
+        "min_profit_target" => 1_000,
+        "max_day_loss" => 5_000,
         "decision_interval" => 5,
         "log_level" => "INFO",
         "use_multi_timeframe" => true,
-        "secondary_timeframe" => 5
+        "secondary_timeframe" => 5,
       },
       "paper" => {
-        "starting_balance" => 200_000
+        "starting_balance" => 200_000,
       },
       "SYMBOLS" => {
         "NIFTY" => {
@@ -24,9 +24,9 @@ RSpec.describe "Paper Trading Integration", :slow do
           "strike_step" => 50,
           "lot_size" => 75,
           "qty_multiplier" => 1,
-          "expiry_wday" => 4
-        }
-      }
+          "expiry_wday" => 4,
+        },
+      },
     }
   end
 
@@ -98,7 +98,7 @@ RSpec.describe "Paper Trading Integration", :slow do
                                                                      momentum: :strong,
                                                                      adx: 25.0,
                                                                      rsi: 65.0,
-                                                                     macd: :bullish
+                                                                     macd: :bullish,
                                                                    })
       allow(DhanScalper::CandleSeries).to receive(:load_from_dhan_intraday).and_return(mock_candle_series)
 
@@ -133,14 +133,14 @@ RSpec.describe "Paper Trading Integration", :slow do
                                                                success: true,
                                                                order_id: "P-1234567890",
                                                                order: double("Order", quantity: 75, price: 150.0),
-                                                               position: double("Position", security_id: "TEST123")
+                                                               position: double("Position", security_id: "TEST123"),
                                                              })
 
       # Mock option picker
       mock_picker = double("OptionPicker")
       allow(mock_picker).to receive(:pick).and_return({
                                                         ce: { strike: 25_000, security_id: "CE123", premium: 150.0 },
-                                                        pe: { strike: 25_000, security_id: "PE123", premium: 120.0 }
+                                                        pe: { strike: 25_000, security_id: "PE123", premium: 120.0 },
                                                       })
       allow(paper_app).to receive(:get_cached_picker).and_return(mock_picker)
 
@@ -157,13 +157,13 @@ RSpec.describe "Paper Trading Integration", :slow do
       mock_broker = paper_app.instance_variable_get(:@broker)
       allow(mock_broker).to receive(:place_order).and_return({
                                                                success: false,
-                                                               error: "Insufficient balance"
+                                                               error: "Insufficient balance",
                                                              })
 
       # Mock option picker
       mock_picker = double("OptionPicker")
       allow(mock_picker).to receive(:pick).and_return({
-                                                        ce: { strike: 25_000, security_id: "CE123", premium: 150.0 }
+                                                        ce: { strike: 25_000, security_id: "CE123", premium: 150.0 },
                                                       })
       allow(paper_app).to receive(:get_cached_picker).and_return(mock_picker)
 
@@ -192,7 +192,7 @@ RSpec.describe "Paper Trading Integration", :slow do
                                                                                    closed_positions: 0,
                                                                                    total_pnl: 500.0,
                                                                                    winning_trades: 1,
-                                                                                   losing_trades: 0
+                                                                                   losing_trades: 0,
                                                                                  })
 
       # Add a position
@@ -219,14 +219,14 @@ RSpec.describe "Paper Trading Integration", :slow do
 
     it "checks daily loss limits" do
       mock_position_tracker = paper_app.instance_variable_get(:@position_tracker)
-      allow(mock_position_tracker).to receive(:get_total_pnl).and_return(-6000.0)
+      allow(mock_position_tracker).to receive(:get_total_pnl).and_return(-6_000.0)
 
       expect { paper_app.send(:check_risk_limits) }.to output(/Daily loss limit breached/).to_stdout
     end
 
     it "continues trading when within limits" do
       mock_position_tracker = paper_app.instance_variable_get(:@position_tracker)
-      allow(mock_position_tracker).to receive(:get_total_pnl).and_return(-1000.0)
+      allow(mock_position_tracker).to receive(:get_total_pnl).and_return(-1_000.0)
 
       expect { paper_app.send(:check_risk_limits) }.not_to output.to_stdout
     end
@@ -243,9 +243,9 @@ RSpec.describe "Paper Trading Integration", :slow do
                                                                                    total_positions: 2,
                                                                                    open_positions: 0,
                                                                                    closed_positions: 2,
-                                                                                   total_pnl: 1000.0,
+                                                                                   total_pnl: 1_000.0,
                                                                                    winning_trades: 1,
-                                                                                   losing_trades: 1
+                                                                                   losing_trades: 1,
                                                                                  })
 
       mock_reporter = double("SessionReporter")
@@ -297,7 +297,7 @@ RSpec.describe "Paper Trading Integration", :slow do
         "strike_step" => 100,
         "lot_size" => 25,
         "qty_multiplier" => 1,
-        "expiry_wday" => 4
+        "expiry_wday" => 4,
       }
 
       multi_app = DhanScalper::PaperApp.new(multi_symbol_config, quiet: true, enhanced: true)
@@ -358,9 +358,9 @@ RSpec.describe "Paper Trading Integration", :slow do
             "seg_idx" => "IDX_I",
             "seg_opt" => "NSE_FNO",
             "strike_step" => 50,
-            "lot_size" => 75
-          }
-        }
+            "lot_size" => 75,
+          },
+        },
       }
 
       minimal_app = DhanScalper::PaperApp.new(minimal_config, quiet: true)

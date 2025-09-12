@@ -56,8 +56,8 @@ RSpec.describe DhanScalper::Config do
         config = described_class.load(path: nil)
 
         expect(config["symbols"]).to eq(["NIFTY"])
-        expect(config.dig("global", "min_profit_target")).to eq(1000.0)
-        expect(config.dig("global", "max_day_loss")).to eq(1500.0)
+        expect(config.dig("global", "min_profit_target")).to eq(1_000.0)
+        expect(config.dig("global", "max_day_loss")).to eq(1_500.0)
         expect(config.dig("global", "charge_per_order")).to eq(20.0)
         expect(config.dig("global", "allocation_pct")).to eq(0.30)
         expect(config.dig("global", "slippage_buffer_pct")).to eq(0.01)
@@ -88,8 +88,8 @@ RSpec.describe DhanScalper::Config do
         config = described_class.load(path: temp_config_file)
 
         expect(config["symbols"]).to eq(%w[NIFTY BANKNIFTY])
-        expect(config.dig("global", "min_profit_target")).to eq(2000)
-        expect(config.dig("global", "max_day_loss")).to eq(3000)
+        expect(config.dig("global", "min_profit_target")).to eq(2_000)
+        expect(config.dig("global", "max_day_loss")).to eq(3_000)
         expect(config.dig("global", "charge_per_order")).to eq(25)
         expect(config.dig("global", "allocation_pct")).to eq(0.40)
         expect(config.dig("global", "slippage_buffer_pct")).to eq(0.02)
@@ -113,8 +113,8 @@ RSpec.describe DhanScalper::Config do
         config = described_class.load(path: temp_config_file)
 
         expect(config["symbols"]).to eq(["NIFTY"])
-        expect(config.dig("global", "min_profit_target")).to eq(2000)
-        expect(config.dig("global", "max_day_loss")).to eq(1500.0) # default
+        expect(config.dig("global", "min_profit_target")).to eq(2_000)
+        expect(config.dig("global", "max_day_loss")).to eq(1_500.0) # default
         expect(config.dig("global", "charge_per_order")).to eq(20.0) # default
         expect(config.dig("paper", "starting_balance")).to eq(200_000.0) # default
       end
@@ -142,7 +142,7 @@ RSpec.describe DhanScalper::Config do
 
         # Should return defaults
         expect(config["symbols"]).to eq(["NIFTY"])
-        expect(config.dig("global", "min_profit_target")).to eq(1000.0)
+        expect(config.dig("global", "min_profit_target")).to eq(1_000.0)
       end
 
       it "handles invalid YAML gracefully" do
@@ -151,7 +151,7 @@ RSpec.describe DhanScalper::Config do
 
         # Should return defaults
         expect(config["symbols"]).to eq(["NIFTY"])
-        expect(config.dig("global", "min_profit_target")).to eq(1000.0)
+        expect(config.dig("global", "min_profit_target")).to eq(1_000.0)
       end
 
       it "handles non-existent file" do
@@ -159,7 +159,7 @@ RSpec.describe DhanScalper::Config do
 
         # Should return defaults
         expect(config["symbols"]).to eq(["NIFTY"])
-        expect(config.dig("global", "min_profit_target")).to eq(1000.0)
+        expect(config.dig("global", "min_profit_target")).to eq(1_000.0)
       end
     end
 
@@ -171,7 +171,7 @@ RSpec.describe DhanScalper::Config do
         config = described_class.load
 
         expect(config["symbols"]).to eq(%w[NIFTY BANKNIFTY])
-        expect(config.dig("global", "min_profit_target")).to eq(2000)
+        expect(config.dig("global", "min_profit_target")).to eq(2_000)
       end
     end
   end
@@ -256,8 +256,8 @@ RSpec.describe DhanScalper::Config do
       File.write(temp_config_file, config_with_nils)
       config = described_class.load(path: temp_config_file)
 
-      expect(config.dig("global", "min_profit_target")).to eq(1000.0) # default
-      expect(config.dig("global", "max_day_loss")).to eq(1500)
+      expect(config.dig("global", "min_profit_target")).to eq(1_000.0) # default
+      expect(config.dig("global", "max_day_loss")).to eq(1_500)
     end
 
     it "handles empty arrays and hashes" do
@@ -311,8 +311,8 @@ RSpec.describe DhanScalper::Config do
       File.write(temp_config_file, config_with_negative)
       config = described_class.load(path: temp_config_file)
 
-      expect(config.dig("global", "min_profit_target")).to eq(-1000)
-      expect(config.dig("global", "max_day_loss")).to eq(-1500)
+      expect(config.dig("global", "min_profit_target")).to eq(-1_000)
+      expect(config.dig("global", "max_day_loss")).to eq(-1_500)
       expect(config.dig("global", "charge_per_order")).to eq(-20)
       expect(config.dig("paper", "starting_balance")).to eq(-200_000)
     end

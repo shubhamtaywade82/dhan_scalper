@@ -25,7 +25,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
 
       # First entry: 75 @ 100
       allow(DhanScalper::TickCache).to receive(:ltp).with(segment, security_id).and_return(100.0)
-      buy_order1 = broker.buy_market(segment: segment, security_id: security_id, quantity: 75)
+      broker.buy_market(segment: segment, security_id: security_id, quantity: 75)
 
       # Expected: balance -= (100 * 75) + 20 = 7,520
       # New balance: 100,000 - 7,520 = 92,480
@@ -39,7 +39,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
 
       # Second entry: 75 @ 120 (averaging up)
       allow(DhanScalper::TickCache).to receive(:ltp).with(segment, security_id).and_return(120.0)
-      buy_order2 = broker.buy_market(segment: segment, security_id: security_id, quantity: 75)
+      broker.buy_market(segment: segment, security_id: security_id, quantity: 75)
 
       # Expected: balance -= (120 * 75) + 20 = 9,020
       # New balance: 92,480 - 9,020 = 83,460
@@ -53,7 +53,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
 
       # Partial exit: 75 @ 130
       allow(DhanScalper::TickCache).to receive(:ltp).with(segment, security_id).and_return(130.0)
-      sell_order = broker.sell_market(segment: segment, security_id: security_id, quantity: 75)
+      broker.sell_market(segment: segment, security_id: security_id, quantity: 75)
 
       # Expected calculations:
       # Gross proceeds: 130 * 75 = 9,750
@@ -79,7 +79,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
 
       # Entry: 100 @ 100
       allow(DhanScalper::TickCache).to receive(:ltp).with(segment, security_id).and_return(100.0)
-      buy_order = broker.buy_market(segment: segment, security_id: security_id, quantity: 100)
+      broker.buy_market(segment: segment, security_id: security_id, quantity: 100)
 
       # Expected: balance -= (100 * 100) + 20 = 10,020
       # New balance: 100,000 - 10,020 = 89,980
@@ -87,7 +87,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
 
       # Half exit profit: 50 @ 120
       allow(DhanScalper::TickCache).to receive(:ltp).with(segment, security_id).and_return(120.0)
-      sell_order1 = broker.sell_market(segment: segment, security_id: security_id, quantity: 50)
+      broker.sell_market(segment: segment, security_id: security_id, quantity: 50)
 
       # Expected calculations:
       # Gross proceeds: 120 * 50 = 6,000
@@ -104,7 +104,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
 
       # Final exit loss: 50 @ 90
       allow(DhanScalper::TickCache).to receive(:ltp).with(segment, security_id).and_return(90.0)
-      sell_order2 = broker.sell_market(segment: segment, security_id: security_id, quantity: 50)
+      broker.sell_market(segment: segment, security_id: security_id, quantity: 50)
 
       # Expected calculations:
       # Gross proceeds: 90 * 50 = 4,500
@@ -157,7 +157,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
 
       # Try to sell 75 (more than held)
       allow(DhanScalper::TickCache).to receive(:ltp).with(segment, security_id).and_return(120.0)
-      sell_order = broker.sell_market(segment: segment, security_id: security_id, quantity: 75)
+      broker.sell_market(segment: segment, security_id: security_id, quantity: 75)
 
       # Should only sell 50 (what's available)
       position = broker.position_tracker.get_position(exchange_segment: segment, security_id: security_id, side: "LONG")
@@ -177,7 +177,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
       broker.sell_market(segment: segment, security_id: security_id, quantity: 50)
 
       # Update unrealized PnL with current LTP
-      ltp_provider = ->(seg, sec_id) { 130.0 }
+      ltp_provider = ->(_seg, _sec_id) { 130.0 }
       unrealized_pnl = broker.position_tracker.update_unrealized_pnl(ltp_provider)
 
       # Expected unrealized PnL: (130 - 100) * 50 = 1,500

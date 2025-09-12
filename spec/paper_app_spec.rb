@@ -6,13 +6,13 @@ RSpec.describe DhanScalper::PaperApp do
   let(:config) do
     {
       "global" => {
-        "min_profit_target" => 1000,
-        "max_day_loss" => 5000,
+        "min_profit_target" => 1_000,
+        "max_day_loss" => 5_000,
         "decision_interval" => 10,
-        "log_level" => "INFO"
+        "log_level" => "INFO",
       },
       "paper" => {
-        "starting_balance" => 200_000
+        "starting_balance" => 200_000,
       },
       "SYMBOLS" => {
         "NIFTY" => {
@@ -22,9 +22,9 @@ RSpec.describe DhanScalper::PaperApp do
           "strike_step" => 50,
           "lot_size" => 75,
           "qty_multiplier" => 1,
-          "expiry_wday" => 4
-        }
-      }
+          "expiry_wday" => 4,
+        },
+      },
     }
   end
 
@@ -78,7 +78,7 @@ RSpec.describe DhanScalper::PaperApp do
                                                                                  closed_positions: 0,
                                                                                  total_pnl: 0.0,
                                                                                  winning_trades: 0,
-                                                                                 losing_trades: 0
+                                                                                 losing_trades: 0,
                                                                                })
     allow(paper_app).to receive(:instance_variable_get).with(:@position_tracker).and_return(mock_position_tracker)
 
@@ -88,7 +88,7 @@ RSpec.describe DhanScalper::PaperApp do
                                                              success: true,
                                                              order_id: "P-1234567890",
                                                              order: double("Order", quantity: 75, price: 150.0),
-                                                             position: double("Position", security_id: "TEST123")
+                                                             position: double("Position", security_id: "TEST123"),
                                                            })
     allow(paper_app).to receive(:instance_variable_get).with(:@broker).and_return(mock_broker)
 
@@ -103,7 +103,7 @@ RSpec.describe DhanScalper::PaperApp do
     mock_picker = double("OptionPicker")
     allow(mock_picker).to receive(:pick).and_return({
                                                       ce: { strike: 25_000, security_id: "CE123", premium: 150.0 },
-                                                      pe: { strike: 25_000, security_id: "PE123", premium: 120.0 }
+                                                      pe: { strike: 25_000, security_id: "PE123", premium: 120.0 },
                                                     })
     allow(paper_app).to receive(:instance_variable_get).with(:@picker).and_return(mock_picker)
 
@@ -266,7 +266,7 @@ RSpec.describe DhanScalper::PaperApp do
       mock_picker = double("OptionPicker")
       allow(mock_picker).to receive(:pick).with(current_spot: spot_price).and_return({
                                                                                        ce_sid: { 25_000 => "12345" },
-                                                                                       pe_sid: { 25_000 => "67890" }
+                                                                                       pe_sid: { 25_000 => "67890" },
                                                                                      })
       allow(mock_picker).to receive(:nearest_strike).with(spot_price, 50).and_return(25_000)
       allow(paper_app).to receive(:get_cached_picker).and_return(mock_picker)
@@ -338,7 +338,7 @@ RSpec.describe DhanScalper::PaperApp do
       mock_picker = double("OptionPicker")
       allow(mock_picker).to receive(:pick).and_return({
                                                         ce: { strike: 25_000, security_id: "CE123", premium: 150.0 },
-                                                        pe: { strike: 25_000, security_id: "PE123", premium: 120.0 }
+                                                        pe: { strike: 25_000, security_id: "PE123", premium: 120.0 },
                                                       })
       allow(paper_app).to receive(:get_cached_picker).and_return(mock_picker)
 
@@ -424,7 +424,7 @@ RSpec.describe DhanScalper::PaperApp do
   describe "#check_risk_limits" do
     it "checks daily loss limit" do
       mock_position_tracker = paper_app.instance_variable_get(:@position_tracker)
-      allow(mock_position_tracker).to receive(:get_total_pnl).and_return(-6000.0)
+      allow(mock_position_tracker).to receive(:get_total_pnl).and_return(-6_000.0)
 
       expect(paper_app).to receive(:puts).with(/Daily loss limit breached/)
       paper_app.send(:check_risk_limits)
@@ -432,7 +432,7 @@ RSpec.describe DhanScalper::PaperApp do
 
     it "continues trading when within limits" do
       mock_position_tracker = paper_app.instance_variable_get(:@position_tracker)
-      allow(mock_position_tracker).to receive(:get_total_pnl).and_return(-1000.0)
+      allow(mock_position_tracker).to receive(:get_total_pnl).and_return(-1_000.0)
 
       expect(paper_app).not_to receive(:puts)
       paper_app.send(:check_risk_limits)
@@ -448,7 +448,7 @@ RSpec.describe DhanScalper::PaperApp do
                                                                                    closed_positions: 1,
                                                                                    total_pnl: 500.0,
                                                                                    winning_trades: 1,
-                                                                                   losing_trades: 0
+                                                                                   losing_trades: 0,
                                                                                  })
 
       expect(paper_app).to receive(:puts).with(/Position Summary/)
@@ -468,7 +468,7 @@ RSpec.describe DhanScalper::PaperApp do
                                                                                    closed_positions: 1,
                                                                                    total_pnl: 750.0,
                                                                                    winning_trades: 1,
-                                                                                   losing_trades: 0
+                                                                                   losing_trades: 0,
                                                                                  })
 
       mock_reporter = double("SessionReporter")

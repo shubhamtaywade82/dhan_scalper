@@ -59,7 +59,7 @@ RSpec.describe DhanScalper::BalanceProviders::Base do
     it "maintains abstract method requirements" do
       child_class = Class.new(described_class) do
         def available_balance
-          1000.0
+          1_000.0
         end
       end
 

@@ -25,11 +25,11 @@ RSpec.describe DhanScalper::Services::PaperPositionTracker do
     end
 
     it "sets up data directory when not memory only" do
-      tracker_with_files = described_class.new(
+      described_class.new(
         websocket_manager: mock_websocket_manager,
         logger: logger,
         memory_only: false,
-        data_dir: "test_data"
+        data_dir: "test_data",
       )
       expect(File.directory?("test_data")).to be true
     end
@@ -46,7 +46,7 @@ RSpec.describe DhanScalper::Services::PaperPositionTracker do
       expect(tracker.underlying_prices[symbol]).to include(
         instrument_id: instrument_id,
         segment: "IDX_I",
-        last_price: nil
+        last_price: nil,
       )
     end
 
@@ -81,7 +81,7 @@ RSpec.describe DhanScalper::Services::PaperPositionTracker do
         entry_price: entry_price,
         current_price: entry_price,
         pnl: 0.0,
-        created_at: be_a(Time)
+        created_at: be_a(Time),
       )
     end
 
@@ -233,7 +233,7 @@ RSpec.describe DhanScalper::Services::PaperPositionTracker do
         closed_positions: 0,
         total_pnl: 0.0,
         winning_trades: 0,
-        losing_trades: 0
+        losing_trades: 0,
       )
     end
 
@@ -269,7 +269,7 @@ RSpec.describe DhanScalper::Services::PaperPositionTracker do
         instrument_id: "13",
         segment: "IDX_I",
         ltp: 25_000.0,
-        timestamp: Time.now.to_i
+        timestamp: Time.now.to_i,
       }
     end
 
@@ -304,7 +304,7 @@ RSpec.describe DhanScalper::Services::PaperPositionTracker do
         websocket_manager: mock_websocket_manager,
         logger: logger,
         memory_only: false,
-        data_dir: "test_data"
+        data_dir: "test_data",
       )
     end
 

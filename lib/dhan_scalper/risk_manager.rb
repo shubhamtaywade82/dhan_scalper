@@ -178,7 +178,7 @@ module DhanScalper
         order = @broker.sell_market(
           segment: "NSE_FNO",
           security_id: security_id,
-          quantity: quantity
+          quantity: quantity,
         )
 
         if order
@@ -190,7 +190,7 @@ module DhanScalper
                                              exit_price: current_price,
                                              exit_reason: reason,
                                              final_pnl: final_pnl,
-                                             exit_timestamp: Time.now
+                                             exit_timestamp: Time.now,
                                            })
 
           @logger.info "[RISK] Position closed: #{position[:symbol]} " \

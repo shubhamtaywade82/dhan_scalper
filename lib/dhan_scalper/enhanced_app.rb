@@ -66,13 +66,13 @@ module DhanScalper
       # Initialize notifier
       @notifier = TelegramNotifier.new(
         enabled: @config.dig("notifications", "telegram_enabled"),
-        logger: @logger
+        logger: @logger,
       )
 
       # Initialize position tracker
       @position_tracker = Services::PaperPositionTracker.new(
         websocket_manager: nil, # Will be set later
-        logger: @logger
+        logger: @logger,
       )
 
       # Initialize session guard
@@ -80,20 +80,20 @@ module DhanScalper
         config: @config,
         position_tracker: @position_tracker,
         cache: @cache,
-        logger: @logger
+        logger: @logger,
       )
 
       # Initialize position analyzer
       position_analyzer = Analyzers::PositionAnalyzer.new(
         cache: @cache,
-        tick_cache: TickCache
+        tick_cache: TickCache,
       )
 
       # Initialize No-Loss Trend Rider
       no_loss_trend_rider = Risk::NoLossTrendRider.new(
         config: @config,
         position_analyzer: position_analyzer,
-        cache: @cache
+        cache: @cache,
       )
 
       # Initialize services
@@ -106,12 +106,12 @@ module DhanScalper
         cache: @cache,
         config: @config,
         series_loader: series_loader,
-        streak_window_minutes: @config.dig("trend", "streak_window_minutes") || 3
+        streak_window_minutes: @config.dig("trend", "streak_window_minutes") || 3,
       )
 
       sizing_calculator = Services::SizingCalculator.new(
         config: @config,
-        logger: @logger
+        logger: @logger,
       )
 
       # Build brokers
@@ -119,7 +119,7 @@ module DhanScalper
         virtual_data_manager: nil,
         balance_provider: BalanceProviders::PaperWallet.new(starting_balance: (@config.dig("global",
                                                                                            "paper_wallet_rupees") || 200_000).to_f),
-        logger: @logger
+        logger: @logger,
       )
 
       live_broker = Brokers::DhanBroker.new(logger: @logger) # assumes credentials via env/config
@@ -129,7 +129,7 @@ module DhanScalper
         cache: @cache,
         broker_paper: paper_broker,
         broker_live: live_broker,
-        logger: @logger
+        logger: @logger,
       )
 
       # Initialize managers
@@ -140,7 +140,7 @@ module DhanScalper
         order_manager: order_manager,
         position_tracker: @position_tracker,
         csv_master: CsvMaster.new,
-        logger: @logger
+        logger: @logger,
       )
 
       @exit_manager = Managers::ExitManager.new(
@@ -148,7 +148,7 @@ module DhanScalper
         no_loss_trend_rider: no_loss_trend_rider,
         order_manager: order_manager,
         position_tracker: @position_tracker,
-        logger: @logger
+        logger: @logger,
       )
 
       # Initialize resilient WebSocket manager
@@ -156,7 +156,7 @@ module DhanScalper
         logger: @logger,
         heartbeat_interval: @config.dig("websocket", "heartbeat_interval") || 30,
         max_reconnect_attempts: @config.dig("websocket", "max_reconnect_attempts") || 10,
-        base_reconnect_delay: @config.dig("websocket", "base_reconnect_delay") || 1
+        base_reconnect_delay: @config.dig("websocket", "base_reconnect_delay") || 1,
       )
       @position_tracker.instance_variable_set(:@websocket_manager, @websocket_manager)
     end
@@ -168,7 +168,7 @@ module DhanScalper
       when "redis"
         RedisAdapter.new(
           url: @config.dig("market_data", "redis_url"),
-          logger: @logger
+          logger: @logger,
         )
       else
         MemoryAdapter.new(logger: @logger)
@@ -188,7 +188,7 @@ module DhanScalper
 
         @websocket_manager.add_baseline_subscription(
           symbol_config["idx_sid"],
-          "INDEX"
+          "INDEX",
         )
       end
 
@@ -212,7 +212,7 @@ module DhanScalper
 
         @websocket_manager.add_position_subscription(
           position[:security_id].to_s,
-          "OPTION"
+          "OPTION",
         )
       end
     end
@@ -325,7 +325,7 @@ module DhanScalper
         low: price_data[:low],
         close: price_data[:close],
         volume: price_data[:volume],
-        ts: price_data[:timestamp]
+        ts: price_data[:timestamp],
       }
 
       TickCache.put(tick_data)

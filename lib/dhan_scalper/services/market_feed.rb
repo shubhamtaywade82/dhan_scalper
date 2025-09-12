@@ -51,7 +51,7 @@ module DhanScalper
         instruments.each do |instrument|
           @ws_client.subscribe_one(
             segment: instrument[:segment],
-            security_id: instrument[:security_id]
+            security_id: instrument[:security_id],
           )
           @instruments << instrument unless @instruments.include?(instrument)
         end
@@ -63,7 +63,7 @@ module DhanScalper
         instruments.each do |instrument|
           @ws_client.unsubscribe_one(
             segment: instrument[:segment],
-            security_id: instrument[:security_id]
+            security_id: instrument[:security_id],
           )
           @instruments.delete(instrument)
         end
@@ -138,12 +138,10 @@ module DhanScalper
 
           @ws_client.subscribe_one(
             segment: instrument[:segment],
-            security_id: instrument[:security_id]
+            security_id: instrument[:security_id],
           )
         end
       end
-
-      private
 
       def find_correct_segment(security_id)
         @instrument_segments[security_id]

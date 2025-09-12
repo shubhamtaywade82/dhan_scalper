@@ -7,7 +7,7 @@ require "dhan_scalper/support/money"
 module BigDecimalHelpers
   # Custom matcher for BigDecimal equality with precision
   def be_bigdecimal_equal(expected, precision: 2)
-    be_within(BigDecimal("0.1") ** precision).of(expected)
+    be_within(BigDecimal("0.1")**precision).of(expected)
   end
 
   # Custom matcher for monetary values
@@ -33,8 +33,8 @@ module BigDecimalHelpers
   end
 
   # Helper to test monetary calculations
-  def expect_monetary_calculation(operation, *args, expected)
-    result = DhanScalper::Support::Money.public_send(operation, *args)
+  def expect_monetary_calculation(operation, *, expected)
+    result = DhanScalper::Support::Money.public_send(operation, *)
     expect(result).to be_monetary_equal(expected)
   end
 
@@ -155,7 +155,7 @@ module BigDecimalHelpers
   # Helper to test compound calculations
   def expect_compound_calculation(principal, rate, periods, expected)
     result = principal
-    periods.times { result = result * (1 + rate) }
+    periods.times { result *= (1 + rate) }
     expect(result).to be_monetary_equal(expected)
   end
 

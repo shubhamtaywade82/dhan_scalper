@@ -34,16 +34,16 @@ RSpec.describe "WebSocket Resubscription Demo", :integration do
     def emit_tick(security_id, price, timestamp = Time.now.to_i)
       @tick_count += 1
       @handlers[:tick]&.call({
-        security_id: security_id,
-        ltp: price,
-        ts: timestamp,
-        symbol: security_id == "13" ? "NIFTY" : "OPTION"
-      })
+                               security_id: security_id,
+                               ltp: price,
+                               ts: timestamp,
+                               symbol: security_id == "13" ? "NIFTY" : "OPTION",
+                             })
     end
 
     def simulate_disconnect
       @reconnect_count += 1
-      @handlers[:close]&.call(1006, "Simulated disconnect")
+      @handlers[:close]&.call(1_006, "Simulated disconnect")
     end
 
     def simulate_reconnect
@@ -59,7 +59,7 @@ RSpec.describe "WebSocket Resubscription Demo", :integration do
       logger: logger,
       heartbeat_interval: 1,
       max_reconnect_attempts: 5,
-      base_reconnect_delay: 0.1
+      base_reconnect_delay: 0.1,
     )
   end
 
@@ -111,13 +111,13 @@ RSpec.describe "WebSocket Resubscription Demo", :integration do
       received_ticks << {
         security_id: price_data[:instrument_id],
         price: price_data[:last_price],
-        timestamp: price_data[:timestamp]
+        timestamp: price_data[:timestamp],
       }
     end
 
     # Emit some ticks to verify normal operation
-    fake_feed.emit_tick("13", 25000.0)      # NIFTY
-    fake_feed.emit_tick("532", 45000.0)     # BANKNIFTY
+    fake_feed.emit_tick("13", 25_000.0)      # NIFTY
+    fake_feed.emit_tick("532", 45_000.0)     # BANKNIFTY
     fake_feed.emit_tick("OPT123", 150.0)    # NIFTY CE
     fake_feed.emit_tick("OPT456", 120.0)    # NIFTY PE
 
@@ -141,8 +141,8 @@ RSpec.describe "WebSocket Resubscription Demo", :integration do
 
     # Emit ticks after reconnection to verify MTM continues
     received_ticks.clear
-    fake_feed.emit_tick("13", 25100.0)      # NIFTY updated
-    fake_feed.emit_tick("532", 45100.0)     # BANKNIFTY updated
+    fake_feed.emit_tick("13", 25_100.0)      # NIFTY updated
+    fake_feed.emit_tick("532", 45_100.0)     # BANKNIFTY updated
     fake_feed.emit_tick("OPT123", 155.0)    # NIFTY CE updated
     fake_feed.emit_tick("OPT456", 125.0)    # NIFTY PE updated
 
@@ -152,7 +152,7 @@ RSpec.describe "WebSocket Resubscription Demo", :integration do
     # Verify tick deduplication works
     puts "✓ Testing tick deduplication..."
     old_timestamp = Time.now.to_i - 10
-    fake_feed.emit_tick("13", 25000.0, old_timestamp)  # Old tick should be ignored
+    fake_feed.emit_tick("13", 25_000.0, old_timestamp) # Old tick should be ignored
 
     sleep(0.1)
     expect(received_ticks.size).to eq(4) # Should still be 4, not 5

@@ -33,7 +33,7 @@ module DhanScalper
         quantity: order.qty,
         avg_price: order.avg_price,
         timestamp: Time.now.iso8601,
-        status: "COMPLETED"
+        status: "COMPLETED",
       }
 
       @orders_cache << order_data
@@ -59,7 +59,7 @@ module DhanScalper
         quantity: position.quantity,
         current_price: position.current_price,
         pnl: position.pnl,
-        timestamp: Time.now.iso8601
+        timestamp: Time.now.iso8601,
       }
 
       # Remove existing position for same security_id if exists

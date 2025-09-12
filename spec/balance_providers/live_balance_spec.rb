@@ -150,7 +150,7 @@ RSpec.describe DhanScalper::BalanceProviders::LiveBalance do
       let(:mock_funds) do
         double(
           available_balance: 100_000.0,
-          total_balance: 200_000.0
+          total_balance: 200_000.0,
         )
       end
 
@@ -304,7 +304,7 @@ RSpec.describe DhanScalper::BalanceProviders::LiveBalance do
       let(:mock_funds) do
         double(
           available_balance: 200_000.0,
-          total_balance: 100_000.0
+          total_balance: 100_000.0,
         )
       end
 
@@ -324,7 +324,7 @@ RSpec.describe DhanScalper::BalanceProviders::LiveBalance do
       let(:mock_funds) do
         double(
           available_balance: 0.0,
-          total_balance: 0.0
+          total_balance: 0.0,
         )
       end
 

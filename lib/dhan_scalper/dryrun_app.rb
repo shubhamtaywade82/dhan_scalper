@@ -126,7 +126,7 @@ module DhanScalper
                 seg_idx: s["seg_idx"],
                 sid_idx: s["idx_sid"],
                 use_multi_timeframe: use_multi_timeframe,
-                secondary_timeframe: secondary_timeframe
+                secondary_timeframe: secondary_timeframe,
               )
             else
               trend = DhanScalper::Trend.new(seg_idx: s["seg_idx"], sid_idx: s["idx_sid"])

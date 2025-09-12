@@ -19,10 +19,10 @@ RSpec.describe DhanScalper::Services::AtomicOperations do
     allow(redis).to receive(:multi).and_yield(redis)
     allow(redis).to receive(:eval).and_return(["ok", "100000.0"])
     allow(redis).to receive(:hgetall).and_return({
-      "available" => "100000.0",
-      "used" => "0.0",
-      "total" => "100000.0"
-    })
+                                                   "available" => "100000.0",
+                                                   "used" => "0.0",
+                                                   "total" => "100000.0",
+                                                 })
     allow(redis).to receive(:hincrbyfloat).and_return("100000.0")
     allow(redis).to receive(:hset).and_return("1")
     allow(redis).to receive(:expire).and_return("1")
@@ -36,7 +36,7 @@ RSpec.describe DhanScalper::Services::AtomicOperations do
         side: "LONG",
         quantity: 100,
         price: 100.0,
-        fee: 20
+        fee: 20,
       )
 
       expect(result[:success]).to be true
@@ -53,7 +53,7 @@ RSpec.describe DhanScalper::Services::AtomicOperations do
         side: "LONG",
         quantity: 100,
         price: 100.0,
-        fee: 20
+        fee: 20,
       )
 
       expect(result[:success]).to be false
@@ -70,7 +70,7 @@ RSpec.describe DhanScalper::Services::AtomicOperations do
         side: "LONG",
         quantity: 100,
         price: 100.0,
-        fee: 20
+        fee: 20,
       )
     end
 
@@ -81,7 +81,7 @@ RSpec.describe DhanScalper::Services::AtomicOperations do
         side: "LONG",
         quantity: 50,
         price: 120.0,
-        fee: 20
+        fee: 20,
       )
 
       expect(result[:success]).to be true
@@ -96,7 +96,7 @@ RSpec.describe DhanScalper::Services::AtomicOperations do
         side: "LONG",
         quantity: 50,
         price: 120.0,
-        fee: 20
+        fee: 20,
       )
 
       expect(result[:success]).to be false
@@ -110,7 +110,7 @@ RSpec.describe DhanScalper::Services::AtomicOperations do
         side: "LONG",
         quantity: 150, # More than available
         price: 120.0,
-        fee: 20
+        fee: 20,
       )
 
       expect(result[:success]).to be true
@@ -131,13 +131,13 @@ RSpec.describe DhanScalper::Services::AtomicOperations do
         side: "LONG",
         quantity: 200,
         price: 100.0,
-        fee: 20
+        fee: 20,
       )
     end
 
     it "handles concurrent sell operations atomically" do
       # Simulate two concurrent sell operations
-      2.times do |i|
+      2.times do |_i|
         threads << Thread.new do
           result = atomic_ops.sell!(
             exchange_segment: exchange_segment,
@@ -145,7 +145,7 @@ RSpec.describe DhanScalper::Services::AtomicOperations do
             side: "LONG",
             quantity: 100,
             price: 120.0,
-            fee: 20
+            fee: 20,
           )
 
           mutex.synchronize do
@@ -172,7 +172,7 @@ RSpec.describe DhanScalper::Services::AtomicOperations do
 
     it "handles concurrent buy operations atomically" do
       # Simulate two concurrent buy operations
-      2.times do |i|
+      2.times do |_i|
         threads << Thread.new do
           result = atomic_ops.buy!(
             exchange_segment: exchange_segment,
@@ -180,7 +180,7 @@ RSpec.describe DhanScalper::Services::AtomicOperations do
             side: "LONG",
             quantity: 50,
             price: 100.0,
-            fee: 20
+            fee: 20,
           )
 
           mutex.synchronize do
@@ -213,11 +213,11 @@ RSpec.describe DhanScalper::Services::AtomicOperations do
         side: "LONG",
         quantity: 100,
         price: 100.0,
-        fee: 20
+        fee: 20,
       )
 
       # Simulate multiple concurrent sell operations trying to sell more than available
-      3.times do |i|
+      3.times do |_i|
         threads << Thread.new do
           result = atomic_ops.sell!(
             exchange_segment: exchange_segment,
@@ -225,7 +225,7 @@ RSpec.describe DhanScalper::Services::AtomicOperations do
             side: "LONG",
             quantity: 60, # Each trying to sell 60, but only 100 total available
             price: 120.0,
-            fee: 20
+            fee: 20,
           )
 
           mutex.synchronize do
@@ -249,36 +249,36 @@ RSpec.describe DhanScalper::Services::AtomicOperations do
     it "maintains consistent final state under high concurrency" do
       # Create initial state
       initial_balance = balance_provider.available_balance
-      initial_position = position_tracker.get_position(
+      position_tracker.get_position(
         exchange_segment: exchange_segment,
         security_id: security_id,
-        side: "LONG"
+        side: "LONG",
       )
 
       # Simulate mixed buy/sell operations
       10.times do |i|
         threads << Thread.new do
-          if i.even?
-            # Buy operation
-            result = atomic_ops.buy!(
-              exchange_segment: exchange_segment,
-              security_id: security_id,
-              side: "LONG",
-              quantity: 10,
-              price: 100.0,
-              fee: 20
-            )
-          else
-            # Sell operation
-            result = atomic_ops.sell!(
-              exchange_segment: exchange_segment,
-              security_id: security_id,
-              side: "LONG",
-              quantity: 10,
-              price: 120.0,
-              fee: 20
-            )
-          end
+          result = if i.even?
+                     # Buy operation
+                     atomic_ops.buy!(
+                       exchange_segment: exchange_segment,
+                       security_id: security_id,
+                       side: "LONG",
+                       quantity: 10,
+                       price: 100.0,
+                       fee: 20,
+                     )
+                   else
+                     # Sell operation
+                     atomic_ops.sell!(
+                       exchange_segment: exchange_segment,
+                       security_id: security_id,
+                       side: "LONG",
+                       quantity: 10,
+                       price: 120.0,
+                       fee: 20,
+                     )
+                   end
 
           mutex.synchronize do
             results << result
@@ -294,7 +294,7 @@ RSpec.describe DhanScalper::Services::AtomicOperations do
       final_position = position_tracker.get_position(
         exchange_segment: exchange_segment,
         security_id: security_id,
-        side: "LONG"
+        side: "LONG",
       )
 
       # Balance should be reasonable (not negative, not infinite)
@@ -317,7 +317,7 @@ RSpec.describe DhanScalper::Services::AtomicOperations do
         side: "LONG",
         quantity: 100,
         price: 100.0,
-        fee: 20
+        fee: 20,
       )
 
       expect(result[:success]).to be false
@@ -333,7 +333,7 @@ RSpec.describe DhanScalper::Services::AtomicOperations do
         side: "LONG",
         quantity: 100,
         price: 100.0,
-        fee: 20
+        fee: 20,
       )
 
       expect(result[:success]).to be false

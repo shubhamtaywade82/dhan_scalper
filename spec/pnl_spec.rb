@@ -37,10 +37,10 @@ RSpec.describe DhanScalper::PnL do
         ltp: ltp,
         lot_size: lot_size,
         qty_lots: qty_lots,
-        charge_per_order: charge_per_order
+        charge_per_order: charge_per_order,
       )
 
-      expect(net).to eq(1460.0)
+      expect(net).to eq(1_460.0)
     end
 
     it "calculates net loss correctly" do
@@ -52,10 +52,10 @@ RSpec.describe DhanScalper::PnL do
         ltp: 90.0,
         lot_size: lot_size,
         qty_lots: qty_lots,
-        charge_per_order: charge_per_order
+        charge_per_order: charge_per_order,
       )
 
-      expect(net).to eq(-1540.0)
+      expect(net).to eq(-1_540.0)
     end
 
     it "calculates breakeven correctly" do
@@ -67,7 +67,7 @@ RSpec.describe DhanScalper::PnL do
         ltp: entry,
         lot_size: lot_size,
         qty_lots: qty_lots,
-        charge_per_order: charge_per_order
+        charge_per_order: charge_per_order,
       )
 
       expect(net).to eq(-40.0)
@@ -79,7 +79,7 @@ RSpec.describe DhanScalper::PnL do
         ltp: ltp,
         lot_size: lot_size,
         qty_lots: 0,
-        charge_per_order: charge_per_order
+        charge_per_order: charge_per_order,
       )
 
       expect(net).to eq(-40.0) # Only charges
@@ -91,7 +91,7 @@ RSpec.describe DhanScalper::PnL do
         ltp: ltp,
         lot_size: 0,
         qty_lots: qty_lots,
-        charge_per_order: charge_per_order
+        charge_per_order: charge_per_order,
       )
 
       expect(net).to eq(-40.0) # Only charges
@@ -103,10 +103,10 @@ RSpec.describe DhanScalper::PnL do
         ltp: ltp,
         lot_size: lot_size,
         qty_lots: qty_lots,
-        charge_per_order: 0
+        charge_per_order: 0,
       )
 
-      expect(net).to eq(1500.0) # Only gross profit
+      expect(net).to eq(1_500.0) # Only gross profit
     end
 
     it "handles fractional prices" do
@@ -115,13 +115,13 @@ RSpec.describe DhanScalper::PnL do
         ltp: 110.75,
         lot_size: lot_size,
         qty_lots: qty_lots,
-        charge_per_order: charge_per_order
+        charge_per_order: charge_per_order,
       )
 
       # Gross: (110.75 - 100.25) * (75 * 2) = 10.5 * 150 = 1575
       # Charges: 40
       # Net: 1575 - 40 = 1535
-      expect(net).to eq(1535.0)
+      expect(net).to eq(1_535.0)
     end
 
     it "handles large numbers" do
@@ -130,7 +130,7 @@ RSpec.describe DhanScalper::PnL do
         ltp: 1_000_100.0,
         lot_size: 1_000_000,
         qty_lots: 1,
-        charge_per_order: 1000.0
+        charge_per_order: 1_000.0,
       )
 
       # Gross: 100 * 1_000_000 = 100_000_000
@@ -145,13 +145,13 @@ RSpec.describe DhanScalper::PnL do
         ltp: -90.0,
         lot_size: lot_size,
         qty_lots: qty_lots,
-        charge_per_order: charge_per_order
+        charge_per_order: charge_per_order,
       )
 
       # Gross: (-90 - (-100)) * (75 * 2) = 10 * 150 = 1500
       # Charges: 40
       # Net: 1500 - 40 = 1460
-      expect(net).to eq(1460.0)
+      expect(net).to eq(1_460.0)
     end
 
     it "handles negative LTP" do
@@ -160,7 +160,7 @@ RSpec.describe DhanScalper::PnL do
         ltp: -50.0,
         lot_size: lot_size,
         qty_lots: qty_lots,
-        charge_per_order: charge_per_order
+        charge_per_order: charge_per_order,
       )
 
       # Gross: (-50 - 100) * (75 * 2) = -150 * 150 = -22500
@@ -176,7 +176,7 @@ RSpec.describe DhanScalper::PnL do
           ltp: ltp,
           lot_size: 50,
           qty_lots: 1,
-          charge_per_order: charge_per_order
+          charge_per_order: charge_per_order,
         )
 
         # Gross: 10 * 50 = 500
@@ -191,7 +191,7 @@ RSpec.describe DhanScalper::PnL do
           ltp: ltp,
           lot_size: 25,
           qty_lots: 4,
-          charge_per_order: charge_per_order
+          charge_per_order: charge_per_order,
         )
 
         # Gross: 10 * (25 * 4) = 10 * 100 = 1000
@@ -209,7 +209,7 @@ RSpec.describe DhanScalper::PnL do
         ltp: 0,
         lot_size: 0,
         qty_lots: 0,
-        charge_per_order: 0
+        charge_per_order: 0,
       )
 
       expect(net).to eq(0.0)
@@ -221,7 +221,7 @@ RSpec.describe DhanScalper::PnL do
         ltp: 0.002,
         lot_size: 1,
         qty_lots: 1,
-        charge_per_order: 0.01
+        charge_per_order: 0.01,
       )
 
       # Gross: 0.001 * 1 = 0.001
@@ -233,10 +233,10 @@ RSpec.describe DhanScalper::PnL do
     it "handles extreme price differences" do
       net = described_class.net(
         entry: 1.0,
-        ltp: 1000.0,
+        ltp: 1_000.0,
         lot_size: 1,
         qty_lots: 1,
-        charge_per_order: 1.0
+        charge_per_order: 1.0,
       )
 
       # Gross: 999 * 1 = 999

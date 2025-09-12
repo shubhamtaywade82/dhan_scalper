@@ -26,13 +26,13 @@ module DhanScalper
         seg: @seg_idx,
         sid: @sid_idx,
         interval: "1",
-        symbol: "INDEX"
+        symbol: "INDEX",
       )
       c5_series = CandleSeries.load_from_dhan_intraday(
         seg: @seg_idx,
         sid: @sid_idx,
         interval: "5",
-        symbol: "INDEX"
+        symbol: "INDEX",
       )
       return :none if c1_series.nil? || c5_series.nil?
       return :none if c1_series.candles.size < 50 || c5_series.candles.size < 50
@@ -158,7 +158,7 @@ module DhanScalper
         segment: @cfg["seg_opt"],
         security_id: sid,
         quantity: qty,
-        charge_per_order: charge_per_order
+        charge_per_order: charge_per_order,
       )
 
       return puts("[#{@symbol}] ORDER FAIL: Could not place order") unless order
@@ -211,7 +211,7 @@ module DhanScalper
         segment: @cfg["seg_opt"],
         security_id: @open.sid,
         quantity: qty,
-        charge_per_order: charge_per_order
+        charge_per_order: charge_per_order,
       )
 
       return puts("[#{@symbol}] EXIT FAIL: Could not place sell order") unless sell_order

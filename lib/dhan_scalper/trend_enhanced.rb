@@ -20,7 +20,7 @@ module DhanScalper
           seg: @seg_idx,
           sid: @sid_idx,
           interval: "1",
-          symbol: "INDEX"
+          symbol: "INDEX",
         )
 
         if c1_series.nil? || c1_series.candles.nil? || c1_series.candles.size < 100
@@ -39,7 +39,7 @@ module DhanScalper
             seg: @seg_idx,
             sid: @sid_idx,
             interval: @secondary_timeframe.to_s,
-            symbol: "INDEX"
+            symbol: "INDEX",
           )
           if c_series.nil? || c_series.candles.nil? || c_series.candles.size < 100
             puts "[TrendEnhanced] Insufficient #{@secondary_timeframe}m data: #{c_series&.candles&.size || 0} candles"

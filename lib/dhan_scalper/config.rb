@@ -10,8 +10,8 @@ module DhanScalper
       "symbols" => ["NIFTY"],
       "global" => {
         "session_hours" => ["09:20", "15:25"],
-        "min_profit_target" => 1000.0,
-        "max_day_loss" => 1500.0,
+        "min_profit_target" => 1_000.0,
+        "max_day_loss" => 1_500.0,
         "charge_per_order" => 20.0,
         "allocation_pct" => 0.30,
         "slippage_buffer_pct" => 0.01,
@@ -31,14 +31,14 @@ module DhanScalper
         "log_status_every" => 60,
         # Risk manager hardening
         "time_stop_seconds" => 300, # 5 minutes default
-        "max_daily_loss_rs" => 2000.0, # Max daily loss in rupees
+        "max_daily_loss_rs" => 2_000.0, # Max daily loss in rupees
         "cooldown_after_loss_seconds" => 180, # 3 minutes default
         "enable_time_stop" => true,
         "enable_daily_loss_cap" => true,
-        "enable_cooldown" => true
+        "enable_cooldown" => true,
       },
       "paper" => {
-        "starting_balance" => 200_000.0
+        "starting_balance" => 200_000.0,
       },
       "SYMBOLS" => {
         "NIFTY" => {
@@ -48,9 +48,9 @@ module DhanScalper
           "strike_step" => 50,
           "lot_size" => 75,
           "qty_multiplier" => 1,
-          "expiry_wday" => 4 # Fallback only - API expiry dates are used primarily
-        }
-      }
+          "expiry_wday" => 4, # Fallback only - API expiry dates are used primarily
+        },
+      },
     }.freeze
 
     def self.load(path: ENV["SCALPER_CONFIG"] || "config/scalper.yml")
@@ -142,9 +142,7 @@ module DhanScalper
             # Validate required symbol fields
             required_fields = %w[idx_sid seg_idx seg_opt strike_step lot_size]
             required_fields.each do |field|
-              if symbol_config[field].nil?
-                errors << "Missing required field '#{field}' for symbol #{symbol}"
-              end
+              errors << "Missing required field '#{field}' for symbol #{symbol}" if symbol_config[field].nil?
             end
 
             # Validate lot_size is positive
@@ -160,9 +158,9 @@ module DhanScalper
       validate_risk_manager_config!(config, errors)
 
       # Raise validation error if any issues found
-      if errors.any?
-        raise ValidationError, "Configuration validation failed:\n" + errors.map { |e| "  - #{e}" }.join("\n")
-      end
+      return unless errors.any?
+
+      raise ValidationError, "Configuration validation failed:\n" + errors.map { |e| "  - #{e}" }.join("\n")
     end
 
     # Validate risk manager configuration

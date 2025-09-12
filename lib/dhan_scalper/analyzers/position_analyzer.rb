@@ -47,7 +47,7 @@ module DhanScalper
           pnl_pct: pnl_pct,
           peak_price: peak_price,
           peak_pct: peak_pct,
-          timestamp: Time.now
+          timestamp: Time.now,
         }
       end
 
@@ -85,7 +85,7 @@ module DhanScalper
 
         # Only update if current price is higher (for long positions)
         if current_price > current_peak
-          @cache.set(peak_key, current_price.to_s, ttl: 3600) # 1 hour TTL
+          @cache.set(peak_key, current_price.to_s, ttl: 3_600) # 1 hour TTL
           current_price
         else
           current_peak

@@ -38,7 +38,7 @@ RSpec.describe DhanScalper::Services::LtpFallback do
         cache["#{segment}:#{security_id}"] = {
           ltp: 150.0,
           timestamp: Time.now.to_i,
-          cached_at: Time.now
+          cached_at: Time.now,
         }
       end
 
@@ -84,7 +84,7 @@ RSpec.describe DhanScalper::Services::LtpFallback do
       [
         { segment: "NSE_FNO", security_id: "TEST1" },
         { segment: "NSE_FNO", security_id: "TEST2" },
-        { segment: "IDX_I", security_id: "TEST3" }
+        { segment: "IDX_I", security_id: "TEST3" },
       ]
     end
 
@@ -100,7 +100,7 @@ RSpec.describe DhanScalper::Services::LtpFallback do
         expect(result).to eq({
                                "NSE_FNO:TEST1" => 100.0,
                                "NSE_FNO:TEST2" => 200.0,
-                               "IDX_I:TEST3" => 300.0
+                               "IDX_I:TEST3" => 300.0,
                              })
       end
     end
@@ -110,7 +110,7 @@ RSpec.describe DhanScalper::Services::LtpFallback do
         cache["NSE_FNO:TEST1"] = { ltp: 100.0, timestamp: Time.now.to_i, cached_at: Time.now }
         allow(ltp_fallback).to receive(:fetch_segment_ltp).and_return({
                                                                         "NSE_FNO:TEST2" => 200.0,
-                                                                        "IDX_I:TEST3" => 300.0
+                                                                        "IDX_I:TEST3" => 300.0,
                                                                       })
       end
 
@@ -122,7 +122,7 @@ RSpec.describe DhanScalper::Services::LtpFallback do
         expect(result).to eq({
                                "NSE_FNO:TEST1" => 100.0,
                                "NSE_FNO:TEST2" => 200.0,
-                               "IDX_I:TEST3" => 300.0
+                               "IDX_I:TEST3" => 300.0,
                              })
       end
     end
@@ -148,7 +148,7 @@ RSpec.describe DhanScalper::Services::LtpFallback do
       cache["#{segment}:#{security_id}"] = {
         ltp: 150.0,
         timestamp: Time.now.to_i,
-        cached_at: Time.now
+        cached_at: Time.now,
       }
       expect(ltp_fallback.available?(segment, security_id)).to be true
     end
@@ -161,7 +161,7 @@ RSpec.describe DhanScalper::Services::LtpFallback do
       cache["#{segment}:#{security_id}"] = {
         ltp: 150.0,
         timestamp: Time.now.to_i,
-        cached_at: Time.now - 3600 # 1 hour ago
+        cached_at: Time.now - 3_600, # 1 hour ago
       }
       expect(ltp_fallback.available?(segment, security_id)).to be false
     end
@@ -191,7 +191,7 @@ RSpec.describe DhanScalper::Services::LtpFallback do
       expect(stats).to include(
         total_entries: 2,
         fresh_entries: 1,
-        stale_entries: 1
+        stale_entries: 1,
       )
     end
   end
@@ -247,7 +247,7 @@ RSpec.describe DhanScalper::Services::LtpFallback do
 
       mock_response = [
         { "security_id" => "TEST1", "last_price" => "100.0" },
-        { "security_id" => "TEST2", "last_price" => "200.0" }
+        { "security_id" => "TEST2", "last_price" => "200.0" },
       ]
       allow(market_feed_class).to receive(:ltp).and_return(mock_response)
     end
@@ -256,7 +256,7 @@ RSpec.describe DhanScalper::Services::LtpFallback do
       result = ltp_fallback.fetch_segment_ltp(segment, security_ids)
       expect(result).to eq({
                              "NSE_FNO:TEST1" => 100.0,
-                             "NSE_FNO:TEST2" => 200.0
+                             "NSE_FNO:TEST2" => 200.0,
                            })
     end
 
@@ -289,7 +289,7 @@ RSpec.describe DhanScalper::Services::LtpFallback do
       cache["#{segment}:#{security_id}"] = {
         ltp: 150.0,
         timestamp: Time.now.to_i,
-        cached_at: Time.now - 2 # 2 seconds ago
+        cached_at: Time.now - 2, # 2 seconds ago
       }
 
       # Should be stale
@@ -304,7 +304,7 @@ RSpec.describe DhanScalper::Services::LtpFallback do
       expect(cache["#{segment}:#{security_id}"]).to include(
         ltp: 150.0,
         timestamp: be_a(Integer),
-        cached_at: be_a(Time)
+        cached_at: be_a(Time),
       )
     end
   end

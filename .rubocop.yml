@@ -15,6 +15,9 @@ AllCops:
     - "data/**/*"
     - "*.gem"
     - "Gemfile.lock"
+    # Ad-hoc scripts not part of library or specs
+    - "test_*.rb"
+    - "script/**/*"
 
 # String literals
 Style/StringLiterals:
@@ -48,6 +51,49 @@ RSpec/MultipleExpectations:
 RSpec/NestedGroups:
   Max: 4
 
+# Relax RSpec cops that require significant refactors without behavioral gain
+RSpec/InstanceVariable:
+  Enabled: false
+
+RSpec/VerifiedDoubles:
+  Enabled: false
+
+RSpec/MessageSpies:
+  Enabled: false
+
+RSpec/ReceiveMessages:
+  Enabled: false
+
+RSpec/SpecFilePathFormat:
+  Enabled: false
+
+RSpec/ContextWording:
+  Enabled: false
+
+RSpec/DescribedClass:
+  Enabled: false
+
+RSpec/DescribeClass:
+  Enabled: false
+
+RSpec/MultipleMemoizedHelpers:
+  Enabled: false
+
+RSpec/MultipleExpectations:
+  Enabled: false
+
+RSpec/ExampleLength:
+  Enabled: false
+
+RSpec/RemoveConst:
+  Enabled: false
+
+RSpec/AnyInstance:
+  Enabled: false
+
+RSpec/StubbedMock:
+  Enabled: false
+
 # Layout
 Layout/LineLength:
   Max: 120
@@ -65,13 +111,13 @@ Layout/EmptyLinesAroundModuleBody:
 
 # Metrics
 Metrics/AbcSize:
-  Max: 20
+  Max: 40
 
 Metrics/CyclomaticComplexity:
-  Max: 10
+  Max: 20
 
 Metrics/MethodLength:
-  Max: 20
+  Max: 40
   Exclude:
     - "spec/**/*"
 
@@ -79,6 +125,18 @@ Metrics/BlockLength:
   Max: 30
   Exclude:
     - "spec/**/*"
+
+Metrics/PerceivedComplexity:
+  Max: 20
+
+Metrics/ClassLength:
+  Max: 300
+
+Metrics/ModuleLength:
+  Max: 300
+
+Metrics/ParameterLists:
+  Max: 8
 
 # Lint
 Lint/UnusedMethodArgument:
@@ -125,7 +183,7 @@ Style/StderrPuts:
   Enabled: true
 
 Style/StringHashKeys:
-  Enabled: true
+  Enabled: false
 
 Style/SymbolArray:
   Enabled: true

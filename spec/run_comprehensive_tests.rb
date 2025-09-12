@@ -10,24 +10,24 @@ TEST_CATEGORIES = {
   unit: {
     description: "Unit Tests - Individual component testing",
     pattern: "spec/**/*_spec.rb",
-    exclude: ["spec/integration/**/*", "spec/performance/**/*"]
+    exclude: ["spec/integration/**/*", "spec/performance/**/*"],
   },
   integration: {
     description: "Integration Tests - Component interaction testing",
-    pattern: "spec/integration/**/*_spec.rb"
+    pattern: "spec/integration/**/*_spec.rb",
   },
   performance: {
     description: "Performance Tests - Load and scalability testing",
-    pattern: "spec/performance/**/*_spec.rb"
+    pattern: "spec/performance/**/*_spec.rb",
   },
   e2e: {
     description: "End-to-End Tests - Complete workflow testing",
-    pattern: "spec/integration/end_to_end_trading_spec.rb"
+    pattern: "spec/integration/end_to_end_trading_spec.rb",
   },
   all: {
     description: "All Tests - Complete test suite",
-    pattern: "spec/**/*_spec.rb"
-  }
+    pattern: "spec/**/*_spec.rb",
+  },
 }.freeze
 
 class ComprehensiveTestRunner
@@ -68,7 +68,7 @@ class ComprehensiveTestRunner
     @results[category] = {
       success: result,
       duration: duration,
-      pattern: category_info[:pattern]
+      pattern: category_info[:pattern],
     }
 
     status = result ? "✅ PASSED" : "❌ FAILED"

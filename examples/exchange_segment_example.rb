@@ -25,7 +25,7 @@ test_cases = [
   %w[BSE E Equity],
   %w[BSE D Derivatives],
   %w[BSE C Currency],
-  %w[MCX M Commodity]
+  %w[MCX M Commodity],
 ]
 
 test_cases.each do |exchange, segment, description|
@@ -43,14 +43,14 @@ real_examples = [
   { security_id: "13", exchange: "NSE", segment: "I", description: "NIFTY Index" },
   { security_id: "13", exchange: "NSE", segment: "C", description: "NIFTY Currency" },
   { security_id: "500325", exchange: "BSE", segment: "E", description: "RELIANCE BSE Equity" },
-  { security_id: "2881", exchange: "NSE", segment: "E", description: "RELIANCE NSE Equity" }
+  { security_id: "2881", exchange: "NSE", segment: "E", description: "RELIANCE NSE Equity" },
 ]
 
 real_examples.each do |example|
   result = csv_master.get_exchange_segment(
     example[:security_id],
     exchange: example[:exchange],
-    segment: example[:segment]
+    segment: example[:segment],
   )
   puts "  #{example[:description]} (#{example[:security_id]}) → #{result || "Not found"}"
 end

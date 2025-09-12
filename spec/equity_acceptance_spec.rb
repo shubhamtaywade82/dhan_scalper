@@ -35,7 +35,7 @@ RSpec.describe "Equity Calculation Acceptance Criteria" do
         side: "LONG",
         quantity: 75,
         price: 100.0,
-        fee: 20
+        fee: 20,
       )
 
       # Verify initial state
@@ -48,7 +48,7 @@ RSpec.describe "Equity Calculation Acceptance Criteria" do
       mtm_service.on_tick_received(
         exchange_segment: exchange_segment,
         security_id: security_id,
-        ltp: 120.0
+        ltp: 120.0,
       )
 
       # Verify final state
@@ -61,7 +61,7 @@ RSpec.describe "Equity Calculation Acceptance Criteria" do
       position = position_tracker.get_position(
         exchange_segment: exchange_segment,
         security_id: security_id,
-        side: "LONG"
+        side: "LONG",
       )
 
       expect(position[:net_qty]).to eq(DhanScalper::Support::Money.bd(75))
@@ -81,7 +81,7 @@ RSpec.describe "Equity Calculation Acceptance Criteria" do
         side: "LONG",
         quantity: 75,
         price: 100.0,
-        fee: 20
+        fee: 20,
       )
 
       # Disable rate limiting for this test
@@ -89,13 +89,13 @@ RSpec.describe "Equity Calculation Acceptance Criteria" do
 
       # LTP updates
       ltp_updates = [110.0, 120.0, 115.0, 125.0]
-      expected_unrealized = [750, 1500, 1125, 1875] # (ltp - 100) * 75
+      expected_unrealized = [750, 1_500, 1_125, 1_875] # (ltp - 100) * 75
 
       ltp_updates.each_with_index do |ltp, index|
         mtm_service.on_tick_received(
           exchange_segment: exchange_segment,
           security_id: security_id,
-          ltp: ltp
+          ltp: ltp,
         )
 
         equity = equity_calculator.calculate_equity
@@ -115,14 +115,14 @@ RSpec.describe "Equity Calculation Acceptance Criteria" do
         side: "LONG",
         quantity: 75,
         price: 100.0,
-        fee: 20
+        fee: 20,
       )
 
       # LTP drops to ₹80
       mtm_service.on_tick_received(
         exchange_segment: exchange_segment,
         security_id: security_id,
-        ltp: 80.0
+        ltp: 80.0,
       )
 
       equity = equity_calculator.calculate_equity
@@ -142,7 +142,7 @@ RSpec.describe "Equity Calculation Acceptance Criteria" do
         side: "LONG",
         quantity: 75,
         price: 100.0,
-        fee: 20
+        fee: 20,
       )
 
       # Disable rate limiting for this test
@@ -153,14 +153,14 @@ RSpec.describe "Equity Calculation Acceptance Criteria" do
         { security_id: "TEST123", ltp: 120.0 },
         { security_id: "TEST456", ltp: 150.0 }, # No position, should be ignored
         { security_id: "TEST123", ltp: 125.0 },
-        { security_id: "TEST123", ltp: 115.0 }
+        { security_id: "TEST123", ltp: 115.0 },
       ]
 
       tick_data.each do |tick|
         mtm_service.on_tick_received(
           exchange_segment: exchange_segment,
           security_id: tick[:security_id],
-          ltp: tick[:ltp]
+          ltp: tick[:ltp],
         )
       end
 
@@ -184,7 +184,7 @@ RSpec.describe "Equity Calculation Acceptance Criteria" do
         side: "LONG",
         quantity: 50,
         price: 100.0,
-        fee: 20
+        fee: 20,
       )
 
       position_tracker.add_position(
@@ -193,7 +193,7 @@ RSpec.describe "Equity Calculation Acceptance Criteria" do
         side: "LONG",
         quantity: 25,
         price: 200.0,
-        fee: 20
+        fee: 20,
       )
 
       # Update LTPs

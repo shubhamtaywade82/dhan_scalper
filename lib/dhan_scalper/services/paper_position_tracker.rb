@@ -36,7 +36,7 @@ module DhanScalper
             instrument_id: instrument_id,
             last_price: nil,
             last_update: nil,
-            subscribed: true
+            subscribed: true,
           }
           save_underlying_prices unless @memory_only
           @logger.info "[PositionTracker] Now tracking #{symbol} at #{instrument_id}"
@@ -68,7 +68,7 @@ module DhanScalper
             pnl: 0.0,
             created_at: Time.now,
             last_update: Time.now,
-            subscribed: true
+            subscribed: true,
           }
 
           save_positions
@@ -148,7 +148,7 @@ module DhanScalper
         summary = {
           total_positions: @positions.size,
           total_pnl: get_total_pnl,
-          positions: {}
+          positions: {},
         }
 
         @positions.each do |key, position|
@@ -160,7 +160,7 @@ module DhanScalper
             entry_price: position[:entry_price],
             current_price: position[:current_price],
             pnl: position[:pnl],
-            created_at: position[:created_at]
+            created_at: position[:created_at],
           }
         end
 
@@ -174,7 +174,7 @@ module DhanScalper
             instrument_id: data[:instrument_id],
             last_price: data[:last_price],
             last_update: data[:last_update],
-            subscribed: data[:subscribed]
+            subscribed: data[:subscribed],
           }
         end
         summary

@@ -25,8 +25,8 @@ module IntegrationHelpers
   def create_test_config(overrides = {})
     {
       "global" => {
-        "min_profit_target" => 1000,
-        "max_day_loss" => 1500,
+        "min_profit_target" => 1_000,
+        "max_day_loss" => 1_500,
         "charge_per_order" => 20,
         "allocation_pct" => 0.30,
         "slippage_buffer_pct" => 0.01,
@@ -35,10 +35,10 @@ module IntegrationHelpers
         "log_level" => "INFO",
         "tp_pct" => 0.35,
         "sl_pct" => 0.18,
-        "trail_pct" => 0.12
+        "trail_pct" => 0.12,
       },
       "paper" => {
-        "starting_balance" => 200_000
+        "starting_balance" => 200_000,
       },
       "SYMBOLS" => {
         "NIFTY" => {
@@ -48,9 +48,9 @@ module IntegrationHelpers
           "strike_step" => 50,
           "lot_size" => 75,
           "qty_multiplier" => 1,
-          "expiry_wday" => 4
-        }
-      }
+          "expiry_wday" => 4,
+        },
+      },
     }.deep_merge(overrides)
   end
 
@@ -109,7 +109,7 @@ module IntegrationHelpers
       security_id,
       side,
       quantity,
-      price
+      price,
     )
   end
 

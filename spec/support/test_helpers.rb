@@ -30,7 +30,7 @@ module TestHelpers
                                                              success: true,
                                                              order_id: "P-1234567890",
                                                              order: double("Order", quantity: 75, price: 150.0),
-                                                             position: double("Position", security_id: "TEST123")
+                                                             position: double("Position", security_id: "TEST123"),
                                                            })
     mock_broker
   end
@@ -48,7 +48,7 @@ module TestHelpers
                                                                                  closed_positions: 0,
                                                                                  total_pnl: 0.0,
                                                                                  winning_trades: 0,
-                                                                                 losing_trades: 0
+                                                                                 losing_trades: 0,
                                                                                })
     allow(mock_position_tracker).to receive(:get_underlying_price).and_return(25_000.0)
     allow(mock_position_tracker).to receive(:handle_price_update)
@@ -88,7 +88,7 @@ module TestHelpers
                                                                 highs: TestData::SAMPLE_CANDLES.map { |c| c[:high] },
                                                                 lows: TestData::SAMPLE_CANDLES.map { |c| c[:low] },
                                                                 closes: TestData::SAMPLE_CANDLES.map { |c| c[:close] },
-                                                                volumes: TestData::SAMPLE_CANDLES.map { |c| c[:volume] }
+                                                                volumes: TestData::SAMPLE_CANDLES.map { |c| c[:volume] },
                                                               })
     allow(DhanScalper::CandleSeries).to receive(:load_from_dhan_intraday).and_return(mock_candle_series)
   end
@@ -101,7 +101,7 @@ module TestHelpers
     allow(DhanScalper::Services::DhanHQConfig).to receive(:status).and_return({
                                                                                 configured: true,
                                                                                 client_id: "TEST_CLIENT_ID",
-                                                                                access_token: "TEST_ACCESS_TOKEN"
+                                                                                access_token: "TEST_ACCESS_TOKEN",
                                                                               })
   end
 
@@ -132,7 +132,7 @@ module TestHelpers
       holy_grail_signal: :bullish,
       trend_analysis: :bullish,
       option_premium: 150.0,
-      expected_trade: :buy_ce
+      expected_trade: :buy_ce,
     }
   end
 
@@ -142,7 +142,7 @@ module TestHelpers
       holy_grail_signal: :bearish,
       trend_analysis: :bearish,
       option_premium: 120.0,
-      expected_trade: :buy_pe
+      expected_trade: :buy_pe,
     }
   end
 
@@ -152,7 +152,7 @@ module TestHelpers
       holy_grail_signal: :none,
       trend_analysis: :none,
       option_premium: 135.0,
-      expected_trade: :none
+      expected_trade: :none,
     }
   end
 
@@ -161,8 +161,8 @@ module TestHelpers
       entry_price: 150.0,
       current_price: 200.0,
       quantity: 75,
-      expected_pnl: 3750.0,
-      expected_pnl_pct: 33.33
+      expected_pnl: 3_750.0,
+      expected_pnl_pct: 33.33,
     }
   end
 
@@ -171,16 +171,16 @@ module TestHelpers
       entry_price: 150.0,
       current_price: 100.0,
       quantity: 75,
-      expected_pnl: -3750.0,
-      expected_pnl_pct: -33.33
+      expected_pnl: -3_750.0,
+      expected_pnl_pct: -33.33,
     }
   end
 
   def create_risk_limit_breach_scenario
     {
-      total_pnl: -6000.0,
-      max_day_loss: 5000.0,
-      should_trigger: true
+      total_pnl: -6_000.0,
+      max_day_loss: 5_000.0,
+      should_trigger: true,
     }
   end
 
@@ -188,7 +188,7 @@ module TestHelpers
     {
       current_positions: 5,
       max_positions: 5,
-      should_allow_new: false
+      should_allow_new: false,
     }
   end
 
@@ -200,13 +200,13 @@ module TestHelpers
     end_time - start_time
   end
 
-  def simulate_high_frequency_updates(app, count: 1000)
+  def simulate_high_frequency_updates(app, count: 1_000)
     count.times do |i|
       price_data = {
         instrument_id: "TEST#{i % 10}",
         segment: "NSE_FNO",
         ltp: 150.0 + i,
-        timestamp: Time.now.to_i
+        timestamp: Time.now.to_i,
       }
       app.send(:handle_price_update, price_data)
     end
@@ -215,9 +215,9 @@ module TestHelpers
   def simulate_concurrent_access(app, thread_count: 10, operations_per_thread: 100)
     threads = []
 
-    thread_count.times do |i|
+    thread_count.times do |_i|
       threads << Thread.new do
-        operations_per_thread.times do |j|
+        operations_per_thread.times do |_j|
           app.send(:analyze_and_trade)
           app.send(:check_risk_limits)
         end
@@ -259,7 +259,7 @@ module TestHelpers
       :total_trades, :successful_trades, :failed_trades, :total_pnl
     )
     expect(session_data[:total_trades]).to eq(
-      session_data[:successful_trades] + session_data[:failed_trades]
+      session_data[:successful_trades] + session_data[:failed_trades],
     )
     expect(session_data[:successful_trades]).to be >= 0
     expect(session_data[:failed_trades]).to be >= 0

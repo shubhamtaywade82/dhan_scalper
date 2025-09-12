@@ -386,13 +386,13 @@ RSpec.describe IndicatorsGate do
     end
 
     it "handles large datasets efficiently" do
-      large_values = (1..1000).map(&:to_f)
+      large_values = (1..1_000).map(&:to_f)
       start_time = Time.now
       result = described_class.ema_series(large_values, 20)
       end_time = Time.now
 
       expect(result).to be_an(Array)
-      expect(result.length).to eq(1000)
+      expect(result.length).to eq(1_000)
       expect(end_time - start_time).to be < 1.0 # Should complete within 1 second
     end
 

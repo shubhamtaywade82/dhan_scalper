@@ -6,15 +6,15 @@ RSpec.describe "End-to-End Trading Workflow", :slow do
   let(:config) do
     {
       "global" => {
-        "min_profit_target" => 1000,
-        "max_day_loss" => 5000,
+        "min_profit_target" => 1_000,
+        "max_day_loss" => 5_000,
         "decision_interval" => 2,
         "log_level" => "INFO",
         "use_multi_timeframe" => true,
-        "secondary_timeframe" => 5
+        "secondary_timeframe" => 5,
       },
       "paper" => {
-        "starting_balance" => 200_000
+        "starting_balance" => 200_000,
       },
       "SYMBOLS" => {
         "NIFTY" => {
@@ -24,9 +24,9 @@ RSpec.describe "End-to-End Trading Workflow", :slow do
           "strike_step" => 50,
           "lot_size" => 75,
           "qty_multiplier" => 1,
-          "expiry_wday" => 4
-        }
-      }
+          "expiry_wday" => 4,
+        },
+      },
     }
   end
 
@@ -85,7 +85,7 @@ RSpec.describe "End-to-End Trading Workflow", :slow do
         instrument_id: "13",
         segment: "IDX_I",
         ltp: 25_050.0,
-        timestamp: Time.now.to_i
+        timestamp: Time.now.to_i,
       }
 
       # Mock position tracker to handle price updates
@@ -135,7 +135,7 @@ RSpec.describe "End-to-End Trading Workflow", :slow do
                                                                                    closed_positions: 0,
                                                                                    total_pnl: 750.0,
                                                                                    winning_trades: 1,
-                                                                                   losing_trades: 0
+                                                                                   losing_trades: 0,
                                                                                  })
 
       # Mock broker order execution
@@ -143,7 +143,7 @@ RSpec.describe "End-to-End Trading Workflow", :slow do
                                                                success: true,
                                                                order_id: "P-1234567890",
                                                                order: double("Order", quantity: 75, price: 150.0),
-                                                               position: double("Position", security_id: "TEST123")
+                                                               position: double("Position", security_id: "TEST123"),
                                                              })
 
       # Execute buy trade
@@ -167,7 +167,7 @@ RSpec.describe "End-to-End Trading Workflow", :slow do
                                                                success: true,
                                                                order_id: "P-1234567891",
                                                                order: double("Order", quantity: 75, price: 200.0),
-                                                               position: nil
+                                                               position: nil,
                                                              })
 
       # Execute sell trade
@@ -183,7 +183,7 @@ RSpec.describe "End-to-End Trading Workflow", :slow do
 
     it "enforces daily loss limits" do
       mock_position_tracker = paper_app.instance_variable_get(:@position_tracker)
-      allow(mock_position_tracker).to receive(:get_total_pnl).and_return(-6000.0)
+      allow(mock_position_tracker).to receive(:get_total_pnl).and_return(-6_000.0)
 
       # Should trigger risk limit breach
       expect { paper_app.send(:check_risk_limits) }.to output(/Daily loss limit breached/).to_stdout
@@ -191,7 +191,7 @@ RSpec.describe "End-to-End Trading Workflow", :slow do
 
     it "continues trading when within risk limits" do
       mock_position_tracker = paper_app.instance_variable_get(:@position_tracker)
-      allow(mock_position_tracker).to receive(:get_total_pnl).and_return(-1000.0)
+      allow(mock_position_tracker).to receive(:get_total_pnl).and_return(-1_000.0)
 
       # Should not trigger risk limit breach
       expect { paper_app.send(:check_risk_limits) }.not_to output.to_stdout
@@ -205,7 +205,7 @@ RSpec.describe "End-to-End Trading Workflow", :slow do
                                                                                    closed_positions: 0,
                                                                                    total_pnl: 0.0,
                                                                                    winning_trades: 0,
-                                                                                   losing_trades: 0
+                                                                                   losing_trades: 0,
                                                                                  })
 
       # Should not execute new trades when at position limit
@@ -231,9 +231,9 @@ RSpec.describe "End-to-End Trading Workflow", :slow do
                                                                                    total_positions: 3,
                                                                                    open_positions: 1,
                                                                                    closed_positions: 2,
-                                                                                   total_pnl: 1500.0,
+                                                                                   total_pnl: 1_500.0,
                                                                                    winning_trades: 2,
-                                                                                   losing_trades: 1
+                                                                                   losing_trades: 1,
                                                                                  })
 
       mock_reporter = double("SessionReporter")
@@ -325,7 +325,7 @@ RSpec.describe "End-to-End Trading Workflow", :slow do
         "strike_step" => 100,
         "lot_size" => 25,
         "qty_multiplier" => 1,
-        "expiry_wday" => 4
+        "expiry_wday" => 4,
       }
 
       multi_app = DhanScalper::PaperApp.new(multi_symbol_config, quiet: true, enhanced: true)
@@ -341,17 +341,17 @@ RSpec.describe "End-to-End Trading Workflow", :slow do
       paper_app.send(:initialize_components)
 
       mock_position_tracker = paper_app.instance_variable_get(:@position_tracker)
-      mock_broker = paper_app.instance_variable_get(:@broker)
+      paper_app.instance_variable_get(:@broker)
       mock_balance_provider = paper_app.instance_variable_get(:@balance_provider)
 
       # Mock consistent data across components
-      allow(mock_position_tracker).to receive(:get_total_pnl).and_return(1000.0)
+      allow(mock_position_tracker).to receive(:get_total_pnl).and_return(1_000.0)
       allow(mock_balance_provider).to receive(:available_balance).and_return(199_000.0)
-      allow(mock_balance_provider).to receive(:used_balance).and_return(1000.0)
+      allow(mock_balance_provider).to receive(:used_balance).and_return(1_000.0)
 
       # Verify data consistency
-      expect(mock_position_tracker.get_total_pnl).to eq(1000.0)
-      expect(mock_balance_provider.used_balance).to eq(1000.0)
+      expect(mock_position_tracker.get_total_pnl).to eq(1_000.0)
+      expect(mock_balance_provider.used_balance).to eq(1_000.0)
     end
 
     it "handles concurrent access safely" do
@@ -359,7 +359,7 @@ RSpec.describe "End-to-End Trading Workflow", :slow do
 
       # Simulate concurrent access
       threads = []
-      5.times do |i|
+      5.times do |_i|
         threads << Thread.new do
           paper_app.send(:analyze_and_trade)
         end

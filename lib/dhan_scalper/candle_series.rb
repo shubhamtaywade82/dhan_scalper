@@ -60,7 +60,7 @@ module DhanScalper
         instrument: (seg == "IDX_I" ? "INDEX" : "OPTION"),
         interval: interval.to_s,
         from_date: from_date,
-        to_date: to_date
+        to_date: to_date,
       }
 
       attempts = 0
@@ -118,7 +118,7 @@ module DhanScalper
           high: high_price.round(2),
           low: low_price.round(2),
           close: close_price.round(2),
-          volume: rand(1000..10_000)
+          volume: rand(1_000..10_000),
         }
 
         # Update base price for next candle
@@ -177,7 +177,7 @@ module DhanScalper
             resp["volume"][i]
           rescue StandardError
             0
-          end.to_i
+          end.to_i,
         }
       end
     end
@@ -191,7 +191,7 @@ module DhanScalper
           high: candle[:high] || candle["high"],
           low: candle[:low] || candle["low"],
           timestamp: to_time(candle[:timestamp] || candle["timestamp"]),
-          volume: candle[:volume] || candle["volume"] || 0
+          volume: candle[:volume] || candle["volume"] || 0,
         }
       elsif candle.respond_to?(:[]) && candle.size >= 5
         {
@@ -358,7 +358,7 @@ module DhanScalper
       DhanScalper::Indicators::Supertrend.new(
         series: self,
         period: period,
-        multiplier: multiplier
+        multiplier: multiplier,
       ).call
     end
 

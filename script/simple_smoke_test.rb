@@ -24,14 +24,14 @@ begin
   equity_calculator = DhanScalper::Services::EquityCalculator.new(
     balance_provider: balance_provider,
     position_tracker: position_tracker,
-    logger: Logger.new($stdout)
+    logger: Logger.new($stdout),
   )
   puts "✅ Equity calculator initialized"
 
   # Initialize paper broker
   broker = DhanScalper::Brokers::PaperBroker.new(
     balance_provider: balance_provider,
-    logger: Logger.new($stdout)
+    logger: Logger.new($stdout),
   )
   puts "✅ Paper broker initialized"
 
@@ -41,7 +41,7 @@ begin
     segment: "NSE_FNO",
     security_id: "TEST123",
     quantity: 75,
-    charge_per_order: 20
+    charge_per_order: 20,
   )
 
   if buy_result.is_a?(DhanScalper::Brokers::Order)
@@ -54,7 +54,7 @@ begin
     position = position_tracker.get_position(
       exchange_segment: "NSE_FNO",
       security_id: "TEST123",
-      side: "LONG"
+      side: "LONG",
     )
 
     if position && position[:net_qty] == 75
@@ -83,7 +83,7 @@ begin
     segment: "NSE_FNO",
     security_id: "TEST123",
     quantity: 75,
-    charge_per_order: 20
+    charge_per_order: 20,
   )
 
   if sell_result.is_a?(DhanScalper::Brokers::Order)
@@ -96,7 +96,7 @@ begin
     position = position_tracker.get_position(
       exchange_segment: "NSE_FNO",
       security_id: "TEST123",
-      side: "LONG"
+      side: "LONG",
     )
 
     if position.nil? || position[:net_qty] == 0
@@ -122,8 +122,8 @@ begin
   puts "   Total Equity: ₹#{equity_breakdown[:total_equity].round(2)}"
 
   # Expected values
-  expected_balance = 101_460.0  # 100,000 + 1,500 profit - 40 fees
-  expected_realized_pnl = 1_500.0  # (120 - 100) * 75 - 40 fees
+  expected_balance = 101_460.0 # 100,000 + 1,500 profit - 40 fees
+  expected_realized_pnl = 1_500.0 # (120 - 100) * 75 - 40 fees
 
   # Validate final balance
   if (final_balance - expected_balance).abs < 0.01
@@ -140,7 +140,6 @@ begin
   end
 
   puts "\n🎉 Smoke test completed!"
-
 rescue StandardError => e
   puts "❌ Test failed with error: #{e.message}"
   puts e.backtrace.first(5).join("\n")

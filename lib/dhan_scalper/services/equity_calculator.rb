@@ -24,7 +24,7 @@ module DhanScalper
         {
           balance: balance,
           unrealized_pnl: unrealized_pnl,
-          total_equity: total_equity
+          total_equity: total_equity,
         }
       end
 
@@ -33,7 +33,7 @@ module DhanScalper
         position = @position_tracker.get_position(
           exchange_segment: exchange_segment,
           security_id: security_id,
-          side: "LONG"
+          side: "LONG",
         )
 
         return { success: false, error: "Position not found" } unless position
@@ -45,7 +45,7 @@ module DhanScalper
 
         unrealized_pnl = DhanScalper::Support::Money.multiply(
           DhanScalper::Support::Money.subtract(current_ltp_bd, buy_avg_bd),
-          net_qty_bd
+          net_qty_bd,
         )
 
         # Update position with new unrealized PnL
@@ -53,7 +53,7 @@ module DhanScalper
           exchange_segment: exchange_segment,
           security_id: security_id,
           side: "LONG",
-          unrealized_pnl: unrealized_pnl
+          unrealized_pnl: unrealized_pnl,
         )
 
         @logger.info("[MTM] #{security_id} | LTP: ₹#{DhanScalper::Support::Money.dec(current_ltp_bd)} | Unrealized: ₹#{DhanScalper::Support::Money.dec(unrealized_pnl)}")
@@ -63,7 +63,7 @@ module DhanScalper
           unrealized_pnl: unrealized_pnl,
           current_ltp: current_ltp_bd,
           net_qty: net_qty_bd,
-          buy_avg: buy_avg_bd
+          buy_avg: buy_avg_bd,
         }
       end
 
@@ -77,27 +77,27 @@ module DhanScalper
 
           # Get current LTP
           current_ltp = if ltp_provider
-            ltp_provider.call(position[:exchange_segment], position[:security_id])
-          else
-            # Fallback to position's current price
-            position[:current_price] || position[:buy_avg]
-          end
+                          ltp_provider.call(position[:exchange_segment], position[:security_id])
+                        else
+                          # Fallback to position's current price
+                          position[:current_price] || position[:buy_avg]
+                        end
 
           next unless current_ltp
 
           result = refresh_unrealized!(
             exchange_segment: position[:exchange_segment],
             security_id: position[:security_id],
-            current_ltp: current_ltp
+            current_ltp: current_ltp,
           )
 
-          if result[:success]
-            total_unrealized = DhanScalper::Support::Money.add(total_unrealized, result[:unrealized_pnl])
-            updated_positions << {
-              security_id: position[:security_id],
-              unrealized_pnl: result[:unrealized_pnl]
-            }
-          end
+          next unless result[:success]
+
+          total_unrealized = DhanScalper::Support::Money.add(total_unrealized, result[:unrealized_pnl])
+          updated_positions << {
+            security_id: position[:security_id],
+            unrealized_pnl: result[:unrealized_pnl],
+          }
         end
 
         @logger.info("[MTM] Refreshed #{updated_positions.length} positions | Total unrealized: ₹#{DhanScalper::Support::Money.dec(total_unrealized)}")
@@ -105,7 +105,7 @@ module DhanScalper
         {
           success: true,
           total_unrealized: total_unrealized,
-          updated_positions: updated_positions
+          updated_positions: updated_positions,
         }
       end
 
@@ -124,7 +124,7 @@ module DhanScalper
           realized_pnl: realized_pnl,
           unrealized_pnl: unrealized_pnl,
           total_equity: total_equity,
-          positions: get_position_breakdown
+          positions: get_position_breakdown,
         }
       end
 
@@ -144,7 +144,7 @@ module DhanScalper
 
           unrealized = DhanScalper::Support::Money.multiply(
             DhanScalper::Support::Money.subtract(current_price, buy_avg),
-            net_qty
+            net_qty,
           )
 
           total_unrealized = DhanScalper::Support::Money.add(total_unrealized, unrealized)
@@ -161,7 +161,7 @@ module DhanScalper
           current_price = position[:current_price] || position[:buy_avg]
           unrealized = DhanScalper::Support::Money.multiply(
             DhanScalper::Support::Money.subtract(current_price, position[:buy_avg]),
-            position[:net_qty]
+            position[:net_qty],
           )
 
           {
@@ -172,7 +172,7 @@ module DhanScalper
             buy_avg: position[:buy_avg],
             current_price: current_price,
             unrealized_pnl: unrealized,
-            market_value: DhanScalper::Support::Money.multiply(current_price, position[:net_qty])
+            market_value: DhanScalper::Support::Money.multiply(current_price, position[:net_qty]),
           }
         end.compact
       end

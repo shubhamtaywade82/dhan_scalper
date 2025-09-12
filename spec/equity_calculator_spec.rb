@@ -27,7 +27,7 @@ RSpec.describe DhanScalper::Services::EquityCalculator do
         side: "LONG",
         quantity: 75,
         price: 100.0,
-        fee: 20
+        fee: 20,
       )
 
       # Set current price to 120
@@ -35,7 +35,7 @@ RSpec.describe DhanScalper::Services::EquityCalculator do
         exchange_segment: exchange_segment,
         security_id: security_id,
         side: "LONG",
-        current_price: 120.0
+        current_price: 120.0,
       )
 
       equity = equity_calculator.calculate_equity
@@ -59,7 +59,7 @@ RSpec.describe DhanScalper::Services::EquityCalculator do
         side: "LONG",
         quantity: 50,
         price: 100.0,
-        fee: 20
+        fee: 20,
       )
 
       position_tracker.add_position(
@@ -68,7 +68,7 @@ RSpec.describe DhanScalper::Services::EquityCalculator do
         side: "LONG",
         quantity: 25,
         price: 200.0,
-        fee: 20
+        fee: 20,
       )
 
       # Set current prices
@@ -76,14 +76,14 @@ RSpec.describe DhanScalper::Services::EquityCalculator do
         exchange_segment: exchange_segment,
         security_id: "TEST123",
         side: "LONG",
-        current_price: 120.0
+        current_price: 120.0,
       )
 
       position_tracker.update_current_price(
         exchange_segment: exchange_segment,
         security_id: "TEST456",
         side: "LONG",
-        current_price: 180.0
+        current_price: 180.0,
       )
 
       equity = equity_calculator.calculate_equity
@@ -106,7 +106,7 @@ RSpec.describe DhanScalper::Services::EquityCalculator do
         side: "LONG",
         quantity: 75,
         price: 100.0,
-        fee: 20
+        fee: 20,
       )
 
       position_tracker.partial_exit(
@@ -115,7 +115,7 @@ RSpec.describe DhanScalper::Services::EquityCalculator do
         side: "LONG",
         quantity: 75,
         price: 120.0,
-        fee: 20
+        fee: 20,
       )
 
       equity = equity_calculator.calculate_equity
@@ -134,13 +134,13 @@ RSpec.describe DhanScalper::Services::EquityCalculator do
         side: "LONG",
         quantity: 75,
         price: 100.0,
-        fee: 20
+        fee: 20,
       )
 
       result = equity_calculator.refresh_unrealized!(
         exchange_segment: exchange_segment,
         security_id: security_id,
-        current_ltp: 120.0
+        current_ltp: 120.0,
       )
 
       expect(result[:success]).to be true
@@ -154,7 +154,7 @@ RSpec.describe DhanScalper::Services::EquityCalculator do
       result = equity_calculator.refresh_unrealized!(
         exchange_segment: exchange_segment,
         security_id: "NONEXISTENT",
-        current_ltp: 120.0
+        current_ltp: 120.0,
       )
 
       expect(result[:success]).to be false
@@ -169,13 +169,13 @@ RSpec.describe DhanScalper::Services::EquityCalculator do
         side: "LONG",
         quantity: 75,
         price: 100.0,
-        fee: 20
+        fee: 20,
       )
 
       result = equity_calculator.refresh_unrealized!(
         exchange_segment: exchange_segment,
         security_id: security_id,
-        current_ltp: 80.0
+        current_ltp: 80.0,
       )
 
       expect(result[:success]).to be true
@@ -192,7 +192,7 @@ RSpec.describe DhanScalper::Services::EquityCalculator do
         side: "LONG",
         quantity: 50,
         price: 100.0,
-        fee: 20
+        fee: 20,
       )
 
       position_tracker.add_position(
@@ -201,15 +201,14 @@ RSpec.describe DhanScalper::Services::EquityCalculator do
         side: "LONG",
         quantity: 25,
         price: 200.0,
-        fee: 20
+        fee: 20,
       )
 
       # Mock LTP provider
-      ltp_provider = lambda do |segment, security_id|
+      ltp_provider = lambda do |_segment, security_id|
         case security_id
         when "TEST123" then 120.0
         when "TEST456" then 180.0
-        else nil
         end
       end
 
@@ -228,7 +227,7 @@ RSpec.describe DhanScalper::Services::EquityCalculator do
         side: "LONG",
         quantity: 75,
         price: 100.0,
-        fee: 20
+        fee: 20,
       )
 
       # Set current price
@@ -236,7 +235,7 @@ RSpec.describe DhanScalper::Services::EquityCalculator do
         exchange_segment: exchange_segment,
         security_id: security_id,
         side: "LONG",
-        current_price: 120.0
+        current_price: 120.0,
       )
 
       result = equity_calculator.refresh_all_unrealized!
@@ -255,14 +254,14 @@ RSpec.describe DhanScalper::Services::EquityCalculator do
         side: "LONG",
         quantity: 75,
         price: 100.0,
-        fee: 20
+        fee: 20,
       )
 
       position_tracker.update_current_price(
         exchange_segment: exchange_segment,
         security_id: security_id,
         side: "LONG",
-        current_price: 120.0
+        current_price: 120.0,
       )
 
       breakdown = equity_calculator.get_equity_breakdown

@@ -22,7 +22,7 @@ module DhanScalper
         total_pnl: 0.0,
         max_drawdown: 0.0,
         max_profit: 0.0,
-        session_start: Time.now
+        session_start: Time.now,
       }
 
       ensure_data_directory
@@ -42,7 +42,7 @@ module DhanScalper
         option_type: option_type,
         strike: strike,
         expiry: expiry,
-        timestamp: Time.now
+        timestamp: Time.now,
       )
 
       @positions[position_key] = position
@@ -138,16 +138,16 @@ module DhanScalper
         open: {
           count: open_positions.size,
           total_pnl: open_positions.sum { |p| p[:pnl] },
-          positions: open_positions
+          positions: open_positions,
         },
         closed: {
           count: closed_positions.size,
           total_pnl: closed_positions.sum { |p| p[:pnl] },
           winning: closed_positions.count { |p| p[:pnl] > 0 },
           losing: closed_positions.count { |p| p[:pnl] < 0 },
-          positions: closed_positions
+          positions: closed_positions,
         },
-        session: get_session_stats
+        session: get_session_stats,
       }
     end
 
@@ -212,7 +212,7 @@ module DhanScalper
             position.option_type,
             position.strike,
             position.expiry,
-            position.timestamp
+            position.timestamp,
           ]
         end
       end
@@ -241,7 +241,7 @@ module DhanScalper
             position.expiry,
             position.timestamp,
             position.exit_timestamp,
-            position.exit_reason
+            position.exit_reason,
           ]
         end
       end
@@ -263,7 +263,7 @@ module DhanScalper
           option_type: row["option_type"],
           strike: row["strike"]&.to_f,
           expiry: row["expiry"],
-          timestamp: Time.parse(row["timestamp"])
+          timestamp: Time.parse(row["timestamp"]),
         )
 
         position_key = generate_position_key(
@@ -291,7 +291,7 @@ module DhanScalper
           option_type: row["option_type"],
           strike: row["strike"]&.to_f,
           expiry: row["expiry"],
-          timestamp: Time.parse(row["entry_timestamp"])
+          timestamp: Time.parse(row["entry_timestamp"]),
         )
 
         position.exit_price = row["exit_price"].to_f

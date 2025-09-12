@@ -6,13 +6,13 @@ RSpec.describe "Performance and Load Testing", :slow do
   let(:config) do
     {
       "global" => {
-        "min_profit_target" => 1000,
-        "max_day_loss" => 5000,
+        "min_profit_target" => 1_000,
+        "max_day_loss" => 5_000,
         "decision_interval" => 1,
-        "log_level" => "WARN"
+        "log_level" => "WARN",
       },
       "paper" => {
-        "starting_balance" => 1_000_000
+        "starting_balance" => 1_000_000,
       },
       "SYMBOLS" => {
         "NIFTY" => {
@@ -22,7 +22,7 @@ RSpec.describe "Performance and Load Testing", :slow do
           "strike_step" => 50,
           "lot_size" => 75,
           "qty_multiplier" => 1,
-          "expiry_wday" => 4
+          "expiry_wday" => 4,
         },
         "BANKNIFTY" => {
           "idx_sid" => "25",
@@ -31,9 +31,9 @@ RSpec.describe "Performance and Load Testing", :slow do
           "strike_step" => 100,
           "lot_size" => 25,
           "qty_multiplier" => 1,
-          "expiry_wday" => 4
-        }
-      }
+          "expiry_wday" => 4,
+        },
+      },
     }
   end
 
@@ -76,7 +76,7 @@ RSpec.describe "Performance and Load Testing", :slow do
                                                                    momentum: :strong,
                                                                    adx: 25.0,
                                                                    rsi: 65.0,
-                                                                   macd: :bullish
+                                                                   macd: :bullish,
                                                                  })
     allow(DhanScalper::CandleSeries).to receive(:load_from_dhan_intraday).and_return(mock_candle_series)
   end
@@ -129,7 +129,7 @@ RSpec.describe "Performance and Load Testing", :slow do
       initial_memory = `ps -o rss= -p #{Process.pid}`.to_i
 
       # Simulate extended operation
-      1000.times do
+      1_000.times do
         paper_app.send(:analyze_and_trade)
         paper_app.send(:check_risk_limits)
       end
@@ -160,7 +160,7 @@ RSpec.describe "Performance and Load Testing", :slow do
 
       # Mock large number of positions
       positions = {}
-      1000.times do |i|
+      1_000.times do |i|
         positions["POS_#{i}"] = {
           symbol: "NIFTY",
           option_type: "CE",
@@ -171,19 +171,19 @@ RSpec.describe "Performance and Load Testing", :slow do
           entry_price: 150.0,
           current_price: 150.0,
           pnl: 0.0,
-          created_at: Time.now
+          created_at: Time.now,
         }
       end
 
       allow(mock_position_tracker).to receive(:positions).and_return(positions)
-      allow(mock_position_tracker).to receive(:get_total_pnl).and_return(1000.0)
+      allow(mock_position_tracker).to receive(:get_total_pnl).and_return(1_000.0)
       allow(mock_position_tracker).to receive(:get_positions_summary).and_return({
-                                                                                   total_positions: 1000,
-                                                                                   open_positions: 1000,
+                                                                                   total_positions: 1_000,
+                                                                                   open_positions: 1_000,
                                                                                    closed_positions: 0,
-                                                                                   total_pnl: 1000.0,
+                                                                                   total_pnl: 1_000.0,
                                                                                    winning_trades: 500,
-                                                                                   losing_trades: 500
+                                                                                   losing_trades: 500,
                                                                                  })
 
       # Measure position summary calculation time
@@ -193,7 +193,7 @@ RSpec.describe "Performance and Load Testing", :slow do
 
       # Should calculate summary quickly even with many positions
       expect(end_time - start_time).to be < 0.1 # Less than 100ms
-      expect(summary[:total_positions]).to eq(1000)
+      expect(summary[:total_positions]).to eq(1_000)
     end
 
     it "handles position updates efficiently" do
@@ -205,12 +205,12 @@ RSpec.describe "Performance and Load Testing", :slow do
 
       # Simulate rapid price updates
       start_time = Time.now
-      1000.times do |i|
+      1_000.times do |i|
         price_data = {
           instrument_id: "TEST#{i % 100}",
           segment: "NSE_FNO",
           ltp: 150.0 + i,
-          timestamp: Time.now.to_i
+          timestamp: Time.now.to_i,
         }
         paper_app.send(:handle_price_update, price_data)
       end
@@ -238,10 +238,10 @@ RSpec.describe "Performance and Load Testing", :slow do
 
       # Measure Redis operations
       start_time = Time.now
-      1000.times do |i|
+      1_000.times do |i|
         mock_redis_store.store_tick("NSE_FNO", "TEST#{i}", {
                                       ltp: 150.0 + i,
-                                      timestamp: Time.now.to_i
+                                      timestamp: Time.now.to_i,
                                     })
       end
       end_time = Time.now
@@ -261,7 +261,7 @@ RSpec.describe "Performance and Load Testing", :slow do
           "STRIKE_PRICE" => (25_000 + (i * 50)).to_s,
           "OPTION_TYPE" => i.even? ? "CE" : "PE",
           "SECURITY_ID" => "TEST#{i}",
-          "LOT_SIZE" => "75"
+          "LOT_SIZE" => "75",
         }
       end
 
@@ -285,12 +285,12 @@ RSpec.describe "Performance and Load Testing", :slow do
 
       # Simulate rapid WebSocket messages
       start_time = Time.now
-      1000.times do |i|
+      1_000.times do |i|
         price_data = {
           instrument_id: "TEST#{i % 10}",
           segment: "NSE_FNO",
           ltp: 150.0 + i,
-          timestamp: Time.now.to_i
+          timestamp: Time.now.to_i,
         }
         paper_app.send(:handle_price_update, price_data)
       end
@@ -371,7 +371,7 @@ RSpec.describe "Performance and Load Testing", :slow do
       paper_app.send(:initialize_components)
 
       # Simulate extended operation
-      1000.times do
+      1_000.times do
         paper_app.send(:analyze_and_trade)
         paper_app.send(:check_risk_limits)
       end
@@ -389,7 +389,7 @@ RSpec.describe "Performance and Load Testing", :slow do
       # Simulate memory pressure by creating large objects
       large_objects = []
       100.times do |i|
-        large_objects << Array.new(10_000) { "data_#{i}_#{rand(1000)}" }
+        large_objects << Array.new(10_000) { "data_#{i}_#{rand(1_000)}" }
       end
 
       # Should still function under memory pressure
@@ -415,7 +415,7 @@ RSpec.describe "Performance and Load Testing", :slow do
           "strike_step" => 50,
           "lot_size" => 75,
           "qty_multiplier" => 1,
-          "expiry_wday" => 4
+          "expiry_wday" => 4,
         }
       end
 
@@ -443,12 +443,12 @@ RSpec.describe "Performance and Load Testing", :slow do
           entry_price: 150.0,
           current_price: 150.0,
           pnl: 0.0,
-          created_at: Time.now
+          created_at: Time.now,
         }
       end
 
       allow(mock_position_tracker).to receive(:positions).and_return(max_positions)
-      allow(mock_position_tracker).to receive(:get_total_pnl).and_return(1000.0)
+      allow(mock_position_tracker).to receive(:get_total_pnl).and_return(1_000.0)
 
       # Should handle maximum positions efficiently
       start_time = Time.now
@@ -456,7 +456,7 @@ RSpec.describe "Performance and Load Testing", :slow do
       end_time = Time.now
 
       expect(end_time - start_time).to be < 0.1 # Less than 100ms
-      expect(total_pnl).to eq(1000.0)
+      expect(total_pnl).to eq(1_000.0)
     end
   end
 end

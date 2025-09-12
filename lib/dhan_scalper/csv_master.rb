@@ -160,8 +160,6 @@ module DhanScalper
                          symbols
                        elsif underlying_symbol
                          [underlying_symbol]
-                       else
-                         nil
                        end
 
       instruments = []
@@ -205,7 +203,7 @@ module DhanScalper
           lot_size: row["LOT_SIZE"].to_i,
           strike_price: row["STRIKE_PRICE"],
           option_type: row["OPTION_TYPE"],
-          expiry_date: row["SM_EXPIRY_DATE"]
+          expiry_date: row["SM_EXPIRY_DATE"],
         }
       end
 
@@ -274,7 +272,7 @@ module DhanScalper
           DhanScalper::ExchangeSegmentMapper.exchange_segment(exchange, segment)
         rescue ArgumentError
           nil
-        end
+        end,
       }
     end
 

@@ -33,7 +33,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
           side: "BUY",
           quantity: 100,
           price: 100.0,
-          redis_store: redis_store
+          redis_store: redis_store,
         )
 
         expect(result[:order_status]).to eq("FILLED")
@@ -52,7 +52,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
           quantity: 100,
           price: 100.0,
           idempotency_key: idempotency_key,
-          redis_store: redis_store
+          redis_store: redis_store,
         )
 
         expect(result[:order_status]).to eq("FILLED")
@@ -72,7 +72,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
           quantity: 100,
           avg_price: 100.0,
           timestamp: Time.now.iso8601,
-          status: "COMPLETED"
+          status: "COMPLETED",
         }
       end
 
@@ -89,7 +89,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
           quantity: 100,
           price: 100.0,
           idempotency_key: idempotency_key,
-          redis_store: redis_store
+          redis_store: redis_store,
         )
 
         expect(result[:order_status]).to eq("FILLED")
@@ -110,7 +110,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
           quantity: 100,
           price: 100.0,
           idempotency_key: idempotency_key,
-          redis_store: redis_store
+          redis_store: redis_store,
         )
 
         first_balance = broker.balance_provider.available_balance
@@ -127,7 +127,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
           quantity: 100,
           price: 100.0,
           idempotency_key: idempotency_key,
-          redis_store: redis_store
+          redis_store: redis_store,
         )
 
         second_balance = broker.balance_provider.available_balance
@@ -156,7 +156,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
           quantity: 100,
           price: 100.0,
           idempotency_key: idempotency_key,
-          redis_store: redis_store
+          redis_store: redis_store,
         )
 
         expect(result[:order_status]).to eq("FILLED")
@@ -170,9 +170,9 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
       before do
         # Mock order placement failure
         allow(broker).to receive(:place_order).and_return({
-          success: false,
-          error: "Insufficient balance"
-        })
+                                                            success: false,
+                                                            error: "Insufficient balance",
+                                                          })
       end
 
       it "does not store idempotency key" do
@@ -183,7 +183,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
           quantity: 100,
           price: 100.0,
           idempotency_key: idempotency_key,
-          redis_store: redis_store
+          redis_store: redis_store,
         )
 
         expect(result[:success]).to be false
@@ -260,7 +260,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
         quantity: 100,
         avg_price: 100.0,
         timestamp: Time.now.iso8601,
-        status: "COMPLETED"
+        status: "COMPLETED",
       }
 
       allow(virtual_data_manager).to receive(:get_order_by_id).with("test-order-123").and_return(order_data)
@@ -275,7 +275,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
         quantity: 100,
         price: 100.0,
         idempotency_key: "test-key-123",
-        redis_store: redis_store_instance
+        redis_store: redis_store_instance,
       )
 
       first_balance = broker_with_redis.balance_provider.available_balance
@@ -292,7 +292,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
         quantity: 100,
         price: 100.0,
         idempotency_key: "test-key-123",
-        redis_store: redis_store_instance
+        redis_store: redis_store_instance,
       )
 
       second_balance = broker_with_redis.balance_provider.available_balance

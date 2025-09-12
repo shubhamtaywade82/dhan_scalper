@@ -46,14 +46,14 @@ module DhanScalper
         balance_change: session_stats[:total_pnl],
         balance_change_pct: calculate_balance_change_pct(
           config[:starting_balance] || (balance_provider.total_balance - session_stats[:total_pnl]),
-          balance_provider.total_balance
+          balance_provider.total_balance,
         ),
 
         # Configuration used
         config: config,
 
         # Detailed position data
-        positions_summary: positions_summary
+        positions_summary: positions_summary,
       }
 
       # Save to CSV
@@ -102,7 +102,7 @@ module DhanScalper
           session_id: session_id,
           file: file,
           created: File.mtime(file),
-          size: File.size(file)
+          size: File.size(file),
         }
       end.sort_by { |s| s[:created] }.reverse
     end
@@ -197,14 +197,14 @@ module DhanScalper
             position[:option_type],
             position[:strike],
             position[:expiry],
-            position[:timestamp]
+            position[:timestamp],
           ]
 
           if position_type == "closed"
             row += [
               position[:exit_price],
               position[:exit_reason],
-              position[:exit_timestamp]
+              position[:exit_timestamp],
             ]
           end
 

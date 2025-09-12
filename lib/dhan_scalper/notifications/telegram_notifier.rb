@@ -141,7 +141,7 @@ module DhanScalper
         payload = {
           chat_id: @chat_id,
           text: text,
-          parse_mode: parse_mode
+          parse_mode: parse_mode,
         }
 
         begin

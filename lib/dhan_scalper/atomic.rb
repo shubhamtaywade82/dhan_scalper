@@ -12,12 +12,12 @@ module DhanScalper
           redis_store: redis_store,
           balance_provider: balance_provider,
           position_tracker: position_tracker,
-          logger: logger
+          logger: logger,
         )
       end
 
       # Atomic buy operation
-      def buy!(exchange_segment:, security_id:, side: "LONG", quantity:, price:, fee: nil)
+      def buy!(exchange_segment:, security_id:, quantity:, price:, side: "LONG", fee: nil)
         ensure_initialized!
         @atomic_ops.buy!(
           exchange_segment: exchange_segment,
@@ -25,12 +25,12 @@ module DhanScalper
           side: side,
           quantity: quantity,
           price: price,
-          fee: fee
+          fee: fee,
         )
       end
 
       # Atomic sell operation
-      def sell!(exchange_segment:, security_id:, side: "LONG", quantity:, price:, fee: nil)
+      def sell!(exchange_segment:, security_id:, quantity:, price:, side: "LONG", fee: nil)
         ensure_initialized!
         @atomic_ops.sell!(
           exchange_segment: exchange_segment,
@@ -38,7 +38,7 @@ module DhanScalper
           side: side,
           quantity: quantity,
           price: price,
-          fee: fee
+          fee: fee,
         )
       end
 
@@ -54,7 +54,7 @@ module DhanScalper
         @atomic_ops.get_position(
           exchange_segment: exchange_segment,
           security_id: security_id,
-          side: side
+          side: side,
         )
       end
 

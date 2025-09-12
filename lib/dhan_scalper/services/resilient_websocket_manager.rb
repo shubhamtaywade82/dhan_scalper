@@ -102,7 +102,6 @@ module DhanScalper
 
             # Resubscribe to all instruments
             resubscribe_all
-
           rescue StandardError => e
             @logger.error "[ResilientWebSocket] Connection failed: #{e.message}"
             @connected = false
@@ -133,20 +132,16 @@ module DhanScalper
 
       def subscribe_to_instrument(instrument_id, instrument_type = "EQUITY", is_baseline: false, is_position: false)
         # Always store the segment mapping, even if not connected
-        @instrument_segments ||=         # Determine segment based on instrument type and underlying
-        segment = determine_segment(instrument_id, instrument_type)
+        @instrument_segments ||= # Determine segment based on instrument type and underlying
+          segment = determine_segment(instrument_id, instrument_type)
 
         # Store the segment mapping for this instrument
         @instrument_segments[instrument_id] = segment
 
         # Track subscription type for resubscription
-        if is_baseline
-          @baseline_subscriptions.add(instrument_id)
-        end
+        @baseline_subscriptions.add(instrument_id) if is_baseline
 
-        if is_position
-          @position_subscriptions.add(instrument_id)
-        end
+        @position_subscriptions.add(instrument_id) if is_position
 
         return false unless @connected
         return true if @subscribed_instruments.include?(instrument_id)
@@ -247,7 +242,7 @@ module DhanScalper
           position_subscriptions: @position_subscriptions.size,
           reconnect_attempts: @reconnect_attempts,
           last_heartbeat: @last_heartbeat,
-          heartbeat_timeout: @heartbeat_timeout
+          heartbeat_timeout: @heartbeat_timeout,
         }
       end
 
@@ -274,16 +269,16 @@ module DhanScalper
         when "INDEX"
           # For indices, determine based on the instrument ID
           case instrument_id.to_s
-          when "13" then "IDX_I"  # NIFTY
-          when "25", "23" then "IDX_I"  # BANKNIFTY
-          when "51" then "IDX_I"  # SENSEX
-          else "IDX_I"  # Default to IDX_I for indices
+          when "13" then "IDX_I" # NIFTY
+          when "25", "23" then "IDX_I" # BANKNIFTY
+          when "51" then "IDX_I" # SENSEX
+          else "IDX_I" # Default to IDX_I for indices
           end
         when "OPTION"
           # For options, use CSV master to determine the correct segment
           determine_option_segment(instrument_id)
         else
-          "NSE_EQ"  # Default for equity
+          "NSE_EQ" # Default for equity
         end
       end
 
@@ -303,10 +298,10 @@ module DhanScalper
 
         # Fallback: try to determine based on common patterns
         # BSE options typically have longer IDs and different patterns
-        if instrument_id.to_s.length > 4  # BSE options typically have longer IDs
+        if instrument_id.to_s.length > 4 # BSE options typically have longer IDs
           "BSE_FNO"
         else
-          "NSE_FNO"  # Default to NSE for most options
+          "NSE_FNO" # Default to NSE for most options
         end
       end
 
@@ -361,7 +356,7 @@ module DhanScalper
           day_high: tick_data[:high]&.to_f || 0.0,
           day_low: tick_data[:low]&.to_f || 0.0,
           atp: tick_data[:ltp]&.to_f || 0.0,
-          vol: tick_data[:volume]&.to_i || 0
+          vol: tick_data[:volume]&.to_i || 0,
         }
 
         # Store in TickCache
@@ -379,7 +374,7 @@ module DhanScalper
           volume: tick_data[:volume]&.to_i || 0,
           timestamp: timestamp,
           segment: segment,
-          exchange: "NSE"
+          exchange: "NSE",
         }
 
         @message_handlers[:price_update]&.call(price_data)
@@ -420,7 +415,7 @@ module DhanScalper
 
       def calculate_reconnect_delay
         # Exponential backoff with jitter
-        base_delay = @base_reconnect_delay * (2 ** (@reconnect_attempts - 1))
+        base_delay = @base_reconnect_delay * (2**(@reconnect_attempts - 1))
         jitter = SecureRandom.random_number(base_delay * 0.1) # 10% jitter
         delay = [base_delay + jitter, @max_reconnect_delay].min
         delay.to_i
@@ -472,10 +467,10 @@ module DhanScalper
         @baseline_subscriptions.each do |instrument_id|
           segment = @instrument_segments[instrument_id] || "IDX_I"
           instrument_type = case segment
-                           when "IDX_I" then "INDEX"
-                           when "NSE_FNO" then "OPTION"
-                           else "EQUITY"
-                           end
+                            when "IDX_I" then "INDEX"
+                            when "NSE_FNO" then "OPTION"
+                            else "EQUITY"
+                            end
 
           subscribe_to_instrument(instrument_id, instrument_type, is_baseline: true)
         end
@@ -484,21 +479,19 @@ module DhanScalper
         @position_subscriptions.each do |instrument_id|
           segment = @instrument_segments[instrument_id] || "NSE_FNO"
           instrument_type = case segment
-                           when "IDX_I" then "INDEX"
-                           when "NSE_FNO" then "OPTION"
-                           else "EQUITY"
-                           end
+                            when "IDX_I" then "INDEX"
+                            when "NSE_FNO" then "OPTION"
+                            else "EQUITY"
+                            end
 
           subscribe_to_instrument(instrument_id, instrument_type, is_position: true)
         end
 
         # Call resubscription callbacks
         @resubscription_callbacks.each do |callback|
-          begin
-            callback.call
-          rescue StandardError => e
-            @logger.error "[ResilientWebSocket] Resubscription callback error: #{e.message}"
-          end
+          callback.call
+        rescue StandardError => e
+          @logger.error "[ResilientWebSocket] Resubscription callback error: #{e.message}"
         end
 
         @logger.info "[ResilientWebSocket] Resubscription complete. Total: #{@subscribed_instruments.size} instruments"

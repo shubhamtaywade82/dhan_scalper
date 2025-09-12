@@ -55,7 +55,7 @@ module DhanScalper
           side: data[:side],
           quantity: data[:quantity],
           price: data[:price],
-          order_type: data[:order_type]
+          order_type: data[:order_type],
         )
         res.merge(mode: :paper)
       end
@@ -69,7 +69,7 @@ module DhanScalper
           side: data[:side],
           quantity: data[:quantity],
           price: data[:price],
-          order_type: data[:order_type]
+          order_type: data[:order_type],
         )
         res.merge(mode: :live)
       end

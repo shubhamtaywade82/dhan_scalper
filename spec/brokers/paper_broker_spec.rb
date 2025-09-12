@@ -74,7 +74,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
 
     context "when insufficient balance is available" do
       before do
-        allow(mock_balance_provider).to receive(:available_balance).and_return(1000.0)
+        allow(mock_balance_provider).to receive(:available_balance).and_return(1_000.0)
       end
 
       it "returns failure status" do
@@ -329,11 +329,11 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
 
       # Buy order
       paper_broker.buy("NIFTY", 100, 50.0)
-      expect(mock_balance_provider).to have_received(:update_balance).with(5000.0, type: :debit)
+      expect(mock_balance_provider).to have_received(:update_balance).with(5_000.0, type: :debit)
 
       # Sell order
       paper_broker.sell("NIFTY", 100, 55.0)
-      expect(mock_balance_provider).to have_received(:update_balance).with(5500.0, type: :credit)
+      expect(mock_balance_provider).to have_received(:update_balance).with(5_500.0, type: :credit)
     end
   end
 end

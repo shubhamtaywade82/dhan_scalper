@@ -39,7 +39,7 @@ module DhanScalper
         size_info = @sizing_calculator.calculate(
           symbol: symbol,
           premium: strike_info[:premium],
-          side: signal == :long ? "BUY" : "SELL"
+          side: signal == :long ? "BUY" : "SELL",
         )
         return :insufficient_size unless size_info[:quantity].to_i >= 1
 
@@ -112,7 +112,7 @@ module DhanScalper
           strike: selected_strike,
           premium: premium,
           option_type: signal == :long ? "CE" : "PE",
-          security_id: get_security_id(symbol, selected_strike, signal == :long ? "CE" : "PE")
+          security_id: get_security_id(symbol, selected_strike, signal == :long ? "CE" : "PE"),
         }
       end
 
@@ -200,7 +200,7 @@ module DhanScalper
           price: strike_info[:premium],
           order_type: "MARKET",
           option_type: strike_info[:option_type],
-          strike: strike_info[:strike]
+          strike: strike_info[:strike],
         }
 
         result = @order_manager.place_order(order_data)

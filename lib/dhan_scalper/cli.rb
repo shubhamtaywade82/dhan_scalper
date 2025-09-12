@@ -47,7 +47,7 @@ module DhanScalper
     desc "start", "Start the scalper (Ctrl+C to stop)"
     option :config, type: :string, aliases: "-c", desc: "Path to scalper.yml"
     option :mode, aliases: "-m", desc: "Trading mode (live/paper)", default: "paper"
-    option :quiet, type: :boolean, aliases: "-q", desc: "Run in quiet mode (no TTY dashboard)", default: false
+    option :quiet, type: :boolean, aliases: "-q", desc: "Run in quiet mode (minimal output)", default: false
     option :enhanced, type: :boolean, aliases: "-e", desc: "Use enhanced indicators (Holy Grail, Supertrend)",
                       default: true
     def start(*_argv)
@@ -68,7 +68,7 @@ module DhanScalper
 
     desc "dryrun", "Run signals only, no orders"
     option :config, type: :string, aliases: "-c"
-    option :quiet, type: :boolean, aliases: "-q", desc: "Run in quiet mode (no TTY dashboard)", default: false
+    option :quiet, type: :boolean, aliases: "-q", desc: "Run in quiet mode (minimal output)", default: false
     option :enhanced, type: :boolean, aliases: "-e", desc: "Use enhanced indicators (Holy Grail, Supertrend)",
                       default: true
     option :once, type: :boolean, aliases: "-o", desc: "Run analysis once and exit (no continuous loop)", default: false
@@ -84,7 +84,7 @@ module DhanScalper
 
     desc "paper", "Start paper trading with WebSocket position tracking"
     option :config, type: :string, aliases: "-c"
-    option :quiet, type: :boolean, aliases: "-q", desc: "Run in quiet mode (no TTY dashboard)", default: false
+    option :quiet, type: :boolean, aliases: "-q", desc: "Run in quiet mode (minimal output)", default: false
     option :enhanced, type: :boolean, aliases: "-e", desc: "Use enhanced indicators (Holy Grail, Supertrend)",
                       default: true
     option :timeout, type: :numeric, aliases: "-t", desc: "Auto-exit after specified minutes (default: no timeout)"
@@ -264,7 +264,7 @@ module DhanScalper
 
       instruments = parse_instruments(options[:instruments])
 
-      # Simple live data display without TTY
+      # Simple live data display
       require_relative "services/market_feed"
 
       market_feed = DhanScalper::Services::MarketFeed.new(mode: :quote)

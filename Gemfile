@@ -23,7 +23,6 @@ gem "DhanHQ", git: "https://github.com/shubhamtaywade82/dhanhq-client.git", bran
 
 gem "concurrent-ruby"
 gem "dotenv"
-gem "pastel"
 gem "simplecov", require: false, group: :test
 gem "thor" # CLI
 gem "webmock", group: :test

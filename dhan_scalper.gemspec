@@ -14,7 +14,7 @@ Gem::Specification.new do |spec|
     options scalping. It integrates with the DhanHQ v2 API via the dhanhq-client gem,
     supports live and paper trading modes, includes Candle and CandleSeries models
     for OHLCV data, indicator calculations, allocation-based position sizing,
-    and a TTY interactive dashboard for monitoring open/closed positions.
+    and comprehensive position monitoring and reporting.
   DESC
   spec.homepage = "https://github.com/shubhamtaywade82/dhan_scalper"
   spec.license = "MIT"
@@ -45,7 +45,6 @@ Gem::Specification.new do |spec|
   spec.add_dependency "concurrent-ruby"
   spec.add_dependency "csv"
   spec.add_dependency "dotenv"
-  spec.add_dependency "pastel"
   spec.add_dependency "ruby-technical-analysis"    # johnnypaper
   spec.add_dependency "technical-analysis"         # intrinio
   spec.add_dependency "thor"

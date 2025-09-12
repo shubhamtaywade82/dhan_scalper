@@ -161,7 +161,7 @@ module DhanScalper
         @balance_provider
       end
 
-      # Place order with idempotency support
+      # Place order with idempotency support - returns Dhan-compatible format
       def place_order!(symbol:, instrument_id:, side:, quantity:, price:, order_type: "MARKET", idempotency_key: nil, redis_store: nil)
         # Check for existing order if idempotency key is provided
         if idempotency_key && redis_store
@@ -172,13 +172,15 @@ module DhanScalper
             # Get the existing order from virtual data manager
             existing_order = @virtual_data_manager&.get_order_by_id(existing_order_id)
             if existing_order
-              return {
-                success: true,
+              return create_dhan_compatible_response(
                 order_id: existing_order_id,
-                order: existing_order,
+                side: side,
+                quantity: quantity,
+                price: price,
                 position: get_position_for_order(existing_order),
-                idempotent: true
-              }
+                idempotent: true,
+                existing_order: get_order_object(existing_order)
+              )
             else
               @logger.warn("[PAPER] Idempotency key found but order not found: #{idempotency_key} -> #{existing_order_id}")
             end
@@ -201,10 +203,101 @@ module DhanScalper
           @logger.info("[PAPER] Stored idempotency key: #{idempotency_key} -> #{result[:order_id]}")
         end
 
-        result
+        # Convert to Dhan-compatible format
+        if result[:success]
+          create_dhan_compatible_response(
+            order_id: result[:order_id],
+            side: side,
+            quantity: quantity,
+            price: price,
+            position: result[:position]
+          )
+        else
+          create_dhan_error_response(result[:error])
+        end
       end
 
       private
+
+      # Create Dhan-compatible order response
+      def create_dhan_compatible_response(order_id:, side:, quantity:, price:, position: nil, idempotent: false, existing_order: nil)
+        {
+          order_id: order_id,
+          order_status: "FILLED",
+          average_traded_price: price.to_f,
+          filled_qty: quantity.to_i,
+          remaining_quantity: 0,
+          transaction_type: side.upcase,
+          exchange_segment: "NSE_FO", # Default to options segment
+          product_type: "MARGIN",
+          order_type: "MARKET",
+          validity: "DAY",
+          security_id: position&.dig(:security_id) || "UNKNOWN",
+          symbol: position&.dig(:symbol) || "UNKNOWN",
+          buy_avg: position&.dig(:buy_avg)&.to_f || 0.0,
+          buy_qty: position&.dig(:buy_qty)&.to_i || 0,
+          sell_avg: position&.dig(:sell_avg)&.to_f || 0.0,
+          sell_qty: position&.dig(:sell_qty)&.to_i || 0,
+          net_qty: position&.dig(:net_qty)&.to_i || quantity.to_i,
+          realized_profit: position&.dig(:realized_pnl)&.to_f || 0.0,
+          unrealized_profit: position&.dig(:unrealized_pnl)&.to_f || 0.0,
+          multiplier: position&.dig(:multiplier)&.to_i || 1,
+          lot_size: position&.dig(:lot_size)&.to_i || 75,
+          option_type: position&.dig(:option_type) || nil,
+          strike_price: position&.dig(:strike_price)&.to_f || nil,
+          expiry_date: position&.dig(:expiry_date) || nil,
+          underlying_symbol: position&.dig(:underlying_symbol) || nil,
+          timestamp: Time.now.iso8601,
+          idempotent: idempotent ? true : nil,
+          # Backward compatibility fields
+          success: true,
+          order: existing_order || {
+            id: order_id,
+            security_id: position&.dig(:security_id) || "UNKNOWN",
+            side: side.upcase,
+            quantity: quantity.to_i,
+            price: price.to_f,
+            timestamp: Time.now
+          }
+        }
+      end
+
+      # Create Dhan-compatible error response
+      def create_dhan_error_response(error_message)
+        {
+          order_id: nil,
+          order_status: "REJECTED",
+          average_traded_price: 0.0,
+          filled_qty: 0,
+          remaining_quantity: 0,
+          transaction_type: nil,
+          exchange_segment: "NSE_FO",
+          product_type: "MARGIN",
+          order_type: "MARKET",
+          validity: "DAY",
+          security_id: nil,
+          symbol: nil,
+          buy_avg: 0.0,
+          buy_qty: 0,
+          sell_avg: 0.0,
+          sell_qty: 0,
+          net_qty: 0,
+          realized_profit: 0.0,
+          unrealized_profit: 0.0,
+          multiplier: 1,
+          lot_size: 75,
+          option_type: nil,
+          strike_price: nil,
+          expiry_date: nil,
+          underlying_symbol: nil,
+          timestamp: Time.now.iso8601,
+          error: error_message,
+          rejection_reason: error_message,
+          # Backward compatibility fields
+          success: false,
+          order: nil
+        }
+      end
 
       # Get position for an existing order
       def get_position_for_order(order)
@@ -218,6 +311,26 @@ module DhanScalper
         )
 
         position
+      end
+
+      # Get order object for an existing order
+      def get_order_object(order)
+        return nil unless order
+
+        # Return the order object as-is if it's already in the expected format
+        if order.is_a?(Hash) && order[:id]
+          order
+        else
+          # Convert to expected format if needed
+          {
+            id: order[:id] || order["id"],
+            security_id: order[:security_id] || order["security_id"],
+            side: order[:side] || order["side"],
+            quantity: order[:quantity] || order["quantity"],
+            price: order[:avg_price] || order[:price] || order["avg_price"] || order["price"],
+            timestamp: order[:timestamp] || order["timestamp"]
+          }
+        end
       end
     end
   end

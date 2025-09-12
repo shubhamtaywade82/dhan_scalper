@@ -54,6 +54,7 @@ module DhanScalper
 
         # Update realized PnL
         @realized_pnl = DhanScalper::Support::Money.add(@realized_pnl, realized_pnl)
+        position[:realized_pnl] = DhanScalper::Support::Money.add(position[:realized_pnl], realized_pnl)
 
         # Update position quantities
         position[:net_qty] = DhanScalper::Support::Money.subtract(position[:net_qty], sellable_quantity)
@@ -195,6 +196,14 @@ module DhanScalper
           day_sell_qty: DhanScalper::Support::Money.bd(0),
           current_price: price_bd,
           unrealized_pnl: DhanScalper::Support::Money.bd(0),
+          realized_pnl: DhanScalper::Support::Money.bd(0),
+          multiplier: 1,
+          lot_size: 75,
+          option_type: nil,
+          strike_price: nil,
+          expiry_date: nil,
+          underlying_symbol: nil,
+          symbol: nil,
           created_at: Time.now,
           last_updated: Time.now
         }

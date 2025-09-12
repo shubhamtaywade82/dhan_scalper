@@ -314,7 +314,7 @@ module DhanScalper
           idempotency_key: idempotency_key
         )
 
-        if order_result && order_result[:success]
+        if order_result && order_result[:order_status] == "FILLED"
           # Calculate final PnL including charges
           final_pnl = DhanScalper::Support::Money.subtract(
             calculate_pnl(position, current_price),

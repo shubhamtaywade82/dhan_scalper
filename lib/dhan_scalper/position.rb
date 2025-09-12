@@ -3,10 +3,14 @@
 module DhanScalper
   class Position
     attr_accessor :symbol, :security_id, :side, :entry_price, :quantity, :current_price, :pnl, :option_type, :strike,
-                  :expiry, :timestamp, :exit_price, :exit_reason, :exit_timestamp
+                  :expiry, :timestamp, :exit_price, :exit_reason, :exit_timestamp, :buy_avg, :buy_qty, :sell_avg, :sell_qty,
+                  :net_qty, :realized_profit, :unrealized_profit, :multiplier, :lot_size, :strike_price, :expiry_date,
+                  :underlying_symbol
 
     def initialize(security_id:, side:, entry_price:, quantity:, symbol: nil, current_price: nil, pnl: 0.0,
-                   option_type: nil, strike: nil, expiry: nil, timestamp: nil)
+                   option_type: nil, strike: nil, expiry: nil, timestamp: nil, buy_avg: nil, buy_qty: nil,
+                   sell_avg: 0.0, sell_qty: 0, net_qty: nil, realized_profit: 0.0, unrealized_profit: 0.0,
+                   multiplier: 1, lot_size: 75, strike_price: nil, expiry_date: nil, underlying_symbol: nil)
       @symbol = symbol
       @security_id = security_id
       @side = side
@@ -21,6 +25,20 @@ module DhanScalper
       @exit_price = nil
       @exit_reason = nil
       @exit_timestamp = nil
+
+      # Dhan-compatible fields
+      @buy_avg = buy_avg || entry_price
+      @buy_qty = buy_qty || quantity
+      @sell_avg = sell_avg
+      @sell_qty = sell_qty
+      @net_qty = net_qty || quantity
+      @realized_profit = realized_profit
+      @unrealized_profit = unrealized_profit
+      @multiplier = multiplier
+      @lot_size = lot_size
+      @strike_price = strike_price || strike
+      @expiry_date = expiry_date || expiry
+      @underlying_symbol = underlying_symbol
     end
 
     def update_price(new_price)
@@ -37,6 +55,7 @@ module DhanScalper
              else
                0.0
              end
+      @unrealized_profit = @pnl
       @pnl
     end
 
@@ -78,7 +97,20 @@ module DhanScalper
         exit_price: @exit_price,
         exit_reason: @exit_reason,
         exit_timestamp: @exit_timestamp,
-        closed: closed?
+        closed: closed?,
+        # Dhan-compatible fields
+        buy_avg: @buy_avg,
+        buy_qty: @buy_qty,
+        sell_avg: @sell_avg,
+        sell_qty: @sell_qty,
+        net_qty: @net_qty,
+        realized_profit: @realized_profit,
+        unrealized_profit: @unrealized_profit,
+        multiplier: @multiplier,
+        lot_size: @lot_size,
+        strike_price: @strike_price,
+        expiry_date: @expiry_date,
+        underlying_symbol: @underlying_symbol
       }
     end
 

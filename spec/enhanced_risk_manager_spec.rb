@@ -32,7 +32,7 @@ RSpec.describe DhanScalper::EnhancedRiskManager do
     allow(DhanScalper::TickCache).to receive(:ltp).and_return(100.0)
 
     # Mock broker responses
-    allow(broker).to receive(:place_order!).and_return({ success: true, order_id: "test_order_123" })
+    allow(broker).to receive(:place_order!).and_return({ order_status: "FILLED", order_id: "test_order_123" })
 
     # Reset position tracker and balance provider for each test
     # Skip this for the daily loss cap test as it uses fresh instances
@@ -141,7 +141,7 @@ RSpec.describe DhanScalper::EnhancedRiskManager do
     it "closes all positions when daily loss cap is exceeded" do
       # Create fresh broker mock for this test
       broker_mock = double("Broker")
-      allow(broker_mock).to receive(:place_order!).and_return({ success: true, order_id: "test_order_123" })
+      allow(broker_mock).to receive(:place_order!).and_return({ order_status: "FILLED", order_id: "test_order_123" })
 
       # Create fresh balance provider, position tracker and risk manager
       fresh_balance_provider = DhanScalper::BalanceProviders::PaperWallet.new(starting_balance: 100_000)
@@ -234,7 +234,7 @@ RSpec.describe DhanScalper::EnhancedRiskManager do
     it "enters cooldown after a loss" do
       # Create a fresh broker mock for this test
       broker_mock = double("Broker")
-      allow(broker_mock).to receive(:place_order!).and_return({ success: true, order_id: "test_order_123" })
+      allow(broker_mock).to receive(:place_order!).and_return({ order_status: "FILLED", order_id: "test_order_123" })
 
       # Create fresh position tracker and risk manager
       fresh_position_tracker = DhanScalper::Services::EnhancedPositionTracker.new
@@ -271,7 +271,7 @@ RSpec.describe DhanScalper::EnhancedRiskManager do
     it "exits cooldown after cooldown period" do
       # Create a fresh broker mock for this test
       broker_mock = double("Broker")
-      allow(broker_mock).to receive(:place_order!).and_return({ success: true, order_id: "test_order_123" })
+      allow(broker_mock).to receive(:place_order!).and_return({ order_status: "FILLED", order_id: "test_order_123" })
 
       # Create fresh position tracker and risk manager
       fresh_position_tracker = DhanScalper::Services::EnhancedPositionTracker.new

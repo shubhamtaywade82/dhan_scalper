@@ -36,7 +36,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
           redis_store: redis_store
         )
 
-        expect(result[:success]).to be true
+        expect(result[:order_status]).to eq("FILLED")
         expect(result[:idempotent]).to be_nil
         expect(redis_store).not_to have_received(:get_idempotency_key)
         expect(redis_store).not_to have_received(:store_idempotency_key)
@@ -55,7 +55,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
           redis_store: redis_store
         )
 
-        expect(result[:success]).to be true
+        expect(result[:order_status]).to eq("FILLED")
         expect(result[:idempotent]).to be_nil
         expect(redis_store).to have_received(:get_idempotency_key).with(idempotency_key)
         expect(redis_store).to have_received(:store_idempotency_key).with(idempotency_key, result[:order_id])
@@ -92,7 +92,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
           redis_store: redis_store
         )
 
-        expect(result[:success]).to be true
+        expect(result[:order_status]).to eq("FILLED")
         expect(result[:order_id]).to eq(existing_order_id)
         expect(result[:order]).to eq(existing_order)
         expect(result[:idempotent]).to be true
@@ -159,7 +159,7 @@ RSpec.describe DhanScalper::Brokers::PaperBroker do
           redis_store: redis_store
         )
 
-        expect(result[:success]).to be true
+        expect(result[:order_status]).to eq("FILLED")
         expect(result[:idempotent]).to be_nil
         expect(redis_store).to have_received(:get_idempotency_key).with(idempotency_key)
         expect(redis_store).to have_received(:store_idempotency_key).with(idempotency_key, result[:order_id])

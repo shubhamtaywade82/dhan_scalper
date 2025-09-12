@@ -377,7 +377,7 @@ module DhanScalper
       option_segment = determine_option_segment(symbol, option_sid)
 
       # Get real market price for the option
-      puts DhanScalper::TickCache.all
+      # puts DhanScalper::TickCache.all
       puts "[#{symbol}] Getting market price for #{option_sid} in #{option_segment}"
       option_price = DhanScalper::TickCache.ltp(option_segment, option_sid)&.to_f
 

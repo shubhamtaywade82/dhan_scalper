@@ -14,6 +14,7 @@ module DhanScalper
       end
 
       def buy_market(segment:, security_id:, quantity:, charge_per_order: nil)
+        puts "Buying market: #{segment}, #{security_id}, #{quantity}, #{charge_per_order}"
         price = DhanScalper::TickCache.ltp(segment, security_id)
         unless price&.positive?
           return create_validation_error("INVALID_PRICE", "No valid price available for #{security_id}")

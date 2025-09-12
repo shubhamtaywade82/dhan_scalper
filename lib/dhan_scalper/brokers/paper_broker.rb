@@ -71,7 +71,6 @@ module DhanScalper
         price_bd = DhanScalper::Support::Money.bd(price)
         quantity_bd = DhanScalper::Support::Money.bd(quantity)
         fee_value = charge_per_order.nil? ? DhanScalper::Config.fee : charge_per_order
-        charge_bd = DhanScalper::Support::Money.bd(fee_value)
 
         # Check if we have sufficient position to sell
         position = @position_tracker.get_position(
@@ -109,8 +108,12 @@ module DhanScalper
           weighted_avg_cost_per_unit = position[:buy_avg]
           weighted_avg_cost = DhanScalper::Support::Money.multiply(weighted_avg_cost_per_unit, sold_quantity)
 
-          # Adjust balance: credit net proceeds, release principal from used
-          @balance_provider&.credit_for_sell(net_proceeds: result[:net_proceeds], released_principal: weighted_avg_cost)
+          # Credit only the net proceeds (price × quantity - fee)
+          # Do not reconcile original cost separately to avoid double-crediting
+          @balance_provider&.update_balance(result[:net_proceeds], type: :credit)
+
+          # Release the principal that was tied up in the position
+          @balance_provider&.update_balance(weighted_avg_cost, type: :release_principal)
 
           # Update realized PnL in balance provider (for reporting only)
           @balance_provider&.add_realized_pnl(result[:realized_pnl])

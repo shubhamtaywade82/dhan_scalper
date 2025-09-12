@@ -41,6 +41,8 @@ module DhanScalper
           @used = DhanScalper::Support::Money.add(@used, amount_bd)
         when :credit
           @available = DhanScalper::Support::Money.add(@available, amount_bd)
+        when :release_principal
+          # Release principal from used balance without affecting available balance
           @used = DhanScalper::Support::Money.subtract(@used, amount_bd)
         end
 
@@ -73,9 +75,14 @@ module DhanScalper
 
         puts "  DEBUG: credit_for_sell called - net_proceeds: #{DhanScalper::Support::Money.dec(net_bd)}, released_principal: #{DhanScalper::Support::Money.dec(released_bd)}"
 
+        # Credit the actual cash received from the sale
         @available = DhanScalper::Support::Money.add(@available, net_bd)
+
+        # Release the principal that was tied up in the position
         @used = DhanScalper::Support::Money.subtract(@used, released_bd)
         @used = DhanScalper::Support::Money.max(@used, DhanScalper::Support::Money.bd(0))
+
+        # Total balance is available + used (no double counting)
         @total = DhanScalper::Support::Money.add(@available, @used)
         puts "  DEBUG: credit_for_sell result - available: #{DhanScalper::Support::Money.dec(@available)}, used: #{DhanScalper::Support::Money.dec(@used)}, total: #{DhanScalper::Support::Money.dec(@total)}"
         @total

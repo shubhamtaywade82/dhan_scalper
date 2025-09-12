@@ -2,7 +2,7 @@
 
 require "DhanHQ"
 require "concurrent"
-require_relative "risk_manager"
+require_relative "unified_risk_manager"
 require_relative "ohlc_fetcher"
 require_relative "enhanced_position_tracker"
 require_relative "session_reporter"
@@ -88,8 +88,15 @@ module DhanScalper
                   )
                 end
 
-      # Initialize risk manager
-      @risk_manager = RiskManager.new(@config, @position_tracker, @broker, logger: @logger)
+      # Initialize unified risk manager
+      @risk_manager = UnifiedRiskManager.new(
+        @config,
+        @position_tracker,
+        @broker,
+        balance_provider: @balance_provider,
+        equity_calculator: @equity_calculator,
+        logger: @logger
+      )
 
       # Initialize OHLC fetcher
       @ohlc_fetcher = OHLCFetcher.new(@config, logger: @logger)

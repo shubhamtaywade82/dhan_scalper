@@ -19,6 +19,14 @@ global:
   tp_pct: 0.35 # take profit
   sl_pct: 0.18 # stop loss
   trail_pct: 0.12 # trailing trigger %
+
+  # Enhanced Risk Management
+  time_stop_seconds: 300 # close position after 5 minutes
+  enable_time_stop: true
+  max_daily_loss_rs: 2000.0 # maximum daily loss in ₹
+  enable_daily_loss_cap: true
+  cooldown_after_loss_seconds: 180 # 3 minutes cooldown after loss
+  enable_cooldown: true
   log_level: "INFO"
   use_multi_timeframe: false # true for 1m+3m/5m, false for 1m only
   secondary_timeframe: 5 # 3 or 5 minutes for secondary timeframe

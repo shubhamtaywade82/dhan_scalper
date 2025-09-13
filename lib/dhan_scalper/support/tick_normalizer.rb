@@ -17,7 +17,6 @@ module DhanScalper
           # Debug logging (can be disabled in production)
           puts "Payload: #{payload.inspect}" if ENV["DHAN_LOG_LEVEL"] == "DEBUG"
 
-          puts "h: #{h.inspect}"
           # Check if this is a quote packet - only quote packets get full normalization
           if h[:kind] == :quote
             # Full normalization for quote packets

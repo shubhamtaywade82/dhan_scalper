@@ -3,12 +3,12 @@
 
 begin
   require "bundler/setup"
-rescue StandardError
+rescue LoadError
   nil
 end
 begin
   require "dotenv/load"
-rescue StandardError
+rescue LoadError
   nil
 end
 require "dhan_scalper"

@@ -48,7 +48,8 @@ module DhanScalper
           @scheduled_tasks.each_value do |task|
             task.stop if task.respond_to?(:stop)
           end
-          @scheduled_tasks.clear
+          # Clear tasks outside of mutex to avoid trap context issues
+          @scheduled_tasks = Concurrent::Map.new
 
           # Stop async reactor
           @async_reactor&.join(2)

@@ -277,6 +277,8 @@ GEM
     simplecov_json_formatter (0.1.4)
     stringio (3.1.7)
     technical-analysis (0.2.4)
+    terminal-table (4.0.0)
+      unicode-display_width (>= 1.1.1, < 4)
     thor (1.4.0)
     thread_safe (0.3.6)
     traces (0.18.2)
@@ -320,6 +322,7 @@ DEPENDENCIES
   rubocop-rspec
   rubycritic (>= 4.0, >= 0)
   simplecov
+  terminal-table
   thor
   webmock (>= 3.19, >= 0)
 

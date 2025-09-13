@@ -28,12 +28,37 @@ module DhanScalper
         if REDIS_POOL
           key = namespaced(tick_key(tick[:segment], tick[:security_id]))
           REDIS_POOL.with do |r|
-            r.hset(key, tick.transform_keys(&:to_s))
+            # For :oi ticks, merge with existing data to avoid overwriting price fields
+            if tick[:kind] == :oi
+              existing_data = r.hgetall(key)
+              if existing_data.any?
+                # Convert existing data to symbols and merge with new tick data
+                existing_symbols = existing_data.transform_keys(&:to_sym)
+                # Remove nil values from the new tick to avoid overwriting existing data
+                new_tick_clean = tick.compact
+                merged_data = existing_symbols.merge(new_tick_clean)
+                r.hset(key, merged_data.transform_keys(&:to_s))
+              else
+                # No existing data, store the new tick as-is
+                r.hset(key, tick.transform_keys(&:to_s))
+              end
+            else
+              # For :quote ticks and others, store normally
+              r.hset(key, tick.transform_keys(&:to_s))
+            end
             r.expire(key, 60)
           end
         else
           key = "#{tick[:segment]}:#{tick[:security_id]}"
-          MAP[key] = tick.merge(timestamp: Time.now)
+          # For :oi ticks, merge with existing data to avoid overwriting price fields
+          if tick[:kind] == :oi && MAP[key]
+            existing_data = MAP[key]
+            # Remove nil values from the new tick to avoid overwriting existing data
+            new_tick_clean = tick.compact
+            MAP[key] = existing_data.merge(new_tick_clean).merge(timestamp: Time.now)
+          else
+            MAP[key] = tick.merge(timestamp: Time.now)
+          end
         end
       end
 

@@ -6,6 +6,9 @@ require "logger"
 require "DhanHQ"
 
 require_relative "virtual_data_manager"
+require_relative "services/cli_services"
+require_relative "runners/app_runner"
+require_relative "runners/paper_runner"
 
 module DhanScalper
   class CLI < Thor
@@ -66,8 +69,15 @@ module DhanScalper
         logger_obj = DhanHQ.logger
         logger_obj.level = Logger::INFO if logger_obj.respond_to?(:level=)
       end
-      app = App.new(cfg, mode: mode, quiet: quiet, enhanced: enhanced)
-      app.start if app.respond_to?(:start)
+
+      # Use the appropriate runner based on mode
+      runner = if mode == :paper
+                 Runners::PaperRunner.new(cfg, quiet: quiet, enhanced: enhanced)
+               else
+                 Runners::AppRunner.new(cfg, mode: mode, quiet: quiet, enhanced: enhanced)
+               end
+
+      runner.start
     end
 
     desc "dryrun", "Run signals only, no orders"
@@ -146,157 +156,55 @@ module DhanScalper
       quiet = options[:quiet]
       enhanced = options[:enhanced]
       timeout_minutes = options[:timeout]
+
       DhanHQ.configure_with_env
       DhanHQ.logger.level = (cfg.dig("global", "log_level") || "INFO").upcase == "DEBUG" ? Logger::DEBUG : Logger::INFO
-      PaperApp.new(cfg, quiet: quiet, enhanced: enhanced, timeout_minutes: timeout_minutes).start
+
+      runner = Runners::PaperRunner.new(cfg, quiet: quiet, enhanced: enhanced, timeout_minutes: timeout_minutes)
+      runner.start
     end
 
     desc "orders", "View virtual orders"
     option :limit, aliases: "-l", desc: "Number of orders to show", type: :numeric, default: 10
     option :mode, aliases: "-m", desc: "Trading mode (paper/live)", type: :string, default: "paper"
+    option :format, aliases: "-f", desc: "Output format (table/json)", type: :string, default: "table"
     def orders
       mode = options[:mode]&.downcase || "paper"
+      limit = options[:limit]
+      format = options[:format]
 
-      case mode
-      when "paper"
-        vdm = VirtualDataManager.new
-        orders = vdm.get_orders(limit: options[:limit])
-
-        if orders.empty?
-          puts "No paper orders"
-          return
-        end
-
-        puts "Order ID | Symbol | Action | Quantity | Price | Status | Timestamp"
-        puts "\nPAPER Orders (Last #{orders.length}):"
-        puts "=" * 80
-        orders.each_with_index do |order, index|
-          order_id = order[:order_id] || order[:id]
-          symbol = order[:symbol] || order[:security_id] || order[:sym]
-          action = order[:action] || order[:side]
-          quantity = order[:quantity] || order[:qty]
-          price = order[:price] || order[:avg_price] || order[:ltp]
-          status = order[:status] || order[:state]
-          timestamp = order[:timestamp] || order[:ts]
-          puts "#{index + 1}. #{order_id} | #{symbol} | #{action} | #{quantity} | #{price} | #{status} | #{timestamp}"
-        end
-
-      when "live"
-        begin
-          # For live mode, we would need to implement live order fetching
-          # This would require integration with DhanHQ API
-          puts "Live orders not yet implemented"
-          puts "This would require DhanHQ API integration for order history"
-        rescue StandardError => e
-          puts "Error fetching live orders: #{e.message}"
-        end
-
-      else
-        puts "Invalid mode: #{mode}. Use 'paper' or 'live'"
-        exit 1
-      end
+      service = Services::OrdersService.new(format: format)
+      service.display_orders(mode: mode, limit: limit)
     end
 
     desc "positions", "View virtual positions"
     option :mode, aliases: "-m", desc: "Trading mode (paper/live)", type: :string, default: "paper"
+    option :format, aliases: "-f", desc: "Output format (table/json)", type: :string, default: "table"
     def positions
       mode = options[:mode]&.downcase || "paper"
+      format = options[:format]
 
-      case mode
-      when "paper"
-        vdm = VirtualDataManager.new
-        positions = vdm.get_positions
-
-        if positions.empty?
-          puts "No open paper positions"
-          return
-        end
-
-        puts "Symbol | Quantity | Side | Entry Price | Current Price | PnL"
-        puts "\nPAPER Positions:"
-        puts "=" * 80
-        positions.each_with_index do |pos, index|
-          symbol = pos[:symbol] || pos[:security_id] || pos[:sym]
-          quantity = pos[:quantity] || pos[:qty]
-          side = pos[:side]
-          entry_price = pos[:entry_price] || pos[:entry]
-          current_price = pos[:current_price] || pos[:ltp]
-          pnl_value = pos[:pnl].is_a?(Numeric) ? pos[:pnl].round(2) : pos[:pnl]
-          puts "#{index + 1}. #{symbol} | #{quantity} | #{side} | #{entry_price} | #{current_price} | #{pnl_value}"
-        end
-
-      when "live"
-        begin
-          # For live mode, we would need to implement live position fetching
-          # This would require integration with DhanHQ API
-          puts "Live positions not yet implemented"
-          puts "This would require DhanHQ API integration for position data"
-        rescue StandardError => e
-          puts "Error fetching live positions: #{e.message}"
-        end
-
-      else
-        puts "Invalid mode: #{mode}. Use 'paper' or 'live'"
-        exit 1
-      end
+      service = Services::PositionsService.new(format: format)
+      service.display_positions(mode: mode)
     end
 
     desc "balance", "View virtual balance"
     option :mode, aliases: "-m", desc: "Trading mode (paper/live)", type: :string, default: "paper"
+    option :format, aliases: "-f", desc: "Output format (table/json)", type: :string, default: "table"
     def balance
       mode = options[:mode]&.downcase || "paper"
+      format = options[:format]
 
-      puts "\n#{mode.upcase} Balance:"
-      puts "=" * 40
-
-      case mode
-      when "paper"
-        # Use VirtualDataManager for paper mode
-        vdm = VirtualDataManager.new
-        balance = nil
-        begin
-          balance = vdm.get_balance
-        rescue Exception
-          balance = nil
-        end
-
-        if balance.is_a?(Numeric)
-          puts balance
-        elsif balance
-          available = balance[:available] || balance["available"]
-          used = balance[:used] || balance["used"]
-          total = balance[:total] || balance["total"]
-          puts "Available: ₹#{available.to_f.round(2)}"
-          puts "Used: ₹#{used.to_f.round(2)}"
-          puts "Total: ₹#{total.to_f.round(2)}"
-        else
-          puts "0.0"
-        end
-
-      when "live"
-        # Use LiveBalance for live mode
-        begin
-          balance_provider = BalanceProviders::LiveBalance.new
-          puts "Available: ₹#{balance_provider.available_balance.round(2)}"
-          puts "Used: ₹#{balance_provider.used_balance.round(2)}"
-          puts "Total: ₹#{balance_provider.total_balance.round(2)}"
-        rescue StandardError => e
-          puts "Error fetching live balance: #{e.message}"
-          puts "Make sure you're connected to DhanHQ API"
-        end
-
-      else
-        puts "Invalid mode: #{mode}. Use 'paper' or 'live'"
-        exit 1
-      end
+      service = Services::BalanceService.new(format: format)
+      service.display_balance(mode: mode)
     end
 
     desc "reset-balance", "Reset virtual balance to initial amount"
     option :amount, aliases: "-a", desc: "Initial balance amount", type: :numeric, default: 100_000
     def reset_balance
-      vdm = VirtualDataManager.new
-      vdm.set_initial_balance(options[:amount])
-      puts "Balance reset to ₹#{options[:amount]}"
+      amount = options[:amount]
+      service = Services::BalanceService.new
+      service.reset_balance(amount: amount)
     end
 
     desc "clear-data", "Clear all virtual data (orders, positions, balance)"

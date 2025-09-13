@@ -13,6 +13,10 @@ module DhanScalper
         @connected
       end
 
+      def shutdown?
+        @shutdown
+      end
+
       def initialize(logger: nil)
         @logger = logger || Logger.new($stdout)
         @connected = false
@@ -30,6 +34,7 @@ module DhanScalper
         @baseline_instruments = [] # Array of {id:, type:}
         @active_instruments_provider = nil # -> [[id, type], ...]
         @csv_master = nil # Lazy load CSV master when needed
+        @shutdown = false # Flag to stop monitor thread
       end
 
       def connect
@@ -68,9 +73,10 @@ module DhanScalper
       end
 
       def disconnect
-        return unless @connected
-
         @logger.info "[WebSocket] Disconnecting..."
+
+        # Set shutdown flag to stop monitor thread
+        @shutdown = true
 
         begin
           # Unsubscribe from all instruments
@@ -80,6 +86,13 @@ module DhanScalper
           @connection = nil
           @connected = false
           @subscribed_instruments.clear
+
+          # Stop monitor thread
+          if @monitor_thread&.alive?
+            @monitor_thread.kill
+            @monitor_thread.join(2) # Wait up to 2 seconds for thread to finish
+            @monitor_thread = nil
+          end
 
           @logger.info "[WebSocket] Disconnected"
         rescue StandardError => e
@@ -243,17 +256,21 @@ module DhanScalper
         @monitor_thread = Thread.new do
           Thread.current.abort_on_exception = false
           loop do
+            break if @shutdown
+
             sleep(@heartbeat_interval)
+            break if @shutdown
+
             # If not connected, try reconnect with backoff
             unless @connected
-              attempt_reconnect!
+              attempt_reconnect! unless @shutdown
               next
             end
 
             # Heartbeat: reconnect if ticks stale
             if Time.now - @last_tick_at > @heartbeat_timeout
               @logger.warn "[WebSocket] Heartbeat timeout (#{@heartbeat_timeout}s). Reconnecting..."
-              attempt_reconnect!
+              attempt_reconnect! unless @shutdown
             end
           rescue StandardError => e
             @logger.error "[WebSocket] Monitor error: #{e.message}"
@@ -262,6 +279,8 @@ module DhanScalper
       end
 
       def attempt_reconnect!
+        return if @shutdown
+
         # Disconnect stale connection first
         begin
           @connection&.disconnect! if @connected
@@ -276,6 +295,8 @@ module DhanScalper
         sleep_time = delay + jitter
         @logger.info "[WebSocket] Reconnecting (attempt #{@reconnect_attempts + 1}) in #{sleep_time.round(2)}s"
         sleep(sleep_time)
+
+        return if @shutdown
 
         begin
           connect

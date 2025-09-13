@@ -86,6 +86,55 @@ module DhanScalper
       DryrunApp.new(cfg, quiet: quiet, enhanced: enhanced, once: once).start
     end
 
+    desc "event-driven", "Start event-driven trading with atomic state management"
+    option :config, type: :string, aliases: "-c"
+    option :quiet, type: :boolean, aliases: "-q", desc: "Run in quiet mode (minimal output)", default: false
+    option :enhanced, type: :boolean, aliases: "-e", desc: "Use enhanced indicators (Holy Grail, Supertrend)",
+                      default: true
+    option :timeout, type: :numeric, aliases: "-t", desc: "Auto-exit after specified minutes (default: no timeout)"
+    def event_driven
+      cfg = Config.load(path: options[:config])
+      quiet = options[:quiet]
+      enhanced = options[:enhanced]
+      timeout_minutes = options[:timeout]
+
+      # Initialize logger
+      DhanScalper::Support::Logger.setup(level: quiet ? :warn : :info)
+
+      DhanHQ.configure_with_env
+      DhanHQ.logger.level = Logger::INFO
+
+      app = EventDrivenApp.new(cfg, quiet: quiet, enhanced: enhanced)
+
+      if timeout_minutes
+        # Schedule auto-exit
+        Thread.new do
+          sleep(timeout_minutes * 60)
+          puts "\n[EVENT-DRIVEN] Auto-exiting after #{timeout_minutes} minutes"
+          app.stop
+        end
+      end
+
+      # Handle graceful shutdown
+      trap("INT") do
+        puts "\n[EVENT-DRIVEN] Shutting down gracefully..."
+        app.stop
+        exit(0)
+      end
+
+      app.start
+
+      # Keep main thread alive
+      begin
+        while app.running?
+          sleep(1)
+        end
+      rescue Interrupt
+        puts "\n[EVENT-DRIVEN] Interrupted, shutting down..."
+        app.stop
+      end
+    end
+
     desc "paper", "Start paper trading with WebSocket position tracking"
     option :config, type: :string, aliases: "-c"
     option :quiet, type: :boolean, aliases: "-q", desc: "Run in quiet mode (minimal output)", default: false

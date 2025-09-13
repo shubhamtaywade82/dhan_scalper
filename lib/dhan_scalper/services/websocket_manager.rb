@@ -23,7 +23,7 @@ module DhanScalper
         @base_reconnect_delay = 1 # seconds
         @max_reconnect_delay = 30 # seconds
         @heartbeat_interval = 5 # seconds between checks
-        @heartbeat_timeout = 10 # seconds without ticks => reconnect
+        @heartbeat_timeout = 30 # seconds without ticks => reconnect
         @monitor_thread = nil
         @last_tick_at = Time.at(0)
         @last_ts_per_instrument = {}

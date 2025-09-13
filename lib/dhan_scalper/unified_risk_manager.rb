@@ -166,7 +166,7 @@ module DhanScalper
     end
 
     def check_all_positions
-      positions = @position_tracker.get_all_positions
+      positions = @position_tracker.get_positions
       return if positions.empty?
 
       positions.each do |position|
@@ -400,7 +400,7 @@ module DhanScalper
     end
 
     def close_all_positions(reason)
-      positions = @position_tracker.get_all_positions
+      positions = @position_tracker.get_positions
       positions.each do |position|
         next unless position[:net_qty] && DhanScalper::Support::Money.positive?(position[:net_qty])
 

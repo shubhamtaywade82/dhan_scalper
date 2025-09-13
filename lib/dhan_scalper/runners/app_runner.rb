@@ -11,12 +11,11 @@ module DhanScalper
     # Live trading runner
     class AppRunner < BaseRunner
       def initialize(config, mode: :live, quiet: false, enhanced: true)
-        super(config, mode: mode, quiet: quiet, enhanced: enhanced)
+        super
 
         # Initialize core infrastructure
         @namespace = config.dig("global", "redis_namespace") || "dhan_scalper:v1"
         @redis_store = nil
-        @paper_reporter = nil
         @csv_master = nil
         @market_feed = nil
         @filtered_instruments = {}
@@ -68,19 +67,12 @@ module DhanScalper
         if ENV["TICK_CACHE_BACKEND"] == "redis"
           @redis_store = Stores::RedisStore.new(
             namespace: @namespace,
-            logger: Logger.new($stdout)
+            logger: Logger.new($stdout),
           )
           @redis_store.connect
           @redis_store.store_config(@config)
           puts "[APP] Redis store initialized"
         end
-
-        # Initialize paper reporter
-        @paper_reporter = Stores::PaperReporter.new(
-          data_dir: "data",
-          logger: Logger.new($stdout)
-        )
-        puts "[APP] Paper reporter initialized"
 
         # Initialize CSV master and filter instruments
         @csv_master = CsvMaster.new
@@ -107,7 +99,7 @@ module DhanScalper
               atp: t[:atp]&.to_f,
               vol: t[:vol]&.to_i,
               segment: t[:segment],
-              security_id: t[:security_id]
+              security_id: t[:security_id],
             }
             @redis_store.store_tick(t[:segment], t[:security_id], tick_data)
           end
@@ -153,7 +145,7 @@ module DhanScalper
             gl: self,
             state: @state,
             quantity_sizer: @quantity_sizer,
-            enhanced: @enhanced
+            enhanced: @enhanced,
           )
           tr.subscribe_options(@ce_map[sym], @pe_map[sym])
           puts "[#{sym}] Expiry=#{pick[:expiry]} strikes=#{pick[:strikes].join(", ")}"
@@ -161,7 +153,7 @@ module DhanScalper
         end
       end
 
-      def run_main_loop(ws)
+      def run_main_loop(_ws)
         last_decision = Time.at(0)
         last_status_update = Time.at(0)
         decision_interval = get_decision_interval
@@ -201,7 +193,6 @@ module DhanScalper
 
             # Check risk limits
             break if check_risk_limits
-
           rescue StandardError => e
             log_error(e)
           ensure
@@ -222,7 +213,7 @@ module DhanScalper
               seg_idx: s["seg_idx"],
               sid_idx: s["idx_sid"],
               use_multi_timeframe: use_multi_timeframe,
-              secondary_timeframe: secondary_timeframe
+              secondary_timeframe: secondary_timeframe,
             ).decide
           else
             dir = DhanScalper::Trend.new(seg_idx: s["seg_idx"], sid_idx: s["idx_sid"]).decide
@@ -234,6 +225,7 @@ module DhanScalper
       def manage_open_positions(tp_pct, sl_pct, tr_pct, charge)
         @traders.each_value do |t|
           next unless t # Skip nil traders
+
           t.manage_open(tp_pct: tp_pct, sl_pct: sl_pct, trail_pct: tr_pct, charge_per_order: charge)
         end
       end
@@ -244,7 +236,7 @@ module DhanScalper
           -> { DhanHQ::WS::Client.new(mode: :quote).start },
           -> { DhanHQ::WebSocket::Client.new(mode: :quote).start },
           -> { DhanHQ::WebSocket.new(mode: :quote).start },
-          -> { DhanHQ::WS.new(mode: :quote).start }
+          -> { DhanHQ::WS.new(mode: :quote).start },
         ]
 
         methods_to_try.each do |method|
@@ -265,7 +257,7 @@ module DhanScalper
           -> { DhanHQ::WS.disconnect_all_local! },
           -> { DhanHQ::WebSocket.disconnect_all_local! },
           -> { DhanHQ::WS.disconnect_all! },
-          -> { DhanHQ::WebSocket.disconnect_all! }
+          -> { DhanHQ::WebSocket.disconnect_all! },
         ]
 
         methods_to_try.each do |method|
@@ -289,7 +281,7 @@ module DhanScalper
           seg: s["seg_idx"],
           sid: s["idx_sid"],
           interval: "1",
-          symbol: "INDEX"
+          symbol: "INDEX",
         ).closes.last.to_f
       end
 
@@ -335,7 +327,7 @@ module DhanScalper
               option_type: instrument[:option_type],
               expiry_date: instrument[:expiry_date],
               lot_size: instrument[:lot_size],
-              exchange_segment: instrument[:exchange_segment]
+              exchange_segment: instrument[:exchange_segment],
             }
           end
         end
@@ -353,7 +345,7 @@ module DhanScalper
               idx_sid: symbol_config["idx_sid"] || "",
               seg_opt: symbol_config["seg_opt"] || "",
               lot_size: symbol_config["lot_size"] || "",
-              strike_step: symbol_config["strike_step"] || ""
+              strike_step: symbol_config["strike_step"] || "",
             }
             @redis_store.store_symbol_metadata(symbol, metadata)
           end

@@ -17,8 +17,8 @@ gem "rubocop-performance"
 
 gem "rubocop-rspec"
 
-gem "rubycritic", require: false, group: :development
 gem "async", "~> 2.0"
+gem "rubycritic", require: false, group: :development
 
 gem "DhanHQ", git: "https://github.com/shubhamtaywade82/dhanhq-client.git", branch: "main"
 

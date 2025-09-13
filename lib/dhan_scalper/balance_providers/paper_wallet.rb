@@ -31,7 +31,7 @@ module DhanScalper
           "used: #{DhanScalper::Support::Money.dec(@used)}, " \
           "realized_pnl: #{DhanScalper::Support::Money.dec(@realized_pnl)}, " \
           "result: #{DhanScalper::Support::Money.dec(result)}",
-          component: "PaperWallet"
+          component: "PaperWallet",
         )
         result
       end
@@ -48,7 +48,7 @@ module DhanScalper
           "Updating balance - amount: #{DhanScalper::Support::Money.dec(amount_bd)}, " \
           "type: #{type}, available before: #{DhanScalper::Support::Money.dec(@available)}, " \
           "used before: #{DhanScalper::Support::Money.dec(@used)}",
-          component: "PaperWallet"
+          component: "PaperWallet",
         )
 
         case type
@@ -72,7 +72,7 @@ module DhanScalper
           "Balance updated - available after: #{DhanScalper::Support::Money.dec(@available)}, " \
           "used after: #{DhanScalper::Support::Money.dec(@used)}, " \
           "total: #{DhanScalper::Support::Money.dec(@total)}",
-          component: "PaperWallet"
+          component: "PaperWallet",
         )
         @total
       end
@@ -88,7 +88,7 @@ module DhanScalper
         DhanScalper::Support::Logger.debug(
           "Debiting for buy - principal: #{DhanScalper::Support::Money.dec(principal_bd)}, " \
           "fee: #{DhanScalper::Support::Money.dec(fee_bd)}",
-          component: "PaperWallet"
+          component: "PaperWallet",
         )
 
         total_cost = DhanScalper::Support::Money.add(principal_bd, fee_bd)
@@ -102,7 +102,7 @@ module DhanScalper
           "Buy debit completed - available: #{DhanScalper::Support::Money.dec(@available)}, " \
           "used: #{DhanScalper::Support::Money.dec(@used)}, " \
           "total: #{DhanScalper::Support::Money.dec(@total)}",
-          component: "PaperWallet"
+          component: "PaperWallet",
         )
         @total
       end
@@ -115,7 +115,7 @@ module DhanScalper
         DhanScalper::Support::Logger.debug(
           "Crediting for sell - net_proceeds: #{DhanScalper::Support::Money.dec(net_bd)}, " \
           "released_principal: #{DhanScalper::Support::Money.dec(released_bd)}",
-          component: "PaperWallet"
+          component: "PaperWallet",
         )
 
         # Credit the actual cash received from the sale
@@ -132,7 +132,7 @@ module DhanScalper
           "Sell credit completed - available: #{DhanScalper::Support::Money.dec(@available)}, " \
           "used: #{DhanScalper::Support::Money.dec(@used)}, " \
           "total: #{DhanScalper::Support::Money.dec(@total)}",
-          component: "PaperWallet"
+          component: "PaperWallet",
         )
         @total
       end
@@ -164,7 +164,7 @@ module DhanScalper
         DhanScalper::Support::Logger.debug(
           "Added realized PnL: #{DhanScalper::Support::Money.dec(pnl)}, " \
           "realized_pnl now: #{DhanScalper::Support::Money.dec(@realized_pnl)}",
-          component: "PaperWallet"
+          component: "PaperWallet",
         )
         @total
       end
@@ -183,7 +183,7 @@ module DhanScalper
         DhanScalper::Support::Logger.debug(
           "Added to used balance - amount: #{DhanScalper::Support::Money.dec(amount_bd)}, " \
           "used after: #{DhanScalper::Support::Money.dec(@used)}",
-          component: "PaperWallet"
+          component: "PaperWallet",
         )
         @total
       end

@@ -14,8 +14,8 @@ RSpec.describe DhanScalper::CLI do
 
   before do
     # Mock the App class to avoid actual execution
-    stub_const("DhanScalper::App", double)
-    allow(DhanScalper::App).to receive(:new).and_return(double)
+    stub_const("DhanScalper::PaperApp", double)
+    allow(DhanScalper::PaperApp).to receive(:new).and_return(double)
 
     # Mock VirtualDataManager
     stub_const("DhanScalper::VirtualDataManager", double)
@@ -31,7 +31,7 @@ RSpec.describe DhanScalper::CLI do
   describe "#start" do
     it "calls start method on App instance" do
       mock_app = double("App")
-      allow(DhanScalper::App).to receive(:new).and_return(mock_app)
+      allow(DhanScalper::PaperApp).to receive(:new).and_return(mock_app)
       allow(mock_app).to receive(:start)
 
       cli.start
@@ -41,7 +41,7 @@ RSpec.describe DhanScalper::CLI do
 
     it "passes command line arguments to App" do
       mock_app = double("App")
-      allow(DhanScalper::App).to receive(:new).and_return(mock_app)
+      allow(DhanScalper::PaperApp).to receive(:new).and_return(mock_app)
       allow(mock_app).to receive(:start)
 
       cli.start("--mode", "paper")

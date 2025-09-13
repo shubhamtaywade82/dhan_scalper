@@ -32,8 +32,6 @@ module DhanScalper
         max_day_loss: cfg.dig("global", "max_day_loss").to_f,
       )
 
-      @virtual_data_manager = VirtualDataManager.new(memory_only: true)
-
       # Initialize balance provider
       starting_balance = cfg.dig("paper", "starting_balance") || 200_000.0
       @balance_provider = BalanceProviders::PaperWallet.new(starting_balance: starting_balance)

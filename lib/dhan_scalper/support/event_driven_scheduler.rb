@@ -19,6 +19,7 @@ module DhanScalper
 
         @mutex.synchronize do
           return if @running
+
           @running = true
 
           Logger.info("Starting event-driven scheduler", component: "EventScheduler")
@@ -33,43 +34,44 @@ module DhanScalper
         end
       end
 
-    def stop
-      return unless @running
+      def stop
+        return unless @running
 
-      # Use non-blocking approach for signal safety
-      if @mutex.try_lock
-        begin
-          return unless @running
-          @running = false
+        # Use non-blocking approach for signal safety
+        if @mutex.try_lock
+          begin
+            return unless @running
 
-          Logger.info("Stopping event-driven scheduler", component: "EventScheduler")
+            @running = false
 
-          # Cancel all scheduled tasks
-          @scheduled_tasks.each_value do |task|
-            task.stop if task.respond_to?(:stop)
+            Logger.info("Stopping event-driven scheduler", component: "EventScheduler")
+
+            # Cancel all scheduled tasks
+            @scheduled_tasks.each_value do |task|
+              task.stop if task.respond_to?(:stop)
+            end
+            # Clear tasks outside of mutex to avoid trap context issues
+            @scheduled_tasks = Concurrent::Map.new
+
+            # Stop async reactor
+            @async_reactor&.join(2)
+            @async_reactor = nil
+          ensure
+            @mutex.unlock
           end
-          # Clear tasks outside of mutex to avoid trap context issues
-          @scheduled_tasks = Concurrent::Map.new
-
-          # Stop async reactor
-          @async_reactor&.join(2)
-          @async_reactor = nil
-        ensure
-          @mutex.unlock
+        else
+          # If we can't get the lock, just set running to false
+          # This is safe for signal handlers
+          @running = false
         end
-      else
-        # If we can't get the lock, just set running to false
-        # This is safe for signal handlers
-        @running = false
       end
-    end
 
       def running?
         @running
       end
 
       # Schedule a recurring task
-      def schedule_recurring(name, interval_seconds, &block)
+      def schedule_recurring(name, interval_seconds)
         return unless @running
 
         # Cancel existing task with same name
@@ -77,17 +79,17 @@ module DhanScalper
 
         Logger.debug(
           "Scheduling recurring task '#{name}' with interval #{interval_seconds}s",
-          component: "EventScheduler"
+          component: "EventScheduler",
         )
 
         task = Async do |task|
           while @running
             begin
-              block.call
+              yield
             rescue StandardError => e
               Logger.error(
                 "Error in recurring task '#{name}': #{e.message}",
-                component: "EventScheduler"
+                component: "EventScheduler",
               )
             end
 
@@ -100,7 +102,7 @@ module DhanScalper
       end
 
       # Schedule a one-time delayed task
-      def schedule_once(name, delay_seconds, &block)
+      def schedule_once(name, delay_seconds)
         return unless @running
 
         # Cancel existing task with same name
@@ -108,7 +110,7 @@ module DhanScalper
 
         Logger.debug(
           "Scheduling one-time task '#{name}' with delay #{delay_seconds}s",
-          component: "EventScheduler"
+          component: "EventScheduler",
         )
 
         task = Async do |task|
@@ -116,11 +118,11 @@ module DhanScalper
           return unless @running
 
           begin
-            block.call
+            yield
           rescue StandardError => e
             Logger.error(
               "Error in one-time task '#{name}': #{e.message}",
-              component: "EventScheduler"
+              component: "EventScheduler",
             )
           ensure
             @scheduled_tasks.delete(name)
@@ -132,7 +134,7 @@ module DhanScalper
       end
 
       # Schedule a task that runs immediately and then at intervals
-      def schedule_immediate_recurring(name, interval_seconds, &block)
+      def schedule_immediate_recurring(name, interval_seconds)
         return unless @running
 
         # Cancel existing task with same name
@@ -140,17 +142,17 @@ module DhanScalper
 
         Logger.debug(
           "Scheduling immediate recurring task '#{name}' with interval #{interval_seconds}s",
-          component: "EventScheduler"
+          component: "EventScheduler",
         )
 
         task = Async do |task|
           # Run immediately first
           begin
-            block.call
+            yield
           rescue StandardError => e
             Logger.error(
               "Error in immediate recurring task '#{name}': #{e.message}",
-              component: "EventScheduler"
+              component: "EventScheduler",
             )
           end
 
@@ -160,11 +162,11 @@ module DhanScalper
             break unless @running
 
             begin
-              block.call
+              yield
             rescue StandardError => e
               Logger.error(
                 "Error in immediate recurring task '#{name}': #{e.message}",
-                component: "EventScheduler"
+                component: "EventScheduler",
               )
             end
           end
@@ -177,10 +179,10 @@ module DhanScalper
       # Cancel a specific task
       def cancel_task(name)
         task = @scheduled_tasks.delete(name)
-        if task
-          task.stop if task.respond_to?(:stop)
-          Logger.debug("Cancelled task '#{name}'", component: "EventScheduler")
-        end
+        return unless task
+
+        task.stop if task.respond_to?(:stop)
+        Logger.debug("Cancelled task '#{name}'", component: "EventScheduler")
       end
 
       # Cancel all tasks
@@ -203,45 +205,46 @@ module DhanScalper
 
         Logger.debug(
           "Waiting for #{@scheduled_tasks.size} tasks to complete",
-          component: "EventScheduler"
+          component: "EventScheduler",
         )
 
         start_time = Time.now
         while @running && !@scheduled_tasks.empty?
           break if Time.now - start_time > timeout_seconds
+
           sleep(0.1)
         end
 
-        if @scheduled_tasks.any?
-          Logger.warn(
-            "Timeout waiting for tasks to complete: #{@scheduled_tasks.keys}",
-            component: "EventScheduler"
-          )
-        end
+        return unless @scheduled_tasks.any?
+
+        Logger.warn(
+          "Timeout waiting for tasks to complete: #{@scheduled_tasks.keys}",
+          component: "EventScheduler",
+        )
       end
 
       # Schedule a task with exponential backoff
-      def schedule_with_backoff(name, initial_delay: 1, max_delay: 60, multiplier: 2, &block)
+      def schedule_with_backoff(name, initial_delay: 1, max_delay: 60, multiplier: 2)
         return unless @running
 
         cancel_task(name)
 
         Logger.debug(
           "Scheduling task '#{name}' with exponential backoff",
-          component: "EventScheduler"
+          component: "EventScheduler",
         )
 
         task = Async do |task|
           delay = initial_delay
           while @running
             begin
-              block.call
+              yield
               # Reset delay on success
               delay = initial_delay
             rescue StandardError => e
               Logger.error(
                 "Error in backoff task '#{name}': #{e.message}, retrying in #{delay}s",
-                component: "EventScheduler"
+                component: "EventScheduler",
               )
 
               task.sleep(delay)
@@ -255,14 +258,14 @@ module DhanScalper
       end
 
       # Schedule a task that runs on specific days/times
-      def schedule_daily(name, hour: 9, minute: 0, &block)
+      def schedule_daily(name, hour: 9, minute: 0)
         return unless @running
 
         cancel_task(name)
 
         Logger.debug(
-          "Scheduling daily task '#{name}' at #{hour}:#{minute.to_s.rjust(2, '0')}",
-          component: "EventScheduler"
+          "Scheduling daily task '#{name}' at #{hour}:#{minute.to_s.rjust(2, "0")}",
+          component: "EventScheduler",
         )
 
         task = Async do |task|
@@ -275,21 +278,21 @@ module DhanScalper
 
             Logger.debug(
               "Next run for '#{name}': #{next_run}",
-              component: "EventScheduler"
+              component: "EventScheduler",
             )
 
             sleep_seconds = next_run - now
             task.sleep(sleep_seconds) if @running
 
-            if @running
-              begin
-                block.call
-              rescue StandardError => e
-                Logger.error(
-                  "Error in daily task '#{name}': #{e.message}",
-                  component: "EventScheduler"
-                )
-              end
+            next unless @running
+
+            begin
+              yield
+            rescue StandardError => e
+              Logger.error(
+                "Error in daily task '#{name}': #{e.message}",
+                component: "EventScheduler",
+              )
             end
           end
         end

@@ -16,14 +16,14 @@ module DhanScalper
       end
 
       # Atomic balance operations
-      def atomic_balance_update(operation, &block)
+      def atomic_balance_update(operation)
         @mutex.synchronize do
-          @redis.multi do |multi|
+          @redis.multi do |_multi|
             # Get current state
             current_state = get_balance_state
 
             # Execute the operation in a block
-            new_state = block.call(current_state.dup)
+            new_state = yield(current_state.dup)
 
             # Validate the new state
             validate_balance_state(new_state)
@@ -36,7 +36,7 @@ module DhanScalper
               "available: #{Money.dec(new_state[:available])}, " \
               "used: #{Money.dec(new_state[:used])}, " \
               "realized_pnl: #{Money.dec(new_state[:realized_pnl])}",
-              component: "AtomicStateManager"
+              component: "AtomicStateManager",
             )
 
             new_state
@@ -48,14 +48,14 @@ module DhanScalper
       end
 
       # Atomic position operations
-      def atomic_position_update(operation, &block)
+      def atomic_position_update(operation)
         @mutex.synchronize do
-          @redis.multi do |multi|
+          @redis.multi do |_multi|
             # Get current positions
             current_positions = get_positions_state
 
             # Execute the operation in a block
-            new_positions = block.call(current_positions.dup)
+            new_positions = yield(current_positions.dup)
 
             # Validate the new positions
             validate_positions_state(new_positions)
@@ -66,7 +66,7 @@ module DhanScalper
             Logger.debug(
               "Atomic position update: #{operation} - " \
               "positions count: #{new_positions.size}",
-              component: "AtomicStateManager"
+              component: "AtomicStateManager",
             )
 
             new_positions
@@ -88,7 +88,7 @@ module DhanScalper
             used: Money.bd(0),
             realized_pnl: Money.bd(0),
             total: Money.bd(200_000.0),
-            starting_balance: Money.bd(200_000.0)
+            starting_balance: Money.bd(200_000.0),
           }
           set_balance_state(default_state)
           return default_state
@@ -99,7 +99,7 @@ module DhanScalper
           used: Money.bd(state_data["used"] || "0"),
           realized_pnl: Money.bd(state_data["realized_pnl"] || "0"),
           total: Money.bd(state_data["total"] || "0"),
-          starting_balance: Money.bd(state_data["starting_balance"] || "200000")
+          starting_balance: Money.bd(state_data["starting_balance"] || "200000"),
         }
       end
 
@@ -229,7 +229,7 @@ module DhanScalper
             used: Money.bd(0),
             realized_pnl: Money.bd(0),
             total: Money.bd(200_000.0),
-            starting_balance: Money.bd(200_000.0)
+            starting_balance: Money.bd(200_000.0),
           }
           set_balance_state(default_state)
 
@@ -241,7 +241,7 @@ module DhanScalper
 
       def validate_balance_state(state)
         # Ensure all required fields are present
-        required_fields = [:available, :used, :realized_pnl, :total, :starting_balance]
+        required_fields = %i[available used realized_pnl total starting_balance]
         missing_fields = required_fields - state.keys
         raise ArgumentError, "Missing required fields: #{missing_fields}" unless missing_fields.empty?
 
@@ -253,7 +253,7 @@ module DhanScalper
         end
 
         # Validate non-negative values
-        [:available, :used, :total, :starting_balance].each do |field|
+        %i[available used total starting_balance].each do |field|
           if Money.negative?(state[field])
             raise ArgumentError, "Field #{field} cannot be negative: #{Money.dec(state[field])}"
           end
@@ -261,17 +261,17 @@ module DhanScalper
 
         # Validate total calculation
         expected_total = Money.add(state[:available], state[:used])
-        unless Money.equal?(state[:total], expected_total)
-          raise ArgumentError,
-                "Total calculation mismatch: expected #{Money.dec(expected_total)}, " \
-                "got #{Money.dec(state[:total])}"
-        end
+        return if Money.equal?(state[:total], expected_total)
+
+        raise ArgumentError,
+              "Total calculation mismatch: expected #{Money.dec(expected_total)}, " \
+              "got #{Money.dec(state[:total])}"
       end
 
       def validate_positions_state(positions)
         # Validate each position has required fields
         positions.each do |security_id, position|
-          required_fields = [:security_id, :exchange_segment, :side, :net_qty, :buy_avg]
+          required_fields = %i[security_id exchange_segment side net_qty buy_avg]
           missing_fields = required_fields - position.keys
           unless missing_fields.empty?
             raise ArgumentError,

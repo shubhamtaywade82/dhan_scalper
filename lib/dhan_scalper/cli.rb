@@ -136,9 +136,7 @@ module DhanScalper
 
       # Keep main thread alive
       begin
-        while app.running?
-          sleep(1)
-        end
+        sleep(1) while app.running?
       rescue Interrupt
         puts "\n[EVENT-DRIVEN] Interrupted, shutting down..."
         app.stop

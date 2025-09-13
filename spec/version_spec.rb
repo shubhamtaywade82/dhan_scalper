@@ -150,7 +150,7 @@ RSpec.describe "DhanScalper::VERSION" do
     end
 
     it "can be accessed from nested modules" do
-      expect(DhanScalper::App::VERSION).to eq(DhanScalper::VERSION) if defined?(DhanScalper::App::VERSION)
+      expect(DhanScalper::PaperApp::VERSION).to eq(DhanScalper::VERSION) if defined?(DhanScalper::PaperApp::VERSION)
     end
 
     it "can be accessed from classes" do

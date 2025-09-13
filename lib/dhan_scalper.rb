@@ -23,18 +23,15 @@ require "dhan_scalper/unified_risk_manager"
 require "dhan_scalper/atomic"
 require "dhan_scalper/indicators/supertrend"
 require "dhan_scalper/indicators/holy_grail"
-require "dhan_scalper/trend_engine"
 require "dhan_scalper/trend_enhanced"
 require "dhan_scalper/order"
 require "dhan_scalper/option_picker"
 require "dhan_scalper/tick_cache"
 require "dhan_scalper/trader"
-require "dhan_scalper/app"
 require "dhan_scalper/dryrun_app"
 require "dhan_scalper/paper_app"
 require "dhan_scalper/event_driven_app"
 require "dhan_scalper/cli"
-require "dhan_scalper/virtual_data_manager"
 require "dhan_scalper/position"
 require "dhan_scalper/quantity_sizer"
 require "dhan_scalper/balance_providers/base"
@@ -68,7 +65,9 @@ require "dhan_scalper/enhanced_app"
 
 # Stores
 require "dhan_scalper/stores/redis_store"
-require "dhan_scalper/stores/paper_reporter"
+
+# Legacy deprecation stubs (non-functional placeholders to preserve public constants)
+require "dhan_scalper/legacy_stubs"
 
 # Enhanced components
 require "dhan_scalper/analyzers/position_analyzer"

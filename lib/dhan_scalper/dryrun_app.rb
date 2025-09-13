@@ -21,7 +21,6 @@ module DhanScalper
       Signal.trap("TERM") { @stop = true }
       @state = State.new(symbols: cfg["SYMBOLS"]&.keys || [], session_target: cfg.dig("global", "min_profit_target").to_f,
                          max_day_loss: cfg.dig("global", "max_day_loss").to_f)
-      @virtual_data_manager = VirtualDataManager.new(memory_only: true)
 
       # Initialize balance provider (always paper for dryrun)
       starting_balance = cfg.dig("paper", "starting_balance") || 200_000.0

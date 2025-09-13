@@ -61,19 +61,19 @@ module DhanScalper
 
       @logger.info(
         "Starting unified risk management loop (interval: #{@risk_check_interval}s)",
-        component: "RiskManager"
+        component: "RiskManager",
       )
       @logger.info(
         "Time stop: #{@enable_time_stop ? "#{@time_stop_seconds}s" : "disabled"}",
-        component: "RiskManager"
+        component: "RiskManager",
       )
       @logger.info(
         "Daily loss cap: #{@enable_daily_loss_cap ? "₹#{DhanScalper::Support::Money.dec(@max_daily_loss_rs)}" : "disabled"}",
-        component: "RiskManager"
+        component: "RiskManager",
       )
       @logger.info(
         "Cooldown: #{@enable_cooldown ? "#{@cooldown_after_loss_seconds}s" : "disabled"}",
-        component: "RiskManager"
+        component: "RiskManager",
       )
 
       @risk_thread = Thread.new do
@@ -99,7 +99,7 @@ module DhanScalper
       @in_cooldown = false
       @logger.info(
         "Session reset, starting equity: ₹#{DhanScalper::Support::Money.dec(@session_start_equity)}",
-        component: "RiskManager"
+        component: "RiskManager",
       )
     end
 
@@ -135,7 +135,7 @@ module DhanScalper
         "current=₹#{DhanScalper::Support::Money.dec(current_equity)}, " \
         "drawdown=₹#{DhanScalper::Support::Money.dec(equity_drawdown)}, " \
         "max=₹#{DhanScalper::Support::Money.dec(@max_daily_loss_rs)}",
-        component: "RiskManager"
+        component: "RiskManager",
       )
 
       return unless DhanScalper::Support::Money.greater_than?(equity_drawdown, @max_daily_loss_rs)
@@ -143,7 +143,7 @@ module DhanScalper
       @logger.warn(
         "Daily loss cap exceeded! Drawdown: ₹#{DhanScalper::Support::Money.dec(equity_drawdown)} " \
         "(max: ₹#{DhanScalper::Support::Money.dec(@max_daily_loss_rs)})",
-        component: "RiskManager"
+        component: "RiskManager",
       )
 
       # Close all positions
@@ -208,7 +208,7 @@ module DhanScalper
       # Calculate current P&L
       pnl = DhanScalper::Support::Money.multiply(
         DhanScalper::Support::Money.subtract(price_bd, entry_price),
-        position[:net_qty]
+        position[:net_qty],
       )
       @position_profits[security_id] = pnl
     end
@@ -247,7 +247,7 @@ module DhanScalper
       entry_price = position[:buy_avg]
       profit_pct = DhanScalper::Support::Money.divide(
         DhanScalper::Support::Money.subtract(price_bd, entry_price),
-        entry_price
+        entry_price,
       )
 
       DhanScalper::Support::Money.greater_than?(profit_pct, DhanScalper::Support::Money.bd(@tp_pct))
@@ -260,7 +260,7 @@ module DhanScalper
       entry_price = position[:buy_avg]
       loss_pct = DhanScalper::Support::Money.divide(
         DhanScalper::Support::Money.subtract(entry_price, price_bd),
-        entry_price
+        entry_price,
       )
 
       DhanScalper::Support::Money.greater_than?(loss_pct, DhanScalper::Support::Money.bd(@sl_pct))
@@ -289,7 +289,7 @@ module DhanScalper
       # Check if current price has fallen from high by trail percentage
       trail_threshold = DhanScalper::Support::Money.multiply(
         position_high,
-        DhanScalper::Support::Money.bd(@trail_pct)
+        DhanScalper::Support::Money.bd(@trail_pct),
       )
       trail_trigger = DhanScalper::Support::Money.subtract(position_high, trail_threshold)
 
@@ -303,7 +303,7 @@ module DhanScalper
       if @pending_exits[security_id] || @idempotency_keys[idempotency_key]
         @logger.debug(
           "Exit already pending or completed for #{security_id} (#{reason}), skipping",
-          component: "RiskManager"
+          component: "RiskManager",
         )
         return
       end
@@ -312,12 +312,12 @@ module DhanScalper
       @pending_exits[security_id] = {
         reason: reason,
         timestamp: Time.now,
-        idempotency_key: idempotency_key
+        idempotency_key: idempotency_key,
       }
 
       @logger.info(
         "Exiting position #{security_id} reason: #{reason} LTP: #{DhanScalper::Support::Money.dec(DhanScalper::Support::Money.bd(current_price))}",
-        component: "RiskManager"
+        component: "RiskManager",
       )
 
       begin
@@ -338,7 +338,7 @@ module DhanScalper
             security_id: security_id,
             reason: reason,
             timestamp: Time.now,
-            order_id: order_result[:order_id]
+            order_id: order_result[:order_id],
           }
 
           # Update position tracker
@@ -387,9 +387,9 @@ module DhanScalper
       DhanScalper::Support::Money.multiply(
         DhanScalper::Support::Money.subtract(
           DhanScalper::Support::Money.bd(exit_price),
-          entry_price
+          entry_price,
         ),
-        quantity
+        quantity,
       )
     end
 

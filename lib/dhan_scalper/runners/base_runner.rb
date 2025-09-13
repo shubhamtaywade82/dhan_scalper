@@ -47,7 +47,7 @@ module DhanScalper
         @state = State.new(
           symbols: @config["SYMBOLS"]&.keys || [],
           session_target: @config.dig("global", "min_profit_target").to_f,
-          max_day_loss: @config.dig("global", "max_day_loss").to_f
+          max_day_loss: @config.dig("global", "max_day_loss").to_f,
         )
       end
 
@@ -68,19 +68,17 @@ module DhanScalper
         @broker = if @mode == :paper
                     Brokers::PaperBroker.new(
                       virtual_data_manager: @virtual_data_manager,
-                      balance_provider: @balance_provider
+                      balance_provider: @balance_provider,
                     )
                   else
                     Brokers::DhanBroker.new(
                       virtual_data_manager: @virtual_data_manager,
-                      balance_provider: @balance_provider
+                      balance_provider: @balance_provider,
                     )
                   end
       end
 
-      def initialize_virtual_data_manager
-        @virtual_data_manager = VirtualDataManager.new(memory_only: @mode == :paper)
-      end
+      def initialize_virtual_data_manager; end
 
       def display_startup_info
         puts "[READY] Symbols: #{@config["SYMBOLS"]&.keys&.join(", ") || "None"}"
@@ -122,8 +120,8 @@ module DhanScalper
 
       def get_decision_interval
         @config.dig("global", "decision_interval_sec") ||
-        @config.dig("global", "decision_interval") ||
-        60
+          @config.dig("global", "decision_interval") ||
+          60
       end
 
       def get_status_interval

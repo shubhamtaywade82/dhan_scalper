@@ -2,6 +2,7 @@
 
 require "json"
 require "terminal-table"
+require_relative "../virtual_data_manager"
 
 module DhanScalper
   module Services
@@ -24,6 +25,7 @@ module DhanScalper
 
       def format_timestamp(timestamp)
         return "N/A" unless timestamp
+
         Time.at(timestamp).strftime("%Y-%m-%d %H:%M:%S")
       end
 
@@ -66,15 +68,13 @@ module DhanScalper
         end
       end
 
-      def display_live_orders(limit)
-        begin
-          # For live mode, we would need to implement live order fetching
-          # This would require integration with DhanHQ API
-          puts "Live orders not yet implemented"
-          puts "This would require DhanHQ API integration for order history"
-        rescue StandardError => e
-          puts "Error fetching live orders: #{e.message}"
-        end
+      def display_live_orders(_limit)
+        # For live mode, we would need to implement live order fetching
+        # This would require integration with DhanHQ API
+        puts "Live orders not yet implemented"
+        puts "This would require DhanHQ API integration for order history"
+      rescue StandardError => e
+        puts "Error fetching live orders: #{e.message}"
       end
 
       def display_orders_table(orders)
@@ -88,7 +88,7 @@ module DhanScalper
             order[:quantity] || order[:qty] || "N/A",
             format_currency(order[:price] || order[:avg_price] || order[:ltp] || 0),
             order[:status] || order[:state] || "N/A",
-            format_timestamp(order[:timestamp] || order[:ts])
+            format_timestamp(order[:timestamp] || order[:ts]),
           ]
         end
 
@@ -105,7 +105,7 @@ module DhanScalper
             quantity: order[:quantity] || order[:qty],
             price: order[:price] || order[:avg_price] || order[:ltp],
             status: order[:status] || order[:state],
-            timestamp: format_timestamp(order[:timestamp] || order[:ts])
+            timestamp: format_timestamp(order[:timestamp] || order[:ts]),
           }
         end
 
@@ -145,14 +145,12 @@ module DhanScalper
       end
 
       def display_live_positions
-        begin
-          # For live mode, we would need to implement live position fetching
-          # This would require integration with DhanHQ API
-          puts "Live positions not yet implemented"
-          puts "This would require DhanHQ API integration for position data"
-        rescue StandardError => e
-          puts "Error fetching live positions: #{e.message}"
-        end
+        # For live mode, we would need to implement live position fetching
+        # This would require integration with DhanHQ API
+        puts "Live positions not yet implemented"
+        puts "This would require DhanHQ API integration for position data"
+      rescue StandardError => e
+        puts "Error fetching live positions: #{e.message}"
       end
 
       def display_positions_table(positions)
@@ -171,7 +169,7 @@ module DhanScalper
             format_currency(entry_price),
             format_currency(current_price),
             format_currency(pnl),
-            format_percentage(pnl_pct)
+            format_percentage(pnl_pct),
           ]
         end
 
@@ -193,7 +191,7 @@ module DhanScalper
             entry_price: entry_price,
             current_price: current_price,
             pnl: pnl,
-            pnl_percentage: pnl_pct
+            pnl_percentage: pnl_pct,
           }
         end
 
@@ -245,21 +243,19 @@ module DhanScalper
       end
 
       def display_live_balance
-        begin
-          balance_provider = BalanceProviders::LiveBalance.new
-          available = balance_provider.available_balance
-          used = balance_provider.used_balance
-          total = balance_provider.total_balance
+        balance_provider = BalanceProviders::LiveBalance.new
+        available = balance_provider.available_balance
+        used = balance_provider.used_balance
+        total = balance_provider.total_balance
 
-          if @options[:format] == "json"
-            display_balance_json(available, used, total, 0)
-          else
-            display_balance_table(available, used, total, 0)
-          end
-        rescue StandardError => e
-          puts "Error fetching live balance: #{e.message}"
-          puts "Make sure you're connected to DhanHQ API"
+        if @options[:format] == "json"
+          display_balance_json(available, used, total, 0)
+        else
+          display_balance_table(available, used, total, 0)
         end
+      rescue StandardError => e
+        puts "Error fetching live balance: #{e.message}"
+        puts "Make sure you're connected to DhanHQ API"
       end
 
       def display_balance_table(available, used, total, realized_pnl)
@@ -276,7 +272,7 @@ module DhanScalper
           available: available,
           used: used,
           realized_pnl: realized_pnl,
-          total: total
+          total: total,
         }
         puts JSON.pretty_generate(balance_data)
       end
@@ -287,7 +283,7 @@ module DhanScalper
       def display_status
         redis_store = DhanScalper::Stores::RedisStore.new(
           namespace: "dhan_scalper:v1",
-          logger: Logger.new($stdout)
+          logger: Logger.new($stdout),
         )
 
         begin
@@ -334,7 +330,7 @@ module DhanScalper
           open_positions: positions_count,
           session_pnl: total_pnl,
           heartbeat_status: heartbeat_status,
-          timestamp: Time.now.strftime("%Y-%m-%d %H:%M:%S")
+          timestamp: Time.now.strftime("%Y-%m-%d %H:%M:%S"),
         }
       end
 

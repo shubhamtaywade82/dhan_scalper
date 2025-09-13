@@ -12,7 +12,7 @@ module DhanScalper
           @instance = ::Logger.new(output)
           @instance.level = level_to_int(level)
           @instance.formatter = proc do |severity, datetime, progname, msg|
-            "[#{datetime.strftime('%Y-%m-%d %H:%M:%S')}] #{severity.ljust(5)} -- #{progname}: #{msg}\n"
+            "[#{datetime.strftime("%Y-%m-%d %H:%M:%S")}] #{severity.ljust(5)} -- #{progname}: #{msg}\n"
           end
           @instance
         end

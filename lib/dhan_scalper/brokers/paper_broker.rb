@@ -18,7 +18,7 @@ module DhanScalper
       def buy_market(segment:, security_id:, quantity:, charge_per_order: nil)
         DhanScalper::Support::Logger.info(
           "Buying market: #{segment}, #{security_id}, #{quantity}, #{charge_per_order}",
-          component: "PaperBroker"
+          component: "PaperBroker",
         )
 
         # Validate inputs
@@ -77,7 +77,7 @@ module DhanScalper
       def sell_market(segment:, security_id:, quantity:, charge_per_order: 20)
         DhanScalper::Support::Logger.info(
           "Selling market: #{segment}, #{security_id}, #{quantity}, #{charge_per_order}",
-          component: "PaperBroker"
+          component: "PaperBroker",
         )
 
         # Validate inputs
@@ -116,7 +116,7 @@ module DhanScalper
         begin
           DhanScalper::Support::Validations.validate_position_sufficient(
             DhanScalper::Support::Money.dec(position[:net_qty]),
-            DhanScalper::Support::Money.dec(quantity_bd)
+            DhanScalper::Support::Money.dec(quantity_bd),
           )
         rescue DhanScalper::OversellError => e
           DhanScalper::Support::Logger.error(e.message, component: "PaperBroker")

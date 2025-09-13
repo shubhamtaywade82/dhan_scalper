@@ -36,7 +36,7 @@ RSpec.describe "DhanScalper Integration", :slow do
     }
   end
 
-  let(:app) { DhanScalper::App.new(config, mode: :paper) }
+  let(:app) { DhanScalper::PaperApp.new(config, quiet: true, enhanced: true) }
 
   before(:all) do
     # Ensure CSV master data is available for testing

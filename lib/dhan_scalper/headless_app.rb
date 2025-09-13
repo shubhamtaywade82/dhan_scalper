@@ -95,7 +95,7 @@ module DhanScalper
         @broker,
         balance_provider: @balance_provider,
         equity_calculator: @equity_calculator,
-        logger: @logger
+        logger: @logger,
       )
 
       # Initialize OHLC fetcher

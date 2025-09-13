@@ -88,7 +88,7 @@ module DhanScalper
     def initialize_components
       # Initialize balance provider
       @balance_provider = DhanScalper::BalanceProviders::AtomicPaperWallet.new(
-        starting_balance: @config.dig("global", "starting_balance") || 200_000.0
+        starting_balance: @config.dig("global", "starting_balance") || 200_000.0,
       )
 
       # Initialize position tracker
@@ -97,7 +97,7 @@ module DhanScalper
       # Initialize broker
       @broker = DhanScalper::Brokers::PaperBroker.new(
         balance_provider: @balance_provider,
-        logger: DhanScalper::Support::Logger
+        logger: DhanScalper::Support::Logger,
       )
 
       # Initialize risk manager
@@ -106,7 +106,7 @@ module DhanScalper
         @position_tracker,
         @broker,
         balance_provider: @balance_provider,
-        logger: DhanScalper::Support::Logger
+        logger: DhanScalper::Support::Logger,
       )
 
       # Initialize option picker
@@ -137,14 +137,14 @@ module DhanScalper
 
       @scheduler.schedule_immediate_recurring(
         "trading_loop",
-        decision_interval
+        decision_interval,
       ) do
         execute_trading_cycle
       end
 
       logger.info(
         "Trading loop scheduled with interval #{decision_interval}s",
-        component: "EventDrivenApp"
+        component: "EventDrivenApp",
       )
     end
 
@@ -153,14 +153,14 @@ module DhanScalper
 
       @scheduler.schedule_immediate_recurring(
         "risk_management",
-        risk_interval
+        risk_interval,
       ) do
         execute_risk_management
       end
 
       logger.info(
         "Risk management scheduled with interval #{risk_interval}s",
-        component: "EventDrivenApp"
+        component: "EventDrivenApp",
       )
     end
 
@@ -169,25 +169,25 @@ module DhanScalper
 
       @scheduler.schedule_recurring(
         "status_reporting",
-        report_interval
+        report_interval,
       ) do
         execute_status_reporting
       end
 
       logger.info(
         "Status reporting scheduled with interval #{report_interval}s",
-        component: "EventDrivenApp"
+        component: "EventDrivenApp",
       )
     end
 
     def schedule_market_data_updates
       # Schedule market data updates based on configuration
-      symbols = @config.dig("symbols") || ["NIFTY"]
+      symbols = @config["symbols"] || ["NIFTY"]
 
       symbols.each do |symbol|
         @scheduler.schedule_recurring(
           "market_data_#{symbol.downcase}",
-          5 # Update every 5 seconds
+          5, # Update every 5 seconds
         ) do
           update_market_data(symbol)
         end
@@ -195,7 +195,7 @@ module DhanScalper
 
       logger.info(
         "Market data updates scheduled for #{symbols.size} symbols",
-        component: "EventDrivenApp"
+        component: "EventDrivenApp",
       )
     end
 
@@ -214,17 +214,16 @@ module DhanScalper
         if current_position_count >= max_positions
           logger.debug(
             "Maximum positions reached (#{current_position_count}/#{max_positions})",
-            component: "EventDrivenApp"
+            component: "EventDrivenApp",
           )
           return
         end
 
         # Execute trading logic for each symbol
-        symbols = @config.dig("symbols") || ["NIFTY"]
+        symbols = @config["symbols"] || ["NIFTY"]
         symbols.each do |symbol|
           execute_symbol_trading(symbol)
         end
-
       rescue StandardError => e
         logger.error("Error in trading cycle: #{e.message}", component: "EventDrivenApp")
         logger.error(e.backtrace.first(5).join("\n"), component: "EventDrivenApp")
@@ -248,7 +247,6 @@ module DhanScalper
 
         # Risk management is handled by the UnifiedRiskManager
         # This method can be used for additional risk checks if needed
-
       rescue StandardError => e
         logger.error("Error in risk management: #{e.message}", component: "EventDrivenApp")
       end
@@ -267,9 +265,8 @@ module DhanScalper
           "Used: ₹#{DhanScalper::Support::Money.dec(balance_snapshot[:used])}, " \
           "Total: ₹#{DhanScalper::Support::Money.dec(balance_snapshot[:total])}, " \
           "Positions: #{positions.size}",
-          component: "EventDrivenApp"
+          component: "EventDrivenApp",
         )
-
       rescue StandardError => e
         logger.error("Error in status reporting: #{e.message}", component: "EventDrivenApp")
       end
@@ -284,7 +281,6 @@ module DhanScalper
         # This is where market data updates would be handled
         # For now, just log that we're updating
         # In a real implementation, this would fetch and update tick data
-
       rescue StandardError => e
         logger.error("Error updating market data for #{symbol}: #{e.message}", component: "EventDrivenApp")
       end

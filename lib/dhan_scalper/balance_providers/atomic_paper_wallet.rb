@@ -39,7 +39,7 @@ module DhanScalper
           "used: #{DhanScalper::Support::Money.dec(snapshot[:used])}, " \
           "realized_pnl: #{DhanScalper::Support::Money.dec(snapshot[:realized_pnl])}, " \
           "result: #{DhanScalper::Support::Money.dec(result)}",
-          component: "AtomicPaperWallet"
+          component: "AtomicPaperWallet",
         )
         result
       end
@@ -59,7 +59,7 @@ module DhanScalper
             "Updating balance - amount: #{DhanScalper::Support::Money.dec(amount_bd)}, " \
             "type: #{type}, available before: #{DhanScalper::Support::Money.dec(state[:available])}, " \
             "used before: #{DhanScalper::Support::Money.dec(state[:used])}",
-            component: "AtomicPaperWallet"
+            component: "AtomicPaperWallet",
           )
 
           case type
@@ -83,7 +83,7 @@ module DhanScalper
             "Balance updated - available after: #{DhanScalper::Support::Money.dec(state[:available])}, " \
             "used after: #{DhanScalper::Support::Money.dec(state[:used])}, " \
             "total: #{DhanScalper::Support::Money.dec(state[:total])}",
-            component: "AtomicPaperWallet"
+            component: "AtomicPaperWallet",
           )
 
           state
@@ -101,7 +101,7 @@ module DhanScalper
           DhanScalper::Support::Logger.debug(
             "Debiting for buy - principal: #{DhanScalper::Support::Money.dec(principal_bd)}, " \
             "fee: #{DhanScalper::Support::Money.dec(fee_bd)}",
-            component: "AtomicPaperWallet"
+            component: "AtomicPaperWallet",
           )
 
           total_cost = DhanScalper::Support::Money.add(principal_bd, fee_bd)
@@ -115,7 +115,7 @@ module DhanScalper
             "Buy debit completed - available: #{DhanScalper::Support::Money.dec(state[:available])}, " \
             "used: #{DhanScalper::Support::Money.dec(state[:used])}, " \
             "total: #{DhanScalper::Support::Money.dec(state[:total])}",
-            component: "AtomicPaperWallet"
+            component: "AtomicPaperWallet",
           )
 
           state
@@ -130,7 +130,7 @@ module DhanScalper
           DhanScalper::Support::Logger.debug(
             "Crediting for sell - net_proceeds: #{DhanScalper::Support::Money.dec(net_bd)}, " \
             "released_principal: #{DhanScalper::Support::Money.dec(released_bd)}",
-            component: "AtomicPaperWallet"
+            component: "AtomicPaperWallet",
           )
 
           # Credit the actual cash received from the sale
@@ -147,7 +147,7 @@ module DhanScalper
             "Sell credit completed - available: #{DhanScalper::Support::Money.dec(state[:available])}, " \
             "used: #{DhanScalper::Support::Money.dec(state[:used])}, " \
             "total: #{DhanScalper::Support::Money.dec(state[:total])}",
-            component: "AtomicPaperWallet"
+            component: "AtomicPaperWallet",
           )
 
           state
@@ -174,7 +174,7 @@ module DhanScalper
           DhanScalper::Support::Logger.debug(
             "Added realized PnL: #{DhanScalper::Support::Money.dec(pnl)}, " \
             "realized_pnl now: #{DhanScalper::Support::Money.dec(state[:realized_pnl])}",
-            component: "AtomicPaperWallet"
+            component: "AtomicPaperWallet",
           )
 
           state
@@ -193,7 +193,7 @@ module DhanScalper
           DhanScalper::Support::Logger.debug(
             "Added to used balance - amount: #{DhanScalper::Support::Money.dec(amount_bd)}, " \
             "used after: #{DhanScalper::Support::Money.dec(state[:used])}",
-            component: "AtomicPaperWallet"
+            component: "AtomicPaperWallet",
           )
 
           state
@@ -232,7 +232,7 @@ module DhanScalper
       private
 
       def initialize_state
-        current_state = @state_manager.balance_snapshot
+        @state_manager.balance_snapshot
 
         # Always initialize with the specified starting balance
         # This ensures the wallet starts with the correct amount

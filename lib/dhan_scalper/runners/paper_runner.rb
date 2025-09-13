@@ -26,7 +26,7 @@ module DhanScalper
         @position_tracker = Services::PaperPositionTracker.new(
           websocket_manager: @websocket_manager,
           logger: @logger,
-          memory_only: true
+          memory_only: true,
         )
 
         # Initialize logger
@@ -50,7 +50,7 @@ module DhanScalper
           trades: [],
           max_pnl: 0.0,
           min_pnl: 0.0,
-          symbols_traded: Set.new
+          symbols_traded: Set.new,
         }
 
         # Cache for trend objects and option pickers
@@ -140,7 +140,7 @@ module DhanScalper
             low: price_data[:low],
             close: price_data[:close],
             volume: price_data[:volume],
-            ts: price_data[:timestamp]
+            ts: price_data[:timestamp],
           }
 
           # Debug: Log the tick data being stored
@@ -375,7 +375,7 @@ module DhanScalper
           side: "BUY",
           quantity: quantity,
           price: option_price,
-          order_type: "MARKET"
+          order_type: "MARKET",
         )
 
         if order_result[:success]
@@ -401,7 +401,7 @@ module DhanScalper
             order_id: order_result[:order_id],
             status: "SUCCESS",
             option_type: option_type,
-            strike: actual_strike
+            strike: actual_strike,
           }
 
           puts "[#{symbol}] Position added to tracker: #{position_key}"
@@ -421,7 +421,7 @@ module DhanScalper
             status: "FAILED",
             error: order_result[:error],
             option_type: option_type,
-            strike: actual_strike
+            strike: actual_strike,
           }
         end
       end
@@ -455,7 +455,7 @@ module DhanScalper
         strikes_to_subscribe = [
           atm_strike - strike_step,  # ATM-1
           atm_strike,                # ATM
-          atm_strike + strike_step   # ATM+1
+          atm_strike + strike_step, # ATM+1
         ]
 
         puts "\n[#{symbol}] Subscribing to ATM options around #{atm_strike}:"
@@ -604,12 +604,12 @@ module DhanScalper
               seg_idx: symbol_config["seg_idx"],
               sid_idx: symbol_config["idx_sid"],
               use_multi_timeframe: use_multi_timeframe,
-              secondary_timeframe: secondary_timeframe
+              secondary_timeframe: secondary_timeframe,
             )
           else
             @cached_trends[trend_key] = Trend.new(
               seg_idx: symbol_config["seg_idx"],
-              sid_idx: symbol_config["idx_sid"]
+              sid_idx: symbol_config["idx_sid"],
             )
           end
         end
@@ -654,7 +654,7 @@ module DhanScalper
                                (@session_data[:max_pnl] / @session_data[:min_pnl].abs).round(2)
                              else
                                0.0
-                             end
+                             end,
         }
 
         # Generate the report

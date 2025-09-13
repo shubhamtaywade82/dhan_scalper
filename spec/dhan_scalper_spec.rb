@@ -29,7 +29,7 @@ RSpec.describe DhanScalper do
 
     it "defines all expected classes" do
       # Test that main classes are defined
-      expect(defined?(DhanScalper::App)).to be_truthy
+      expect(defined?(DhanScalper::PaperApp)).to be_truthy
       expect(defined?(DhanScalper::Trader)).to be_truthy
       expect(defined?(DhanScalper::Brokers::Base)).to be_truthy
       expect(defined?(DhanScalper::Brokers::DhanBroker)).to be_truthy
@@ -254,7 +254,7 @@ RSpec.describe DhanScalper do
 
   describe "module functionality" do
     it "provides trading functionality" do
-      expect(DhanScalper::App).to respond_to(:new)
+      expect(DhanScalper::PaperApp).to respond_to(:new)
       expect(DhanScalper::Trader).to respond_to(:new)
       expect(DhanScalper::Brokers::Base).to respond_to(:new)
     end

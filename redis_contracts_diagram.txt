@@ -1,0 +1,185 @@
+# Redis Data Contracts - Visual Diagram
+
+## Core Data Structures
+
+### 1. POSITIONS
+┌─────────────────────────────────────────────────────────────┐
+│ Key: {namespace}:pos:{position_id}                         │
+│ Type: Hash                                                 │
+│ TTL: 24h                                                   │
+└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│ Minimal Fields:                                            │
+│ • id (string) - Position ID                                │
+│ • security_id (string) - Security ID                       │
+│ • side (string) - LONG/SHORT                               │
+│ • quantity (string) - Net quantity                         │
+│ • entry_price (string) - Weighted avg entry price          │
+│ • entry_fee (string) - Total entry fees                    │
+│ • stop_loss (string) - Current stop loss (optional)        │
+│ • take_profit (string) - Current take profit (optional)    │
+│ • trailing_stop (string) - Current trailing stop (optional)│
+│ • created_at (ISO8601) - Position creation time            │
+│ • updated_at (ISO8601) - Last update time                  │
+│ • status (string) - open/closed                            │
+└─────────────────────────────────────────────────────────────┘
+
+### 2. ORDERS
+┌─────────────────────────────────────────────────────────────┐
+│ Key: {namespace}:order:{order_id}                          │
+│ Type: Hash                                                 │
+│ TTL: 24h                                                   │
+└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│ Minimal Fields:                                            │
+│ • id (string) - Order ID                                   │
+│ • security_id (string) - Security ID                       │
+│ • side (string) - LONG/SHORT                               │
+│ • quantity (string) - Order quantity                       │
+│ • price (string) - Order price                             │
+│ • order_type (string) - MARKET/LIMIT                       │
+│ • status (string) - pending/filled/cancelled/rejected      │
+│ • filled_quantity (string) - Filled quantity               │
+│ • filled_price (string) - Average filled price             │
+│ • created_at (ISO8601) - Order creation time               │
+│ • filled_at (ISO8601) - Fill timestamp (optional)          │
+│ • session_id (string) - Session ID                         │
+│ • mode (string) - paper/live                               │
+└─────────────────────────────────────────────────────────────┘
+
+### 3. SESSIONS
+┌─────────────────────────────────────────────────────────────┐
+│ Key: {namespace}:pnl:session                               │
+│ Type: Hash                                                 │
+│ TTL: 24h                                                   │
+└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│ Minimal Fields:                                            │
+│ • realized (string) - Realized PnL                         │
+│ • unrealized (string) - Unrealized PnL                     │
+│ • fees (string) - Total fees paid                          │
+│ • total (string) - Total PnL                               │
+│ • session_id (string) - Session ID                         │
+│ • mode (string) - paper/live                               │
+│ • start_time (ISO8601) - Session start time                │
+│ • last_update (ISO8601) - Last update time                 │
+│ • total_trades (string) - Total trades executed            │
+│ • winning_trades (string) - Winning trades                 │
+│ • losing_trades (string) - Losing trades                   │
+│ • max_drawdown (string) - Maximum drawdown                 │
+│ • max_positions (string) - Max concurrent positions        │
+│ • current_positions (string) - Current open positions      │
+└─────────────────────────────────────────────────────────────┘
+
+## Supporting Data Structures
+
+### 4. OPEN POSITIONS TRACKING
+┌─────────────────────────────────────────────────────────────┐
+│ Key: {namespace}:pos:open                                  │
+│ Type: Set                                                  │
+│ TTL: 24h                                                   │
+│ Purpose: Quick recovery of open position IDs               │
+└─────────────────────────────────────────────────────────────┘
+
+### 5. SESSION ORDER TRACKING
+┌─────────────────────────────────────────────────────────────┐
+│ Key: {namespace}:orders:{mode}:{session_id}                │
+│ Type: List                                                 │
+│ TTL: 24h                                                   │
+│ Purpose: Track all orders for a session                    │
+└─────────────────────────────────────────────────────────────┘
+
+### 6. LTP SNAPSHOT (Recovery Only)
+┌─────────────────────────────────────────────────────────────┐
+│ Key: {namespace}:ltp:snapshot                              │
+│ Type: Hash                                                 │
+│ TTL: 5m                                                    │
+│ Purpose: LTP snapshot for recovery after restart           │
+└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│ Fields:                                                    │
+│ • NSE_FNO:12345 => "100.0" - LTP for security             │
+│ • IDX_I:13 => "25000.0" - LTP for index                   │
+│ • snapshot_time (ISO8601) - Snapshot timestamp            │
+└─────────────────────────────────────────────────────────────┘
+
+## Data Flow
+
+### Normal Operation
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│   LTP       │    │  Positions  │    │   Orders    │
+│   Cache     │    │   (Redis)   │    │   (Redis)   │
+│ (Memory)    │    │             │    │             │
+└─────────────┘    └─────────────┘    └─────────────┘
+       │                   │                   │
+       │                   │                   │
+       ▼                   ▼                   ▼
+┌─────────────────────────────────────────────────────────────┐
+│                Trading System                              │
+│              (Real-time Processing)                        │
+└─────────────────────────────────────────────────────────────┘
+
+### Recovery Operation
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│   LTP       │    │  Positions  │    │   Orders    │
+│  Snapshot   │    │   (Redis)   │    │   (Redis)   │
+│   (Redis)   │    │             │    │             │
+└─────────────┘    └─────────────┘    └─────────────┘
+       │                   │                   │
+       │                   │                   │
+       ▼                   ▼                   ▼
+┌─────────────────────────────────────────────────────────────┐
+│                Recovery Process                             │
+│           1. Load session state                            │
+│           2. Load open positions                           │
+│           3. Restore LTP snapshot                          │
+│           4. Resubscribe to positions                      │
+│           5. Resume risk management                        │
+└─────────────────────────────────────────────────────────────┘
+
+## Key Naming Convention
+
+### Pattern
+```
+{namespace}:{category}:{identifier}
+```
+
+### Examples
+```
+dhan_scalper:v1:pos:pos_12345
+dhan_scalper:v1:order:P-1234567890
+dhan_scalper:v1:orders:paper:20250113
+dhan_scalper:v1:pnl:session
+dhan_scalper:v1:pos:open
+dhan_scalper:v1:ltp:snapshot
+```
+
+## TTL Strategy
+
+┌─────────────┬─────────┬─────────────────────────────────────┐
+│ Data Type   │   TTL   │ Reason                              │
+├─────────────┼─────────┼─────────────────────────────────────┤
+│ Positions   │  24h    │ Need for recovery, not frequent     │
+│ Orders      │  24h    │ Historical data, not frequent       │
+│ Session PnL │  24h    │ Session data, not frequent          │
+│ LTP Snapshot│  5m     │ Recovery only, short-lived          │
+│ Open Pos Set│  24h    │ Recovery index, not frequent        │
+└─────────────┴─────────┴─────────────────────────────────────┘
+
+## Performance Benefits
+
+### Memory Usage
+- **LTP cache**: In-memory only (Concurrent::Map)
+- **Redis data**: Minimal fields, appropriate TTLs
+- **Recovery**: Only essential data loaded
+
+### Redis Operations
+- **HSET/HGET**: Position and order data
+- **SADD/SMEMBERS**: Open positions tracking
+- **LPUSH/LRANGE**: Session order tracking
+- **MULTI/EXEC**: Atomic operations
+
+### Recovery Performance
+- **Fast startup**: Essential data only
+- **Lazy loading**: LTP data on demand
+- **Incremental**: Positions → Orders → LTP

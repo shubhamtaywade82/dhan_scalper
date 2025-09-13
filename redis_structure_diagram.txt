@@ -1,0 +1,86 @@
+# DhanScalper Redis Key Structure Diagram
+
+dhan_scalper:v1
+├── Configuration & Metadata
+│   ├── cfg                           # System configuration (JSON)
+│   ├── csv:raw                       # CSV master data checksum
+│   ├── universe:sids                 # Universe security IDs (Set)
+│   └── sym:{symbol}:meta            # Symbol metadata (Hash)
+│
+├── Market Data & Ticks
+│   ├── ticks:{segment}:{security_id} # Real-time tick data (Hash)
+│   │   ├── ltp                      # Last traded price
+│   │   ├── ts                       # Timestamp
+│   │   ├── atp                      # Average traded price
+│   │   ├── vol                      # Volume
+│   │   ├── segment                  # Exchange segment
+│   │   └── security_id              # Security ID
+│   └── bars:{segment}:{security_id}:{minute} # Minute bars (List, last 100)
+│
+├── Orders & Trading
+│   ├── order:{order_id}             # Order details (Hash)
+│   │   ├── id                       # Order ID
+│   │   ├── security_id              # Security ID
+│   │   ├── side                     # LONG/SHORT
+│   │   ├── quantity                 # Quantity
+│   │   ├── price                    # Price
+│   │   ├── timestamp                # Timestamp
+│   │   └── status                   # Order status
+│   ├── orders:{mode}:{session_id}   # Session order IDs (List)
+│   └── idemp:{idempotency_key}      # Idempotency tracking (String)
+│
+├── Positions & PnL
+│   ├── pos:{position_id}            # Position details (Hash)
+│   │   ├── id                       # Position ID
+│   │   ├── security_id              # Security ID
+│   │   ├── side                     # LONG/SHORT
+│   │   ├── quantity                 # Quantity
+│   │   ├── entry_price              # Entry price
+│   │   ├── current_price            # Current price
+│   │   ├── unrealized_pnl           # Unrealized PnL
+│   │   └── realized_pnl             # Realized PnL
+│   ├── pos:open                     # Open position IDs (Set)
+│   ├── pnl:session                  # Session PnL data (Hash)
+│   │   ├── realized                 # Realized PnL
+│   │   ├── unrealized               # Unrealized PnL
+│   │   ├── fees                     # Total fees
+│   │   ├── total                    # Total PnL
+│   │   └── timestamp                # Last update timestamp
+│   └── position:{segment}:{security_id}:{side} # Atomic position data (Hash)
+│
+├── State Management (AtomicStateManager)
+│   ├── balance                      # Balance state (Hash)
+│   │   ├── available                # Available balance
+│   │   ├── used                     # Used balance
+│   │   ├── total                    # Total balance
+│   │   └── realized_pnl             # Realized PnL
+│   └── positions                    # Positions state (Hash)
+│
+├── Reports & Analytics
+│   └── reports:{session_id}         # Session reports (Hash)
+│       ├── csv_path                 # CSV report path
+│       ├── json_path                # JSON report path
+│       ├── total_trades             # Total trades count
+│       ├── total_pnl                # Total PnL
+│       └── generated_at             # Generation timestamp
+│
+├── System & Monitoring
+│   ├── hb                           # Heartbeat (Hash, process monitoring)
+│   ├── locks:{lock_name}            # Distributed locks (String)
+│   └── throttle:{throttle_name}     # Rate limiting (String)
+│
+└── Instrument Cache
+    ├── instruments:{symbol}         # Instrument data cache (String, JSON)
+    └── instruments:cache            # Cache metadata (Hash)
+
+# TTL (Time To Live) Summary:
+# - 5 minutes:  Tick data, heartbeats
+# - 24 hours:   Orders, positions, reports, configuration
+# - No TTL:     State data, locks (manual cleanup)
+# - Variable:   Instrument cache, throttles
+
+# Data Types Used:
+# - String:  Configuration, locks, throttles, idempotency
+# - Hash:    Tick data, orders, positions, PnL, balance
+# - List:    Order history, minute bars
+# - Set:     Open positions, universe SIDs

@@ -3,6 +3,7 @@
 require "json"
 require "terminal-table"
 require_relative "../virtual_data_manager"
+require_relative "session_reporter"
 
 module DhanScalper
   module Services
@@ -53,11 +54,16 @@ module DhanScalper
       private
 
       def display_paper_orders(limit)
-        vdm = VirtualDataManager.new
-        orders = vdm.get_orders(limit: limit)
+        orders = read_orders_from_latest_report(limit) || []
 
         if orders.empty?
-          puts "No paper orders found"
+          # Fallback to legacy VirtualDataManager
+          vdm = VirtualDataManager.new
+          orders = vdm.get_orders(limit: limit)
+        end
+
+        if orders.empty?
+          puts "No orders"
           return
         end
 
@@ -111,6 +117,34 @@ module DhanScalper
 
         puts JSON.pretty_generate({ orders: formatted_orders })
       end
+      def read_orders_from_latest_report(limit)
+        begin
+          reporter = DhanScalper::Services::SessionReporter.new
+          sessions = reporter.list_available_sessions
+          return nil if sessions.nil? || sessions.empty?
+
+          # Load latest session JSON
+          latest = sessions.first
+          report = reporter.generate_report_for_session(latest[:session_id])
+          trades = report && report[:trades].is_a?(Array) ? report[:trades] : []
+          return nil if trades.empty?
+
+          trades.last(limit).map do |t|
+            {
+              order_id: t[:order_id] || t[:id],
+              symbol: t[:symbol],
+              action: t[:side] || t[:action],
+              quantity: t[:quantity] || t[:qty],
+              price: t[:price] || t[:avg_price],
+              status: t[:status] || "COMPLETED",
+              timestamp: t[:timestamp],
+            }
+          end
+        rescue StandardError
+          nil
+        end
+      end
+
     end
 
     # Service for handling positions display
@@ -129,11 +163,16 @@ module DhanScalper
       private
 
       def display_paper_positions
-        vdm = VirtualDataManager.new
-        positions = vdm.get_positions
+        positions = read_positions_from_latest_report || []
 
         if positions.empty?
-          puts "No open paper positions"
+          # Fallback to legacy VirtualDataManager
+          vdm = VirtualDataManager.new
+          positions = vdm.get_positions
+        end
+
+        if positions.empty?
+          puts "No open positions"
           return
         end
 
@@ -197,6 +236,32 @@ module DhanScalper
 
         puts JSON.pretty_generate({ positions: formatted_positions })
       end
+
+      def read_positions_from_latest_report
+        begin
+          reporter = DhanScalper::Services::SessionReporter.new
+          sessions = reporter.list_available_sessions
+          return nil if sessions.nil? || sessions.empty?
+
+          latest = sessions.first
+          report = reporter.generate_report_for_session(latest[:session_id])
+          positions = report && report[:positions].is_a?(Array) ? report[:positions] : []
+          return nil if positions.empty?
+
+          positions.map do |p|
+            {
+              symbol: p[:symbol],
+              quantity: p[:quantity] || p[:qty],
+              side: p[:side] || p[:option_type],
+              entry_price: p[:entry_price] || 0,
+              current_price: p[:current_price] || 0,
+              pnl: p[:pnl] || 0,
+            }
+          end
+        rescue StandardError
+          nil
+        end
+      end
     end
 
     # Service for handling balance display
@@ -221,6 +286,23 @@ module DhanScalper
       private
 
       def display_paper_balance
+        # Prefer latest report ending balance if available
+        reported = read_balance_from_latest_report
+        if reported
+          available = reported[:ending_balance]
+          used = 0
+          total = reported[:ending_balance]
+          realized_pnl = reported[:total_pnl]
+
+          if @options[:format] == "json"
+            display_balance_json(available, used, total, realized_pnl)
+          else
+            display_balance_table(available, used, total, realized_pnl)
+          end
+          return
+        end
+
+        # Fallback to legacy VirtualDataManager
         vdm = VirtualDataManager.new
         balance = vdm.get_balance
 
@@ -259,7 +341,7 @@ module DhanScalper
       end
 
       def display_balance_table(available, used, total, realized_pnl)
-        puts "\nPAPER Balance:"
+        puts "\nBalance:"
         puts "=" * 40
         puts "Available: #{format_currency(available)}"
         puts "Used: #{format_currency(used)}"

@@ -2,6 +2,7 @@ symbols: ["NIFTY", "BANKNIFTY", "SENSEX"]
 
 global:
   session_hours: ["09:20", "15:25"]
+  enforce_market_hours: false # Set to false to allow trading outside market hours
   min_profit_target: 1000 # session target (₹)
   max_day_loss: 1500 # cutoff (₹)
   charge_per_order: 20 # flat per order (entry & exit both)

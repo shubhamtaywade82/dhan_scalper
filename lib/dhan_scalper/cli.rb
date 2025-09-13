@@ -22,27 +22,30 @@ module DhanScalper
       puts "=" * 50
       puts
       puts "Commands:"
-      puts "  start           - Start the scalper (Ctrl+C to stop)"
-      puts "  paper           - Start paper trading (alias for start -m paper)"
-      puts "  headless        - Run headless options buying bot"
-      puts "  dryrun          - Run signals only, no orders"
-      puts "  orders          - Show order history"
-      puts "  positions       - Show open positions"
-      puts "  balance         - Show current balance"
-      puts "  reset-balance   - Reset virtual balance to initial amount"
-      puts "  clear-data      - Clear all virtual data (orders, positions, balance)"
-      puts "  live            - Show live LTP data with WebSocket feed"
-      puts "  report          - Generate session report from CSV data"
-      puts "  status          - Show key runtime health from Redis"
-      puts "  export          - Export CSV data from Redis history"
-      puts "  config          - Show DhanHQ configuration status"
-      puts "  help            - Show this help"
+      # Keep CLI surface small; advanced commands remain available but are hidden from this help summary.
+      commands = [
+        ["start", "Start the scalper (Ctrl+C to stop)"],
+        ["paper", "Start paper trading (alias for start -m paper)"],
+        ["dryrun", "Run signals only, no orders"],
+        ["orders", "Show order history"],
+        ["positions", "Show open positions"],
+        ["balance", "Show current balance"],
+        ["reset-balance", "Reset virtual balance to initial amount"],
+        ["clear-data", "Clear all virtual data (orders, positions, balance)"],
+        ["config", "Show DhanHQ configuration status"],
+        ["version", "Show version"],
+        ["help", "Show this help"],
+      ]
+      commands.each { |name, desc| puts "  %-15s - %s" % [name, desc] }
       puts
       puts "Options:"
-      puts "  -q, --quiet     - Run in quiet mode (minimal output)"
-      puts "  -e, --enhanced  - Use enhanced indicators (Holy Grail, Supertrend) [default: true]"
-      puts "  -c, --config    - Path to configuration file"
-      puts "  -m, --mode      - Trading mode (live/paper)"
+      options = [
+        ["-q, --quiet", "Run in quiet mode (minimal output)"],
+        ["-e, --enhanced", "Use enhanced indicators (Holy Grail, Supertrend) [default: true]"],
+        ["-c, --config", "Path to configuration file"],
+        ["-m, --mode", "Trading mode (live/paper)"],
+      ]
+      options.each { |opt, desc| puts "  %-15s - %s" % [opt, desc] }
       puts
       puts "For detailed help on a command, use: scalper help COMMAND"
     end

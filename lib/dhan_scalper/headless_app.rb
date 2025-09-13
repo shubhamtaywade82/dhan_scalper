@@ -18,6 +18,7 @@ require_relative "services/websocket_manager"
 require_relative "services/rate_limiter"
 require_relative "services/order_monitor"
 require_relative "services/position_reconciler"
+require_relative "services/market_hours_service"
 
 module DhanScalper
   class HeadlessApp
@@ -87,6 +88,9 @@ module DhanScalper
                     balance_provider: @balance_provider,
                   )
                 end
+
+      # Initialize market hours service
+      @market_hours_service = Services::MarketHoursService.new(config: @config, logger: @logger)
 
       # Initialize unified risk manager
       @risk_manager = UnifiedRiskManager.new(
@@ -163,7 +167,19 @@ module DhanScalper
 
         # Setup tick handler
         @websocket_manager.on_price_update do |price_data|
-          TickCache.put(price_data)
+          # Convert price_data to tick format for TickCache
+          tick_data = {
+            segment: price_data[:segment] || "NSE_FNO",
+            security_id: price_data[:instrument_id],
+            ltp: price_data[:last_price],
+            open: price_data[:open],
+            high: price_data[:high],
+            low: price_data[:low],
+            close: price_data[:close],
+            volume: price_data[:volume],
+            ts: price_data[:timestamp],
+          }
+          TickCache.put(tick_data)
           @position_tracker.update_all_positions
         end
 
@@ -257,18 +273,7 @@ module DhanScalper
     end
 
     def market_open?
-      current_time = Time.now
-      current_date = current_time.to_date
-
-      # Check if it's a weekend
-      return false if current_time.saturday? || current_time.sunday?
-
-      # Market hours: 9:15 AM to 3:30 PM IST
-      market_start = Time.new(current_date.year, current_date.month, current_date.day, 9, 15, 0)
-      market_end = Time.new(current_date.year, current_date.month, current_date.day, 15, 30, 0)
-
-      # Check if current time is within market hours
-      current_time.between?(market_start, market_end)
+      @market_hours_service.market_open?
     end
 
     def should_stop_trading?

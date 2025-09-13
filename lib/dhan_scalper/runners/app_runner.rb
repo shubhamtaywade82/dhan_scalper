@@ -15,7 +15,6 @@ module DhanScalper
 
         # Initialize core infrastructure
         @namespace = config.dig("global", "redis_namespace") || "dhan_scalper:v1"
-        @redis_store = nil
         @csv_master = nil
         @market_feed = nil
         @filtered_instruments = {}
@@ -63,16 +62,8 @@ module DhanScalper
       def initialize_core_infrastructure
         puts "[APP] Initializing core infrastructure..."
 
-        # Initialize Redis store if Redis is available
-        if ENV["TICK_CACHE_BACKEND"] == "redis"
-          @redis_store = Stores::RedisStore.new(
-            namespace: @namespace,
-            logger: Logger.new($stdout),
-          )
-          @redis_store.connect
-          @redis_store.store_config(@config)
-          puts "[APP] Redis store initialized"
-        end
+        # Using memory-only storage
+        puts "[APP] Using memory-only storage"
 
         # Initialize CSV master and filter instruments
         @csv_master = CsvMaster.new
@@ -89,30 +80,22 @@ module DhanScalper
 
       def setup_websocket_handlers(ws)
         ws.on(:tick) do |t|
-          # Store in Redis if available
-          if @redis_store
-            tick_data = {
-              ltp: t[:ltp]&.to_f,
-              ts: t[:ts]&.to_i || Time.now.to_i,
-              day_high: t[:day_high]&.to_f,
-              day_low: t[:day_low]&.to_f,
-              atp: t[:atp]&.to_f,
-              vol: t[:vol]&.to_i,
-              segment: t[:segment],
-              security_id: t[:security_id],
-            }
-            @redis_store.store_tick(t[:segment], t[:security_id], tick_data)
-          end
+          # Normalize the tick data first
+          normalized = DhanScalper::Support::TickNormalizer.normalize(t)
 
-          # Also store in existing TickCache for backward compatibility
-          DhanScalper::TickCache.put(t)
+          # Store in TickCache (memory-only)
+
+          # Store normalized data in TickCache
+          DhanScalper::TickCache.put(normalized) if normalized
 
           # Mirror latest LTPs into subscriptions view
-          rec = { segment: t[:segment], security_id: t[:security_id], ltp: t[:ltp], ts: t[:ts], symbol: sym_for(t) }
-          if t[:segment] == "IDX_I"
-            @state.upsert_idx_sub(rec)
-          else
-            @state.upsert_opt_sub(rec)
+          if normalized
+            rec = { segment: normalized[:segment], security_id: normalized[:security_id], ltp: normalized[:ltp], ts: normalized[:ts], symbol: sym_for(normalized) }
+            if normalized[:segment] == "IDX_I"
+              @state.upsert_idx_sub(rec)
+            else
+              @state.upsert_opt_sub(rec)
+            end
           end
         end
       end
@@ -305,7 +288,7 @@ module DhanScalper
         puts "[APP] Filtering instruments for symbols: #{allowed_symbols.join(", ")}"
 
         # Use optimized symbol-specific loading with caching
-        @filtered_instruments = @csv_master.get_instruments_for_symbols(allowed_symbols, @redis_store)
+        @filtered_instruments = @csv_master.get_instruments_for_symbols(allowed_symbols)
 
         # Filter for OPTIDX and OPTFUT instruments only
         @universe_sids = Set.new
@@ -332,24 +315,8 @@ module DhanScalper
           end
         end
 
-        # Cache in Redis if available
-        if @redis_store
-          @redis_store.store_universe_sids(@universe_sids.to_a)
-
-          # Cache symbol metadata
-          @config["SYMBOLS"]&.each do |symbol, symbol_config|
-            next unless symbol_config.is_a?(Hash)
-
-            metadata = {
-              seg_idx: symbol_config["seg_idx"] || "",
-              idx_sid: symbol_config["idx_sid"] || "",
-              seg_opt: symbol_config["seg_opt"] || "",
-              lot_size: symbol_config["lot_size"] || "",
-              strike_step: symbol_config["strike_step"] || "",
-            }
-            @redis_store.store_symbol_metadata(symbol, metadata)
-          end
-        end
+        # Cache metadata in memory
+        puts "[APP] Cached #{@universe_sids.size} universe SIDs in memory"
 
         total_instruments = @filtered_instruments.values.sum(&:size)
         puts "[APP] Filtered #{total_instruments} instruments for #{allowed_symbols.size} symbols"
@@ -361,8 +328,7 @@ module DhanScalper
         # Stop market feed
         @market_feed&.stop
 
-        # Disconnect Redis store
-        @redis_store&.disconnect
+        # Memory-only storage cleanup complete
 
         puts "[APP] Cleanup complete"
       end

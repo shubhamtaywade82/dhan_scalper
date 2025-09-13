@@ -1,18 +1,20 @@
 # frozen_string_literal: true
 
 require_relative "../support/application_service"
+require_relative "../services/market_hours_service"
 
 module DhanScalper
   module Guards
     # Session guard for market hours, day loss protection, and panic switch
     class SessionGuard < DhanScalper::ApplicationService
-      attr_reader :config, :position_tracker, :cache, :logger
+      attr_reader :config, :position_tracker, :cache, :logger, :market_hours_service
 
       def initialize(config:, position_tracker:, cache:, logger: nil)
         @config = config
         @position_tracker = position_tracker
         @cache = cache
         @logger = logger || Logger.new($stdout)
+        @market_hours_service = Services::MarketHoursService.new(config: config, logger: logger)
       end
 
       def call
@@ -46,15 +48,7 @@ module DhanScalper
       end
 
       def market_open?
-        current_time = Time.now
-        market_start = Time.parse("09:15")
-        market_end = Time.parse("15:30")
-
-        # Add grace period
-        grace_start = market_start - 5.minutes
-        grace_end = market_end + 5.minutes
-
-        current_time.between?(grace_start, grace_end)
+        @market_hours_service.market_open?
       end
 
       def day_loss_limit_breached?

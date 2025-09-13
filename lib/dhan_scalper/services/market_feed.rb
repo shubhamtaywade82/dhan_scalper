@@ -3,6 +3,7 @@
 require "DhanHQ"
 require_relative "../tick_cache"
 require_relative "dhanhq_config"
+require_relative "../support/tick_normalizer"
 
 module DhanScalper
   module Services
@@ -111,22 +112,16 @@ module DhanScalper
 
       def setup_tick_handler
         @ws_client.on(:tick) do |tick|
-          # Enhance tick data with day_high and day_low if not present
-          enhanced_tick = tick.dup
-          enhanced_tick[:day_high] ||= tick[:high] # Use high as day_high if not provided
-          enhanced_tick[:day_low] ||= tick[:low]   # Use low as day_low if not provided
+          # Normalize incoming tick to our canonical schema
+          normalized = DhanScalper::Support::TickNormalizer.normalize(
+            tick,
+            segment: find_correct_segment(tick[:security_id]) || tick[:segment],
+          )
 
-          # Fix segment mapping - the DhanHQ WebSocket client doesn't preserve segment correctly
-          # We need to look up the correct segment from our instrument mapping
-          correct_segment = find_correct_segment(tick[:security_id])
-          enhanced_tick[:segment] = correct_segment if correct_segment
+          TickCache.put(normalized) if normalized
 
-          # Store tick in cache
-          TickCache.put(enhanced_tick)
-
-          # Log tick for debugging (can be removed in production)
-          if ENV["DHAN_LOG_LEVEL"] == "DEBUG"
-            puts "[TICK] #{enhanced_tick[:segment]}:#{tick[:security_id]} LTP=#{tick[:ltp]} H=#{tick[:day_high]} L=#{tick[:day_low]} kind=#{tick[:kind]}"
+          if ENV["DHAN_LOG_LEVEL"] == "DEBUG" && normalized
+            puts "[TICK] #{normalized[:segment]}:#{normalized[:security_id]} LTP=#{normalized[:ltp]} H=#{normalized[:day_high]} L=#{normalized[:day_low]} kind=#{normalized[:kind]}"
           end
         end
       end

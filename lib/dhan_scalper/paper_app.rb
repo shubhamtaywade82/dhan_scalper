@@ -609,6 +609,7 @@ module DhanScalper
 
       cache_data = DhanScalper::TickCache.all
 
+      puts "Cache data: #{cache_data.inspect}"
       if cache_data && !cache_data.empty?
         puts "\n📊 SUBSCRIBED INSTRUMENTS:"
 

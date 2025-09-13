@@ -340,36 +340,25 @@ module DhanScalper
         # Debug: Log the raw tick data
         @logger.debug "[ResilientWebSocket] Raw tick data: #{tick_data.inspect}" if ENV["DHAN_LOG_LEVEL"] == "DEBUG"
 
-        # Create tick data for TickCache with correct field names
-        tick_cache_data = {
+        # Normalize and store using TickNormalizer
+        normalized = DhanScalper::Support::TickNormalizer.normalize(
+          tick_data,
           segment: segment,
           security_id: instrument_id,
-          ltp: tick_data[:ltp].to_f,
-          open: tick_data[:open].to_f,
-          high: tick_data[:high].to_f,
-          low: tick_data[:low].to_f,
-          close: tick_data[:close].to_f,
-          volume: tick_data[:volume].to_i,
-          timestamp: timestamp,
-          day_high: tick_data[:high].to_f,
-          day_low: tick_data[:low].to_f,
-          atp: tick_data[:ltp].to_f,
-          vol: tick_data[:volume].to_i,
-        }
-
-        # Store in TickCache
-        DhanScalper::TickCache.put(tick_cache_data)
+          ts: timestamp,
+        )
+        DhanScalper::TickCache.put(normalized) if normalized
 
         # Create price data for handlers
         price_data = {
           instrument_id: instrument_id,
           symbol: tick_data[:symbol],
-          last_price: tick_data[:ltp].to_f,
-          open: tick_data[:open].to_f,
-          high: tick_data[:high].to_f,
-          low: tick_data[:low].to_f,
-          close: tick_data[:close].to_f,
-          volume: tick_data[:volume].to_i,
+          last_price: (tick_data[:ltp] || 0).to_f,
+          open: (tick_data[:open] || 0).to_f,
+          high: (tick_data[:high] || 0).to_f,
+          low: (tick_data[:low] || 0).to_f,
+          close: (tick_data[:close] || 0).to_f,
+          volume: (tick_data[:volume] || 0).to_i,
           timestamp: timestamp,
           segment: segment,
           exchange: "NSE",

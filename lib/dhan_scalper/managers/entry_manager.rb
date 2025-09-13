@@ -50,17 +50,7 @@ module DhanScalper
       private
 
       def market_open?
-        now = Time.now
-        start_h = 9
-        start_m = 15
-        end_h = 15
-        end_m = 30
-        grace_seconds = 5 * 60
-
-        start_ts = Time.new(now.year, now.month, now.day, start_h, start_m, 0, now.utc_offset)
-        end_ts   = Time.new(now.year, now.month, now.day, end_h, end_m, 0, now.utc_offset)
-
-        (now >= (start_ts - grace_seconds)) && (now <= (end_ts + grace_seconds))
+        @market_hours_service.market_open?
       end
 
       def max_positions_reached?

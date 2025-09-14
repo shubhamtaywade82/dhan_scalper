@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "csv"
 require_relative "base"
 require_relative "../support/money"
 require_relative "../support/logger"
@@ -249,14 +250,21 @@ module DhanScalper
         positions = get_positions_from_session_report
         return 0.0 if positions.nil? || positions.empty?
 
-        total_used = positions.sum do |position|
+        # Calculate position values
+        position_values = positions.sum do |position|
           quantity = position[:quantity] || position["quantity"] || 0
           entry_price = position[:entry_price] || position["entry_price"] || 0
           quantity * entry_price
         end
 
+        # Calculate total fees (₹20 per order)
+        fee_per_order = DhanScalper::Config.fee || 20.0
+        total_fees = positions.length * fee_per_order
+
+        total_used = position_values + total_fees
+
         DhanScalper::Support::Logger.debug(
-          "Calculated used balance from positions: #{total_used}",
+          "Calculated used balance - positions: #{position_values}, fees: #{total_fees}, total: #{total_used}",
           component: "PaperWallet",
         )
 
@@ -264,15 +272,49 @@ module DhanScalper
       end
 
       def get_positions_from_session_report
-        reporter = DhanScalper::Services::SessionReporter.new
-        sessions = reporter.list_available_sessions
-        return [] if sessions.nil? || sessions.empty?
+        # Find the latest session CSV file directly
+        csv_files = Dir.glob(File.join("data/reports", "session_*_*.csv"))
+        return [] if csv_files.empty?
 
-        latest = sessions.first
-        report = reporter.generate_report_for_session(latest[:session_id])
-        return [] unless report
+        latest_file = csv_files.max_by { |f| File.mtime(f) }
+        return [] unless latest_file
 
-        report[:positions] || []
+        # Parse the CSV file directly - this is a custom format, not standard CSV
+        positions = []
+        lines = File.readlines(latest_file)
+
+        # Find the positions section
+        positions_start = nil
+        lines.each_with_index do |line, index|
+          if line.strip == "POSITIONS"
+            positions_start = index + 2 # Skip the header line
+            break
+          end
+        end
+
+        return [] unless positions_start
+
+        # Parse position data
+        (positions_start...lines.length).each do |i|
+          line = lines[i].strip
+          break if line.empty? || line.start_with?("TRADES")
+
+          parts = line.split(",")
+          next if parts.length < 8
+
+          positions << {
+            symbol: parts[0],
+            option_type: parts[1],
+            strike: parts[2],
+            quantity: parts[3].to_i,
+            entry_price: parts[4].to_f,
+            current_price: parts[5].to_f,
+            pnl: parts[6].to_f,
+            created_at: parts[7],
+          }
+        end
+
+        positions
       rescue StandardError => e
         DhanScalper::Support::Logger.debug(
           "Failed to get positions from session report: #{e.message}",

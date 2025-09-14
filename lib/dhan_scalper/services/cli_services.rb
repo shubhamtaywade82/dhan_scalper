@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "json"
+require "csv"
 require "terminal-table"
 require_relative "../virtual_data_manager"
 require_relative "session_reporter"
@@ -174,6 +175,9 @@ module DhanScalper
           return
         end
 
+        # Display current balance information
+        display_current_balance_info
+
         if @options[:format] == "json"
           display_positions_json(positions)
         else
@@ -188,6 +192,22 @@ module DhanScalper
         puts "This would require DhanHQ API integration for position data"
       rescue StandardError => e
         puts "Error fetching live positions: #{e.message}"
+      end
+
+      def display_current_balance_info
+        balance_provider = BalanceProviders::PaperWallet.new
+        available = balance_provider.available_balance
+        used = balance_provider.used_balance
+        total = balance_provider.total_balance
+        realized_pnl = balance_provider.realized_pnl
+
+        puts "\nBalance:"
+        puts "========================================"
+        puts "Available: #{format_currency(available)}"
+        puts "Used: #{format_currency(used)}"
+        puts "Realized PnL: #{format_currency(realized_pnl)}"
+        puts "Total: #{format_currency(total)}"
+        puts ""
       end
 
       def display_positions_table(positions)
@@ -241,7 +261,8 @@ module DhanScalper
         return nil if sessions.nil? || sessions.empty?
 
         latest = sessions.first
-        report = reporter.generate_report_for_session(latest[:session_id])
+        # Load report data without displaying it
+        report = load_report_data(latest[:session_id])
         positions = report && report[:positions].is_a?(Array) ? report[:positions] : []
         return nil if positions.empty?
 
@@ -257,6 +278,74 @@ module DhanScalper
         end
       rescue StandardError
         nil
+      end
+
+      def load_report_data(session_id)
+        # Load report data without displaying the console summary
+        # Find the actual CSV file with the session ID
+        csv_files = Dir.glob(File.join("data/reports", "session_#{session_id}_*.csv"))
+        return nil if csv_files.empty?
+
+        csv_file = csv_files.first
+
+        report_data = {}
+        positions = []
+        in_positions_section = false
+
+        CSV.foreach(csv_file, headers: true) do |row|
+          # Check if we're in the positions section
+          if row[0] == "Symbol" && row[1] == "Option Type"
+            in_positions_section = true
+            next
+          end
+
+          # Check if we're past the positions section
+          if in_positions_section && (row[0].nil? || row[0].empty?)
+            in_positions_section = false
+            next
+          end
+
+          # Parse positions
+          if in_positions_section && row[0] && !row[0].empty?
+            positions << {
+              symbol: row[0],
+              option_type: row[1],
+              strike: row[2],
+              quantity: row[3].to_i,
+              entry_price: row[4].to_f,
+              current_price: row[5].to_f,
+              pnl: row[6].to_f,
+              created_at: row[7],
+            }
+            next
+          end
+
+          # Parse other data (skip if not in positions section)
+          next if in_positions_section
+
+          # Handle regular metric-value pairs
+          if row[0] && row[1]
+            report_data[row[0]] = row[1]
+          end
+        end
+
+        report_data[:positions] = positions
+
+        # Convert string values to appropriate types
+        report_data.transform_values do |value|
+          next value if value.is_a?(Array) # Skip positions array
+
+          case value
+          when /^\d+\.\d+$/
+            value.to_f
+          when /^\d+$/
+            value.to_i
+          else
+            value
+          end
+        end
+
+        report_data
       end
     end
 

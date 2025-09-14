@@ -256,19 +256,36 @@ module DhanScalper
         puts "  Failed: #{report_data[:failed_trades]}"
         puts "  Win Rate: #{report_data[:win_rate]&.round(2)}%"
 
-        # Financial Summary
+        # Financial Summary - Use current balance data if available
         puts "\n💰 FINANCIAL SUMMARY:"
-        puts "  Starting Balance: #{DhanScalper::Support::Money.format(report_data[:starting_balance] || 0)}"
-        puts "  Available Balance: #{DhanScalper::Support::Money.format(report_data[:available_balance] || report_data[:ending_balance] || 0)}"
-        puts "  Used Balance: #{DhanScalper::Support::Money.format(report_data[:used_balance] || 0)}"
-        puts "  Total Balance: #{DhanScalper::Support::Money.format(report_data[:total_balance] || 0)}"
-        puts "  Total P&L: #{DhanScalper::Support::Money.format(report_data[:total_pnl] || 0)}"
+        if report_data[:mode] == "paper"
+          # Get current balance data for paper mode
+          balance_provider = DhanScalper::BalanceProviders::PaperWallet.new
+          starting_balance = report_data[:starting_balance] || 200_000.0
+          available_balance = balance_provider.available_balance
+          used_balance = balance_provider.used_balance
+          total_balance = balance_provider.total_balance
+          total_pnl = total_balance - starting_balance
+        else
+          # Use cached data for other modes
+          starting_balance = report_data[:starting_balance] || 0
+          available_balance = report_data[:available_balance] || report_data[:ending_balance] || 0
+          used_balance = report_data[:used_balance] || 0
+          total_balance = report_data[:total_balance] || 0
+          total_pnl = report_data[:total_pnl] || 0
+        end
+
+        puts "  Starting Balance: #{DhanScalper::Support::Money.format(starting_balance)}"
+        puts "  Available Balance: #{DhanScalper::Support::Money.format(available_balance)}"
+        puts "  Used Balance: #{DhanScalper::Support::Money.format(used_balance)}"
+        puts "  Total Balance: #{DhanScalper::Support::Money.format(total_balance)}"
+        puts "  Total P&L: #{DhanScalper::Support::Money.format(total_pnl)}"
         puts "  Max Profit: #{DhanScalper::Support::Money.format(report_data[:max_profit] || 0)}"
         puts "  Max Drawdown: #{DhanScalper::Support::Money.format(report_data[:max_drawdown] || 0)}"
         puts "  Avg Trade P&L: #{DhanScalper::Support::Money.format(report_data[:average_trade_pnl] || 0)}"
 
         # Performance Rating
-        pnl = (report_data[:total_pnl] || 0).to_f
+        pnl = total_pnl.to_f
         if pnl.positive?
           puts "\n✅ SESSION RESULT: PROFITABLE"
         elsif pnl.negative?

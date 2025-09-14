@@ -154,10 +154,10 @@ module DhanScalper
         funds = DhanHQ::Models::Funds.fetch
         @logger.debug "[LIVE_BALANCE] Funds object: #{funds.inspect}"
 
-        if funds && funds.respond_to?(:available_balance) && funds.respond_to?(:total_balance)
+        if funds && funds.respond_to?(:available_balance)
           available = funds.available_balance.to_f
-          total = funds.total_balance.to_f
-          used = total - available
+          used = funds.respond_to?(:utilized_amount) ? funds.utilized_amount.to_f : 0.0
+          total = available + used
 
           @cache = { available: available, used: used, total: total }
         else

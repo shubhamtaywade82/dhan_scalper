@@ -281,6 +281,23 @@ module DhanScalper
 
       private
 
+      def read_balance_from_latest_report
+        reporter = DhanScalper::Services::SessionReporter.new
+        sessions = reporter.list_available_sessions
+        return nil if sessions.nil? || sessions.empty?
+
+        latest = sessions.first
+        report = reporter.generate_report_for_session(latest[:session_id])
+        return nil unless report
+
+        {
+          ending_balance: report[:ending_balance] || report[:final_balance] || 0,
+          total_pnl: report[:total_pnl] || report[:realized_pnl] || 0,
+        }
+      rescue StandardError
+        nil
+      end
+
       def display_paper_balance
         # Prefer latest report ending balance if available
         reported = read_balance_from_latest_report

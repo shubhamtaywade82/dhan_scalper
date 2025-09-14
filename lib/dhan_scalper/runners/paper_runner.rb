@@ -29,6 +29,9 @@ module DhanScalper
           memory_only: true,
         )
 
+        # Update balance provider with position tracker for accurate used balance calculation
+        @balance_provider.instance_variable_set(:@position_tracker, @position_tracker)
+
         # Initialize logger
         @logger = Logger.new($stdout)
         @logger.level = quiet ? Logger::WARN : Logger::INFO
@@ -635,8 +638,15 @@ module DhanScalper
         # Finalize session data
         @session_data[:end_time] = Time.now.strftime("%Y-%m-%d %H:%M:%S")
         @session_data[:duration_minutes] = (Time.now - @start_time) / 60.0
-        @session_data[:ending_balance] = @balance_provider.total_balance
-        @session_data[:total_pnl] = @session_data[:ending_balance] - @session_data[:starting_balance]
+
+        # Get current balance information
+        @session_data[:available_balance] = @balance_provider.available_balance
+        @session_data[:used_balance] = @balance_provider.used_balance
+        @session_data[:total_balance] = @balance_provider.total_balance
+        @session_data[:ending_balance] = @balance_provider.available_balance
+
+        # Calculate P&L correctly
+        @session_data[:total_pnl] = @session_data[:total_balance] - @session_data[:starting_balance]
         @session_data[:win_rate] =
           @session_data[:total_trades].positive? ? (@session_data[:successful_trades].to_f / @session_data[:total_trades] * 100) : 0.0
         @session_data[:average_trade_pnl] =

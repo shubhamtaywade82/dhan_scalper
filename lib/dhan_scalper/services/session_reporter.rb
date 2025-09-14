@@ -259,7 +259,7 @@ module DhanScalper
         # Financial Summary
         puts "\n💰 FINANCIAL SUMMARY:"
         puts "  Starting Balance: #{DhanScalper::Support::Money.format(report_data[:starting_balance] || 0)}"
-        puts "  Available Balance: #{DhanScalper::Support::Money.format(report_data[:ending_balance] || 0)}"
+        puts "  Available Balance: #{DhanScalper::Support::Money.format(report_data[:available_balance] || report_data[:ending_balance] || 0)}"
         puts "  Used Balance: #{DhanScalper::Support::Money.format(report_data[:used_balance] || 0)}"
         puts "  Total Balance: #{DhanScalper::Support::Money.format(report_data[:total_balance] || 0)}"
         puts "  Total P&L: #{DhanScalper::Support::Money.format(report_data[:total_pnl] || 0)}"

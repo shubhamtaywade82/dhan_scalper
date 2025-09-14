@@ -299,41 +299,18 @@ module DhanScalper
       end
 
       def display_paper_balance
-        # Prefer latest report ending balance if available
-        reported = read_balance_from_latest_report
-        if reported
-          available = reported[:ending_balance]
-          used = 0
-          total = reported[:ending_balance]
-          realized_pnl = reported[:total_pnl]
+        # Use current balance provider for accurate data
+        balance_provider = BalanceProviders::PaperWallet.new
 
-          if @options[:format] == "json"
-            display_balance_json(available, used, total, realized_pnl)
-          else
-            display_balance_table(available, used, total, realized_pnl)
-          end
-          return
-        end
+        available = balance_provider.available_balance
+        used = balance_provider.used_balance
+        total = balance_provider.total_balance
+        realized_pnl = balance_provider.realized_pnl
 
-        # Fallback to legacy VirtualDataManager
-        vdm = VirtualDataManager.new
-        balance = vdm.get_balance
-
-        if balance.is_a?(Numeric)
-          puts format_currency(balance)
-        elsif balance
-          available = balance[:available] || balance["available"] || 0
-          used = balance[:used] || balance["used"] || 0
-          total = balance[:total] || balance["total"] || 0
-          realized_pnl = balance[:realized_pnl] || balance["realized_pnl"] || 0
-
-          if @options[:format] == "json"
-            display_balance_json(available, used, total, realized_pnl)
-          else
-            display_balance_table(available, used, total, realized_pnl)
-          end
+        if @options[:format] == "json"
+          display_balance_json(available, used, total, realized_pnl)
         else
-          puts format_currency(0)
+          display_balance_table(available, used, total, realized_pnl)
         end
       end
 

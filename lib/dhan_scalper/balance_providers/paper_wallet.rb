@@ -8,17 +8,26 @@ require_relative "../support/validations"
 module DhanScalper
   module BalanceProviders
     class PaperWallet < Base
-      def initialize(starting_balance: 200_000.0)
+      def initialize(starting_balance: 200_000.0, position_tracker: nil)
         super()
         @starting_balance = DhanScalper::Support::Money.bd(starting_balance)
         @available = @starting_balance
         @used = DhanScalper::Support::Money.bd(0)
         @total = @starting_balance
         @realized_pnl = DhanScalper::Support::Money.bd(0)
+        @position_tracker = position_tracker
       end
 
       def available_balance
-        DhanScalper::Support::Money.dec(@available).to_f
+        # Calculate available balance as total - used
+        total = total_balance
+        used = used_balance
+        available = total - used
+        DhanScalper::Support::Logger.debug(
+          "Calculated available balance - total: #{total}, used: #{used}, available: #{available}",
+          component: "PaperWallet",
+        )
+        available
       end
 
       def total_balance
@@ -35,7 +44,8 @@ module DhanScalper
       end
 
       def used_balance
-        DhanScalper::Support::Money.dec(@used).to_f
+        # Always calculate used balance from current positions in session report
+        calculate_used_balance_from_positions
       end
 
       def update_balance(amount, type: :debit)
@@ -230,6 +240,45 @@ module DhanScalper
       def clear_used_balance
         @used = DhanScalper::Support::Money.bd(0)
         @total = DhanScalper::Support::Money.add(@available, @used)
+      end
+
+      private
+
+      def calculate_used_balance_from_positions
+        # Try to get positions from session report first
+        positions = get_positions_from_session_report
+        return 0.0 if positions.nil? || positions.empty?
+
+        total_used = positions.sum do |position|
+          quantity = position[:quantity] || position["quantity"] || 0
+          entry_price = position[:entry_price] || position["entry_price"] || 0
+          quantity * entry_price
+        end
+
+        DhanScalper::Support::Logger.debug(
+          "Calculated used balance from positions: #{total_used}",
+          component: "PaperWallet",
+        )
+
+        total_used.to_f
+      end
+
+      def get_positions_from_session_report
+        reporter = DhanScalper::Services::SessionReporter.new
+        sessions = reporter.list_available_sessions
+        return [] if sessions.nil? || sessions.empty?
+
+        latest = sessions.first
+        report = reporter.generate_report_for_session(latest[:session_id])
+        return [] unless report
+
+        report[:positions] || []
+      rescue StandardError => e
+        DhanScalper::Support::Logger.debug(
+          "Failed to get positions from session report: #{e.message}",
+          component: "PaperWallet",
+        )
+        []
       end
     end
   end

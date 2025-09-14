@@ -253,9 +253,10 @@ module DhanScalper
         positions_summary = @position_tracker.get_positions_summary
 
         # Calculate financial metrics correctly
-        @session_data[:ending_balance] = @balance_provider.available_balance
+        @session_data[:available_balance] = @balance_provider.available_balance
         @session_data[:used_balance] = @balance_provider.used_balance
         @session_data[:total_balance] = @balance_provider.total_balance
+        @session_data[:ending_balance] = @balance_provider.available_balance
 
         # Calculate P&L from position tracker (more accurate than balance difference)
         total_unrealized_pnl = positions_summary[:total_pnl] || 0.0

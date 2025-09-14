@@ -181,7 +181,16 @@ module DhanScalper
       private
 
       def position_key(exchange_segment, security_id, side)
-        "#{exchange_segment}_#{security_id}_#{side.upcase}"
+        # For options, we want to aggregate by underlying symbol, not individual security_id
+        # This allows multiple strikes of the same underlying to be treated as one position
+        if security_id.to_s.match?(/^\d+$/) # If it's a numeric security_id (likely an option)
+          # Extract underlying symbol from security_id if possible
+          # For now, we'll use a simplified approach - group by first few digits
+          base_id = security_id.to_s[0..2] # Use first 3 digits as base
+          "#{exchange_segment}_#{base_id}_#{side.upcase}"
+        else
+          "#{exchange_segment}_#{security_id}_#{side.upcase}"
+        end
       end
 
       def create_new_position(key, exchange_segment, security_id, side, quantity_bd, price_bd, fee_bd)
@@ -232,6 +241,88 @@ module DhanScalper
         position[:entry_fee] =
           DhanScalper::Support::Money.add(position[:entry_fee] || DhanScalper::Support::Money.bd(0), fee_bd)
         position[:last_updated] = Time.now
+      end
+
+      # Get comprehensive positions summary
+      def get_positions_summary
+        total_positions = @positions.size
+        open_positions = @positions.values.count { |pos| DhanScalper::Support::Money.positive?(pos[:net_qty]) }
+        closed_positions = total_positions - open_positions
+
+        # Calculate total P&L
+        total_unrealized_pnl = @positions.values.sum do |pos|
+          DhanScalper::Support::Money.dec(pos[:unrealized_pnl] || DhanScalper::Support::Money.bd(0))
+        end
+
+        total_realized_pnl = @positions.values.sum do |pos|
+          DhanScalper::Support::Money.dec(pos[:realized_pnl] || DhanScalper::Support::Money.bd(0))
+        end
+
+        total_pnl = total_unrealized_pnl + total_realized_pnl
+
+        # Calculate max profit and drawdown
+        max_profit = @positions.values.map do |pos|
+          DhanScalper::Support::Money.dec(pos[:unrealized_pnl] || DhanScalper::Support::Money.bd(0))
+        end.max || 0.0
+
+        max_drawdown = @positions.values.map do |pos|
+          pnl = DhanScalper::Support::Money.dec(pos[:unrealized_pnl] || DhanScalper::Support::Money.bd(0))
+          pnl.negative? ? pnl.abs : 0.0
+        end.max || 0.0
+
+        # Count winning and losing trades
+        winning_trades = @positions.values.count do |pos|
+          pnl = DhanScalper::Support::Money.dec(pos[:unrealized_pnl] || DhanScalper::Support::Money.bd(0))
+          pnl.positive?
+        end
+
+        losing_trades = @positions.values.count do |pos|
+          pnl = DhanScalper::Support::Money.dec(pos[:unrealized_pnl] || DhanScalper::Support::Money.bd(0))
+          pnl.negative?
+        end
+
+        # Format positions for reporting
+        formatted_positions = @positions.values.map do |pos|
+          {
+            symbol: pos[:symbol] || pos[:underlying_symbol] || "UNKNOWN",
+            option_type: pos[:option_type] || "UNKNOWN",
+            strike: pos[:strike_price] || 0,
+            quantity: DhanScalper::Support::Money.dec(pos[:net_qty] || DhanScalper::Support::Money.bd(0)),
+            entry_price: DhanScalper::Support::Money.dec(pos[:buy_avg] || DhanScalper::Support::Money.bd(0)),
+            current_price: DhanScalper::Support::Money.dec(pos[:current_price] || pos[:buy_avg] || DhanScalper::Support::Money.bd(0)),
+            pnl: DhanScalper::Support::Money.dec(pos[:unrealized_pnl] || DhanScalper::Support::Money.bd(0)),
+            created_at: pos[:created_at]&.strftime("%Y-%m-%d %H:%M:%S %z") || Time.now.strftime("%Y-%m-%d %H:%M:%S %z"),
+          }
+        end
+
+        {
+          total_positions: total_positions,
+          open_positions: open_positions,
+          closed_positions: closed_positions,
+          total_pnl: total_pnl,
+          max_profit: max_profit,
+          max_drawdown: max_drawdown,
+          winning_trades: winning_trades,
+          losing_trades: losing_trades,
+          positions: @positions.transform_values do |pos|
+            {
+              symbol: pos[:symbol] || pos[:underlying_symbol] || "UNKNOWN",
+              option_type: pos[:option_type] || "UNKNOWN",
+              strike: pos[:strike_price] || 0,
+              quantity: DhanScalper::Support::Money.dec(pos[:net_qty] || DhanScalper::Support::Money.bd(0)),
+              entry_price: DhanScalper::Support::Money.dec(pos[:buy_avg] || DhanScalper::Support::Money.bd(0)),
+              current_price: DhanScalper::Support::Money.dec(pos[:current_price] || pos[:buy_avg] || DhanScalper::Support::Money.bd(0)),
+              pnl: DhanScalper::Support::Money.dec(pos[:unrealized_pnl] || DhanScalper::Support::Money.bd(0)),
+              created_at: pos[:created_at]&.strftime("%Y-%m-%d %H:%M:%S %z") || Time.now.strftime("%Y-%m-%d %H:%M:%S %z"),
+            }
+          end,
+        }
+      end
+
+      # Save session data to file
+      def save_session_data
+        # This method can be implemented to save position data to a file
+        # For now, it's a no-op
       end
     end
   end

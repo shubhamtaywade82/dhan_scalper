@@ -31,7 +31,7 @@ module DhanScalper
 
         # Clean up all WebSocket connections
         def cleanup_all_websockets
-          puts "\n[WEBSOCKET] Cleaning up all connections..." if ENV["DHAN_LOG_LEVEL"] == "DEBUG"
+          puts "\n[WEBSOCKET] Cleaning up all connections..."
 
           # Try multiple methods to disconnect all WebSocket connections
           methods_to_try = [
@@ -41,23 +41,33 @@ module DhanScalper
             -> { DhanHQ::WebSocket.disconnect_all! },
           ]
 
+          success = false
           methods_to_try.each do |method|
             method.call
-            puts "[WEBSOCKET] Successfully disconnected all connections" if ENV["DHAN_LOG_LEVEL"] == "DEBUG"
-            return
+            puts "[WEBSOCKET] Successfully disconnected all connections"
+            success = true
+            break
           rescue StandardError => e
-            if ENV["DHAN_LOG_LEVEL"] == "DEBUG"
-              puts "[WEBSOCKET] Warning: Failed to disconnect via method: #{e.message}"
-            end
+            puts "[WEBSOCKET] Warning: Failed to disconnect via method: #{e.message}"
             next
           end
 
-          puts "[WEBSOCKET] Warning: Could not disconnect all WebSocket connections" if ENV["DHAN_LOG_LEVEL"] == "DEBUG"
+          return if success
+
+          puts "[WEBSOCKET] Warning: Could not disconnect all WebSocket connections using standard methods"
+          # Try to force cleanup any remaining connections
+          begin
+            # Force garbage collection to clean up any remaining WebSocket objects
+            GC.start
+            puts "[WEBSOCKET] Forced garbage collection to clean up remaining connections"
+          rescue StandardError => e
+            puts "[WEBSOCKET] Error during forced cleanup: #{e.message}"
+          end
         end
 
         # Check if cleanup is already registered
         def cleanup_registered?
-          @cleanup_registered || false
+          @register_cleanup || false
         end
       end
     end

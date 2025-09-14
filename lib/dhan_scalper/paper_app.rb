@@ -236,16 +236,31 @@ module DhanScalper
         # Finalize session data
         @session_data[:end_time] = Time.now.strftime("%Y-%m-%d %H:%M:%S")
         @session_data[:duration_minutes] = (Time.now - @start_time) / 60.0
-        @session_data[:ending_balance] = @balance_provider.total_balance
-        @session_data[:total_pnl] = @session_data[:ending_balance] - @session_data[:starting_balance]
+
+        # Get positions summary first
+        positions_summary = @position_tracker.get_positions_summary
+
+        # Calculate financial metrics correctly
+        @session_data[:ending_balance] = @balance_provider.available_balance
+        @session_data[:used_balance] = @balance_provider.used_balance
+        @session_data[:total_balance] = @balance_provider.total_balance
+
+        # Calculate P&L from position tracker (more accurate than balance difference)
+        total_unrealized_pnl = positions_summary[:total_pnl] || 0.0
+        total_realized_pnl = @balance_provider.realized_pnl || 0.0
+        @session_data[:total_pnl] = total_unrealized_pnl + total_realized_pnl
+
+        # Calculate max profit and drawdown from position tracker
+        @session_data[:max_profit] = positions_summary[:max_profit] || 0.0
+        @session_data[:max_drawdown] = positions_summary[:max_drawdown] || 0.0
+
         @session_data[:win_rate] =
           @session_data[:total_trades].positive? ? (@session_data[:successful_trades].to_f / @session_data[:total_trades] * 100) : 0.0
         @session_data[:average_trade_pnl] =
           @session_data[:total_trades].positive? ? (@session_data[:total_pnl] / @session_data[:total_trades]) : 0.0
 
-        # Get positions summary
-        positions_summary = @position_tracker.get_positions_summary
-        @session_data[:positions] = positions_summary[:positions].values
+        # Get positions data properly
+        @session_data[:positions] = positions_summary[:positions]&.values || []
         @session_data[:symbols_traded] = @session_data[:symbols_traded].to_a
 
         show_final_summary

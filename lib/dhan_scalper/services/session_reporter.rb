@@ -4,6 +4,7 @@ require "csv"
 require "json"
 require "fileutils"
 require "time"
+require_relative "../support/money"
 
 module DhanScalper
   module Services
@@ -11,7 +12,17 @@ module DhanScalper
       def initialize
         @data_dir = "data"
         @reports_dir = File.join(@data_dir, "reports")
-        FileUtils.mkdir_p(@reports_dir)
+
+        # Ensure the reports directory exists
+        begin
+          FileUtils.mkdir_p(@reports_dir)
+          puts "[REPORTS] Reports directory created: #{@reports_dir}" if ENV["DHAN_LOG_LEVEL"] == "DEBUG"
+        rescue StandardError => e
+          puts "[REPORTS] Warning: Failed to create reports directory: #{e.message}"
+          # Fallback to current directory if data directory creation fails
+          @reports_dir = "reports"
+          FileUtils.mkdir_p(@reports_dir)
+        end
       end
 
       # Generate a comprehensive session report
@@ -33,6 +44,8 @@ module DhanScalper
           total_pnl: session_data[:total_pnl] || 0.0,
           starting_balance: session_data[:starting_balance] || 0.0,
           ending_balance: session_data[:ending_balance] || 0.0,
+          used_balance: session_data[:used_balance] || 0.0,
+          total_balance: session_data[:total_balance] || 0.0,
           max_drawdown: session_data[:max_drawdown] || 0.0,
           max_profit: session_data[:max_profit] || 0.0,
           win_rate: session_data[:win_rate] || 0.0,
@@ -43,13 +56,30 @@ module DhanScalper
           performance_summary: session_data[:performance_summary] || {},
         }
 
+        # Ensure reports directory exists before writing
+        ensure_reports_directory
+
         # Save JSON report
         json_file = File.join(@reports_dir, "session_#{session_id}_#{timestamp}.json")
-        File.write(json_file, JSON.pretty_generate(report_data))
+        begin
+          File.write(json_file, JSON.pretty_generate(report_data))
+        rescue StandardError => e
+          puts "[REPORTS] Error writing JSON report: #{e.message}"
+          # Fallback to current directory
+          json_file = "session_#{session_id}_#{timestamp}.json"
+          File.write(json_file, JSON.pretty_generate(report_data))
+        end
 
         # Save CSV report
         csv_file = File.join(@reports_dir, "session_#{session_id}_#{timestamp}.csv")
-        save_csv_report(csv_file, report_data)
+        begin
+          save_csv_report(csv_file, report_data)
+        rescue StandardError => e
+          puts "[REPORTS] Error writing CSV report: #{e.message}"
+          # Fallback to current directory
+          csv_file = "session_#{session_id}_#{timestamp}.csv"
+          save_csv_report(csv_file, report_data)
+        end
 
         # Generate console summary
         generate_console_summary(report_data)
@@ -112,6 +142,21 @@ module DhanScalper
 
       private
 
+      def ensure_reports_directory
+        return if Dir.exist?(@reports_dir)
+
+        begin
+          FileUtils.mkdir_p(@reports_dir)
+          puts "[REPORTS] Created reports directory: #{@reports_dir}" if ENV["DHAN_LOG_LEVEL"] == "DEBUG"
+        rescue StandardError => e
+          puts "[REPORTS] Warning: Failed to create reports directory #{@reports_dir}: #{e.message}"
+          # Fallback to current directory
+          @reports_dir = "reports"
+          FileUtils.mkdir_p(@reports_dir)
+          puts "[REPORTS] Using fallback directory: #{@reports_dir}"
+        end
+      end
+
       def generate_session_id
         "PAPER_#{Time.now.strftime("%Y%m%d_%H%M%S")}"
       end
@@ -144,7 +189,9 @@ module DhanScalper
           # Financial Summary
           csv << ["FINANCIAL SUMMARY"]
           csv << ["Starting Balance", DhanScalper::Support::Money.format(report_data[:starting_balance] || 0)]
-          csv << ["Ending Balance", DhanScalper::Support::Money.format(report_data[:ending_balance] || 0)]
+          csv << ["Available Balance", DhanScalper::Support::Money.format(report_data[:ending_balance] || 0)]
+          csv << ["Used Balance", DhanScalper::Support::Money.format(report_data[:used_balance] || 0)]
+          csv << ["Total Balance", DhanScalper::Support::Money.format(report_data[:total_balance] || 0)]
           csv << ["Total P&L", DhanScalper::Support::Money.format(report_data[:total_pnl] || 0)]
           csv << ["Max Profit", DhanScalper::Support::Money.format(report_data[:max_profit] || 0)]
           csv << ["Max Drawdown", DhanScalper::Support::Money.format(report_data[:max_drawdown] || 0)]
@@ -212,7 +259,9 @@ module DhanScalper
         # Financial Summary
         puts "\n💰 FINANCIAL SUMMARY:"
         puts "  Starting Balance: #{DhanScalper::Support::Money.format(report_data[:starting_balance] || 0)}"
-        puts "  Ending Balance: #{DhanScalper::Support::Money.format(report_data[:ending_balance] || 0)}"
+        puts "  Available Balance: #{DhanScalper::Support::Money.format(report_data[:ending_balance] || 0)}"
+        puts "  Used Balance: #{DhanScalper::Support::Money.format(report_data[:used_balance] || 0)}"
+        puts "  Total Balance: #{DhanScalper::Support::Money.format(report_data[:total_balance] || 0)}"
         puts "  Total P&L: #{DhanScalper::Support::Money.format(report_data[:total_pnl] || 0)}"
         puts "  Max Profit: #{DhanScalper::Support::Money.format(report_data[:max_profit] || 0)}"
         puts "  Max Drawdown: #{DhanScalper::Support::Money.format(report_data[:max_drawdown] || 0)}"

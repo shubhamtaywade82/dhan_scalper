@@ -33,15 +33,26 @@ module DhanScalper
         # Ensure global WebSocket cleanup is registered
         DhanScalper::Services::WebSocketCleanup.register_cleanup
 
-        # Try to create WebSocket client with fallback methods
-        ws = create_websocket_client
-        return unless ws
+        puts "[APP] WebSocket cleanup registered #{ENV["DISABLE_WEBSOCKET"]}"
+        # Check if WebSocket is disabled via environment variable
+        if ENV["DISABLE_WEBSOCKET"] == "true"
+          puts "[WS] WebSocket disabled via DISABLE_WEBSOCKET=true"
+          run_fallback_mode
+          return
+        end
 
-        setup_websocket_handlers(ws)
-        setup_traders(ws)
-        display_startup_info
+        # Try to create WebSocket client with retry logic
+        ws = create_websocket_with_retry
 
-        run_main_loop(ws)
+        if ws
+          setup_websocket_handlers(ws)
+          setup_traders(ws)
+          display_startup_info
+          run_main_loop(ws)
+        else
+          puts "[WS] WebSocket connection failed, falling back to LTP-only mode"
+          run_fallback_mode
+        end
       ensure
         cleanup
         disconnect_websocket
@@ -75,7 +86,43 @@ module DhanScalper
         @market_feed.start([]) # Start with empty instruments
         puts "[APP] Market feed initialized"
 
+        # Initialize live trading components if in live mode
+        if @mode == :live
+          initialize_live_trading_components
+        end
+
         puts "[APP] Core infrastructure initialization complete"
+      end
+
+      def initialize_live_trading_components
+        puts "[APP] Initializing live trading components..."
+
+        # Initialize live balance provider
+        @balance_provider = DhanScalper::BalanceProviders::LiveBalance.new(
+          logger: @quiet ? Logger.new("/dev/null") : Logger.new($stdout)
+        )
+
+        # Initialize live broker
+        @broker = DhanScalper::Brokers::DhanBroker.new(
+          balance_provider: @balance_provider,
+          logger: @quiet ? Logger.new("/dev/null") : Logger.new($stdout)
+        )
+
+        # Initialize live position tracker
+        @position_tracker = DhanScalper::Services::LivePositionTracker.new(
+          broker: @broker,
+          balance_provider: @balance_provider,
+          logger: @quiet ? Logger.new("/dev/null") : Logger.new($stdout)
+        )
+
+        # Initialize live order manager
+        @order_manager = DhanScalper::Services::LiveOrderManager.new(
+          broker: @broker,
+          position_tracker: @position_tracker,
+          logger: @quiet ? Logger.new("/dev/null") : Logger.new($stdout)
+        )
+
+        puts "[APP] Live trading components initialized"
       end
 
       def setup_websocket_handlers(ws)
@@ -113,7 +160,11 @@ module DhanScalper
             next
           end
 
-          ws.subscribe_one(segment: s["seg_idx"], security_id: s["idx_sid"])
+          # Subscribe to WebSocket if available
+          if ws
+            ws.subscribe_one(segment: s["seg_idx"], security_id: s["idx_sid"])
+          end
+
           spot = wait_for_spot(s)
           picker = OptionPicker.new(s, mode: @mode)
           pick = picker.pick(current_spot: spot)
@@ -130,7 +181,12 @@ module DhanScalper
             quantity_sizer: @quantity_sizer,
             enhanced: @enhanced,
           )
-          tr.subscribe_options(@ce_map[sym], @pe_map[sym])
+
+          # Subscribe to options if WebSocket is available
+          if ws
+            tr.subscribe_options(@ce_map[sym], @pe_map[sym])
+          end
+
           puts "[#{sym}] Expiry=#{pick[:expiry]} strikes=#{pick[:strikes].join(", ")}"
           @traders[sym] = tr
         end
@@ -213,7 +269,88 @@ module DhanScalper
         end
       end
 
+      def create_websocket_with_retry
+        max_retries = 2 # Reduced retries to avoid rate limiting
+        retry_delay = 30 # Start with 30 seconds delay
+
+        (1..max_retries).each do |attempt|
+          puts "[WS] Connection attempt #{attempt}/#{max_retries}"
+
+          ws = create_websocket_client
+          return ws if ws
+
+          if attempt < max_retries
+            puts "[WS] Connection failed, retrying in #{retry_delay}s..."
+            sleep(retry_delay)
+            retry_delay *= 2 # Exponential backoff
+          end
+        end
+
+        puts "[WS] Failed to establish WebSocket connection after #{max_retries} attempts"
+        puts "[WS] This is likely due to rate limiting (429 errors)"
+        nil
+      end
+
+      def run_fallback_mode
+        puts "[FALLBACK] Running in LTP-only mode without WebSocket"
+        puts "[FALLBACK] This mode will use REST API for price updates"
+
+        # Initialize traders without WebSocket
+        setup_traders(nil)
+        display_startup_info
+
+        # Run a simplified main loop that uses LTP fallback
+        run_fallback_loop
+      end
+
+      def run_fallback_loop
+        puts "[FALLBACK] Starting fallback trading loop..."
+        puts "[FALLBACK] Using LTP fallback service for price updates"
+        last_decision = Time.at(0)
+        last_status = Time.at(0)
+
+        loop do
+          break if @stop
+
+          current_time = Time.now
+
+          # Execute trading decisions every 60 seconds
+          if current_time - last_decision >= 60
+            puts "[FALLBACK] Executing trading decisions..."
+            execute_trading_decisions
+            last_decision = current_time
+          end
+
+          # Status update every 30 seconds
+          if current_time - last_status >= 30
+            puts "[FALLBACK] Status update - checking positions and risk limits"
+            check_risk_limits
+            last_status = current_time
+          end
+
+          sleep(5) # Check every 5 seconds
+        end
+      rescue Interrupt
+        puts "\n[FALLBACK] Shutting down gracefully..."
+      rescue StandardError => e
+        puts "[FALLBACK] Error in fallback loop: #{e.message}"
+        puts "[FALLBACK] Continuing with error handling..."
+        retry
+      end
+
       def create_websocket_client
+        # Add rate limiting to prevent 429 errors
+        @last_ws_attempt ||= Time.at(0)
+        min_interval = 5.0 # 5 seconds between connection attempts
+
+        if Time.now - @last_ws_attempt < min_interval
+          sleep_time = min_interval - (Time.now - @last_ws_attempt)
+          puts "[WS] Rate limiting: waiting #{sleep_time.round(1)}s before next connection attempt"
+          sleep(sleep_time)
+        end
+
+        @last_ws_attempt = Time.now
+
         # Try multiple methods to create WebSocket client
         methods_to_try = [
           -> { DhanHQ::WS::Client.new(mode: :quote).start },
@@ -223,11 +360,21 @@ module DhanScalper
         ]
 
         methods_to_try.each do |method|
-          result = method.call
-          return result if result.respond_to?(:on)
-        rescue StandardError => e
-          puts "Warning: Failed to create WebSocket client via method: #{e.message}"
-          next
+          begin
+            result = method.call
+            if result.respond_to?(:on)
+              puts "[WS] Successfully created WebSocket client"
+              return result
+            end
+          rescue StandardError => e
+            puts "Warning: Failed to create WebSocket client via method: #{e.message}"
+            # If it's a 429 error, wait longer before retrying
+            if e.message.include?("429")
+              puts "[WS] Rate limited (429), waiting 30s before retry"
+              sleep(30)
+            end
+            next
+          end
         end
 
         puts "Error: Failed to create WebSocket client via all available methods"

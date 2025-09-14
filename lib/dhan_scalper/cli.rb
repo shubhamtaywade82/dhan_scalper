@@ -36,7 +36,7 @@ module DhanScalper
         ["version", "Show version"],
         ["help", "Show this help"],
       ]
-      commands.each { |name, desc| puts "  %-15s - %s" % [name, desc] }
+      commands.each { |name, desc| puts format("  %-15s - %s", name, desc) }
       puts
       puts "Options:"
       options = [
@@ -45,7 +45,7 @@ module DhanScalper
         ["-c, --config", "Path to configuration file"],
         ["-m, --mode", "Trading mode (live/paper)"],
       ]
-      options.each { |opt, desc| puts "  %-15s - %s" % [opt, desc] }
+      options.each { |opt, desc| puts format("  %-15s - %s", opt, desc) }
       puts
       puts "For detailed help on a command, use: scalper help COMMAND"
     end
@@ -62,6 +62,9 @@ module DhanScalper
       mode = (opts[:mode] || "paper").to_sym
       quiet = !opts[:quiet].nil?
       enhanced = opts.key?(:enhanced) ? opts[:enhanced] : true
+
+      # Ensure global WebSocket cleanup is registered
+      DhanScalper::Services::WebSocketCleanup.register_cleanup
 
       # Initialize logger
       DhanScalper::Support::Logger.setup(level: quiet ? :warn : :info)
@@ -158,10 +161,40 @@ module DhanScalper
       enhanced = options[:enhanced]
       timeout_minutes = options[:timeout]
 
+      # Ensure global WebSocket cleanup is registered
+      DhanScalper::Services::WebSocketCleanup.register_cleanup
+
       DhanHQ.configure_with_env
       DhanHQ.logger.level = (cfg.dig("global", "log_level") || "INFO").upcase == "DEBUG" ? Logger::DEBUG : Logger::INFO
 
       runner = Runners::PaperRunner.new(cfg, quiet: quiet, enhanced: enhanced, timeout_minutes: timeout_minutes)
+      runner.start
+    end
+
+    desc "live", "Start live trading with real money"
+    option :config, type: :string, aliases: "-c"
+    option :quiet, type: :boolean, aliases: "-q", desc: "Run in quiet mode (minimal output)", default: false
+    option :enhanced, type: :boolean, aliases: "-e", desc: "Use enhanced indicators (Holy Grail, Supertrend)",
+                      default: true
+    def live
+      cfg = Config.load(path: options[:config])
+      quiet = options[:quiet]
+      enhanced = options[:enhanced]
+
+      # Ensure global WebSocket cleanup is registered
+      DhanScalper::Services::WebSocketCleanup.register_cleanup
+
+      # Initialize logger
+      DhanScalper::Support::Logger.setup(level: quiet ? :warn : :info)
+
+      DhanHQ.configure_with_env
+      # Always set INFO level for CLI live; keep logs concise for terminal usage
+      if DhanHQ.respond_to?(:logger)
+        logger_obj = DhanHQ.logger
+        logger_obj.level = Logger::INFO if logger_obj.respond_to?(:level=)
+      end
+
+      runner = Runners::AppRunner.new(cfg, mode: :live, quiet: quiet, enhanced: enhanced)
       runner.start
     end
 
@@ -216,11 +249,11 @@ module DhanScalper
       puts "All virtual data cleared."
     end
 
-    desc "live", "Show live LTP data with WebSocket feed"
+    desc "live-data", "Show live LTP data with WebSocket feed"
     option :interval, type: :numeric, default: 1.0, desc: "Refresh interval (seconds)"
     option :instruments, type: :string,
                          desc: "Comma-separated list of instruments (format: name:segment:security_id)"
-    def live
+    def live_data
       # Ensure global WebSocket cleanup is registered
       DhanScalper::Services::WebSocketCleanup.register_cleanup
 

@@ -37,6 +37,9 @@ module DhanScalper
     end
 
     def start
+      # Ensure global WebSocket cleanup is registered
+      DhanScalper::Services::WebSocketCleanup.register_cleanup
+
       @logger.info "[HEADLESS] Starting DhanScalper Options Buying Bot"
       @logger.info "[MODE] #{@mode.upcase} trading"
       @logger.info "[BALANCE] ₹#{@balance_provider.available_balance.round(0)}"

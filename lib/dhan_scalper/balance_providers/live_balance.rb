@@ -17,17 +17,17 @@ module DhanScalper
 
       def available_balance
         refresh_cache_if_needed
-        @cache[:available] || 0.0
+        (@cache[:available] || 0.0).to_f
       end
 
       def total_balance
         refresh_cache_if_needed
-        @cache[:total] || 0.0
+        (@cache[:total] || 0.0).to_f
       end
 
       def used_balance
         refresh_cache_if_needed
-        @cache[:used] || 0.0
+        (@cache[:used] || 0.0).to_f
       end
 
       def update_balance(_amount, type: :debit)
@@ -154,10 +154,10 @@ module DhanScalper
         funds = DhanHQ::Models::Funds.fetch
         @logger.debug "[LIVE_BALANCE] Funds object: #{funds.inspect}"
 
-        if funds && funds.respond_to?(:available_balance) && funds.respond_to?(:utilized_amount)
+        if funds && funds.respond_to?(:available_balance) && funds.respond_to?(:total_balance)
           available = funds.available_balance.to_f
-          used = funds.utilized_amount.to_f
-          total = (available + used).to_f
+          total = funds.total_balance.to_f
+          used = total - available
 
           @cache = { available: available, used: used, total: total }
         else

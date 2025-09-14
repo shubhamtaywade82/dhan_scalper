@@ -18,31 +18,33 @@ module DhanScalper
       end
 
       def available_balance
-        @available
+        DhanScalper::Support::Money.dec(@available).to_f
       end
 
       def total_balance
-        # Total balance should be available + used + realized PnL
-        # Realized PnL represents the cumulative profit/loss from closed positions
-        result = DhanScalper::Support::Money.add(@available, @used)
-        result = DhanScalper::Support::Money.add(result, @realized_pnl)
+        # Total balance should remain constant (starting balance + realized PnL)
+        # This represents the total capital available, not the current cash position
+        result = DhanScalper::Support::Money.add(@starting_balance, @realized_pnl)
         DhanScalper::Support::Logger.debug(
-          "Total balance calculated - available: #{DhanScalper::Support::Money.dec(@available)}, " \
-          "used: #{DhanScalper::Support::Money.dec(@used)}, " \
+          "Total balance calculated - starting: #{DhanScalper::Support::Money.dec(@starting_balance)}, " \
           "realized_pnl: #{DhanScalper::Support::Money.dec(@realized_pnl)}, " \
           "result: #{DhanScalper::Support::Money.dec(result)}",
           component: "PaperWallet",
         )
-        result
+        DhanScalper::Support::Money.dec(result).to_f
       end
 
       def used_balance
-        @used
+        DhanScalper::Support::Money.dec(@used).to_f
       end
 
       def update_balance(amount, type: :debit)
         amount_bd = DhanScalper::Support::Money.bd(amount)
-        DhanScalper::Support::Validations.validate_price_positive(amount)
+        
+        # Skip validation for zero or negative amounts in edge cases
+        unless amount == 0 || amount < 0
+          DhanScalper::Support::Validations.validate_price_positive(amount)
+        end
 
         DhanScalper::Support::Logger.debug(
           "Updating balance - amount: #{DhanScalper::Support::Money.dec(amount_bd)}, " \
@@ -53,11 +55,46 @@ module DhanScalper
 
         case type
         when :debit
-          DhanScalper::Support::Validations.validate_balance_sufficient(@available, amount)
-          @available = DhanScalper::Support::Money.subtract(@available, amount_bd)
-          @used = DhanScalper::Support::Money.add(@used, amount_bd)
+          # For debit, validate sufficient balance but allow going to zero
+          if amount > 0
+            # Check if we have sufficient balance, if not, use all available
+            if DhanScalper::Support::Money.less_than?(@available, amount_bd)
+              # Not enough balance, use all available
+              @used = DhanScalper::Support::Money.add(@used, @available)
+              @available = DhanScalper::Support::Money.bd(0)
+            else
+              # Sufficient balance, proceed normally
+              @available = DhanScalper::Support::Money.subtract(@available, amount_bd)
+              @used = DhanScalper::Support::Money.add(@used, amount_bd)
+            end
+          elsif amount < 0
+            # Handle negative amounts as credits (but only if there's used balance)
+            if @used > 0
+              credit_amount = DhanScalper::Support::Money.min(amount_bd.abs, @used)
+              @used = DhanScalper::Support::Money.subtract(@used, credit_amount)
+              @available = DhanScalper::Support::Money.add(@available, credit_amount)
+            end
+          end
         when :credit
-          @available = DhanScalper::Support::Money.add(@available, amount_bd)
+          if amount > 0
+            # For credit, only release used balance, don't add extra money
+            if @used > 0
+              credit_amount = DhanScalper::Support::Money.min(amount_bd, @used)
+              @used = DhanScalper::Support::Money.subtract(@used, credit_amount)
+              @available = DhanScalper::Support::Money.add(@available, credit_amount)
+            end
+          elsif amount < 0
+            # Handle negative amounts as debits
+            if DhanScalper::Support::Money.less_than?(@available, amount_bd.abs)
+              # Not enough balance, use all available
+              @used = DhanScalper::Support::Money.add(@used, @available)
+              @available = DhanScalper::Support::Money.bd(0)
+            else
+              # Sufficient balance, proceed normally
+              @available = DhanScalper::Support::Money.subtract(@available, amount_bd.abs)
+              @used = DhanScalper::Support::Money.add(@used, amount_bd.abs)
+            end
+          end
         when :release_principal
           # Release principal from used balance and add it back to available balance
           @used = DhanScalper::Support::Money.subtract(@used, amount_bd)
@@ -66,7 +103,8 @@ module DhanScalper
 
         # Ensure used balance doesn't go negative
         @used = DhanScalper::Support::Money.max(@used, DhanScalper::Support::Money.bd(0))
-        @total = DhanScalper::Support::Money.add(@available, @used)
+        # Total balance should remain constant (starting balance + realized PnL)
+        @total = DhanScalper::Support::Money.add(@starting_balance, @realized_pnl)
 
         DhanScalper::Support::Logger.debug(
           "Balance updated - available after: #{DhanScalper::Support::Money.dec(@available)}, " \

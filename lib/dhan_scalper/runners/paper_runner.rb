@@ -89,6 +89,7 @@ module DhanScalper
         begin
           setup_websocket_connection
           start_tracking_underlyings
+          load_existing_positions
           subscribe_to_atm_options_for_monitoring
           run_main_loop
         ensure
@@ -174,6 +175,77 @@ module DhanScalper
             puts "[PAPER] Failed to track #{sym}"
           end
         end
+      end
+
+      def load_existing_positions
+        return unless @session_data && @session_data[:positions]
+
+        existing_positions = @session_data[:positions]
+        return if existing_positions.empty?
+
+        puts "\n[POSITION LOADER] Loading #{existing_positions.size} existing positions from session data..."
+
+        existing_positions.each do |position_data|
+          symbol = position_data[:symbol]
+          option_type = position_data[:option_type]
+          strike = position_data[:strike]
+          quantity = position_data[:quantity]
+          entry_price = position_data[:entry_price]
+          created_at = position_data[:created_at]
+
+          # Skip if position is closed (quantity is 0 or negative)
+          next if quantity.to_i <= 0
+
+          # Find the security ID for this option
+          symbol_config = sym_cfg(symbol)
+          next if symbol_config.empty?
+
+          # Get option picker to find the security ID
+          picker = get_cached_picker(symbol, symbol_config)
+
+          # Get current spot price to determine ATM
+          spot_price = @position_tracker.get_underlying_price(symbol)
+          next unless spot_price&.positive?
+
+          # Calculate ATM strike
+          strike_step = symbol_config["strike_step"] || 50
+          atm_strike = picker.nearest_strike(spot_price, strike_step)
+
+          # Find the security ID for this strike and option type
+          pick = picker.pick(current_spot: spot_price)
+          security_id = case option_type
+                        when "CE"
+                          pick[:ce_sid][strike]
+                        when "PE"
+                          pick[:pe_sid][strike]
+                        end
+
+          next unless security_id
+
+          # Subscribe to the option instrument
+          @websocket_manager.subscribe_to_instrument(security_id, "OPTION")
+
+          # Add position to tracker
+          position_key = "#{symbol}_#{option_type}_#{strike}_#{Date.today}"
+          @position_tracker.add_position(
+            symbol, option_type, strike, Date.today,
+            security_id, quantity, entry_price
+          )
+
+          # Store security ID to strike mapping for display
+          @security_to_strike[security_id] = {
+            strike: strike,
+            type: option_type,
+            symbol: symbol,
+          }
+
+          puts "  ✅ Loaded position: #{symbol} #{option_type} #{strike} (#{quantity} lots @ ₹#{entry_price}) [#{security_id}]"
+        rescue StandardError => e
+          puts "  ❌ Failed to load position #{position_data[:symbol]}: #{e.message}"
+          puts "    Error details: #{e.backtrace.first(2).join("\n")}" if @config.dig("global", "log_level") == "DEBUG"
+        end
+
+        puts "[POSITION LOADER] Position loading complete"
       end
 
       def subscribe_to_atm_options_for_monitoring
@@ -655,7 +727,7 @@ module DhanScalper
         # Get positions summary
         positions_summary = @position_tracker.get_positions_summary
         @session_data[:positions] = positions_summary[:positions].values
-        @session_data[:symbols_traded] = @session_data[:symbols_traded].to_a
+        @session_data[:symbols_traded] = @session_data[:symbols_traded].is_a?(Set) ? @session_data[:symbols_traded].to_a : @session_data[:symbols_traded]
 
         # Add risk metrics
         @session_data[:risk_metrics] = {

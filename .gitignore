@@ -14,3 +14,4 @@ dhan_scalper-*.*.*.gem
 data/
 data/
 exports/export**.csv
+PAPER_*

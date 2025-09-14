@@ -188,7 +188,7 @@ module DhanScalper
           csv << ["Start Time", report_data[:start_time]]
           csv << ["End Time", report_data[:end_time]]
           csv << ["Duration (minutes)", report_data[:duration_minutes]]
-          csv << ["Symbols Traded", report_data[:symbols_traded].join(", ")]
+          csv << ["Symbols Traded", report_data[:symbols_traded].is_a?(Array) ? report_data[:symbols_traded].join(", ") : report_data[:symbols_traded].to_s]
           csv << []
 
           # Trading Summary
@@ -260,7 +260,7 @@ module DhanScalper
         puts "  Duration: #{report_data[:duration_minutes]&.round(1)} minutes"
         puts "  Start: #{report_data[:start_time]}"
         puts "  End: #{report_data[:end_time]}"
-        puts "  Symbols: #{report_data[:symbols_traded].join(", ")}"
+        puts "  Symbols: #{report_data[:symbols_traded].is_a?(Array) ? report_data[:symbols_traded].join(", ") : report_data[:symbols_traded].to_s}"
 
         # Trading Performance
         puts "\n📈 TRADING PERFORMANCE:"

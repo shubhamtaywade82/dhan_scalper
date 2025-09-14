@@ -283,10 +283,8 @@ module DhanScalper
       def load_report_data(session_id)
         # Load report data without displaying the console summary
         # Find the actual CSV file with the session ID
-        csv_files = Dir.glob(File.join("data/reports", "session_#{session_id}_*.csv"))
-        return nil if csv_files.empty?
-
-        csv_file = csv_files.first
+        csv_file = File.join("data/reports", "#{session_id}.csv")
+        return nil unless File.exist?(csv_file)
 
         report_data = {}
         positions = []

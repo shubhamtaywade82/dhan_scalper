@@ -273,7 +273,7 @@ module DhanScalper
 
       def get_positions_from_session_report
         # Find the latest session CSV file directly
-        csv_files = Dir.glob(File.join("data/reports", "session_*_*.csv"))
+        csv_files = Dir.glob(File.join("data/reports", "*.csv"))
         return [] if csv_files.empty?
 
         latest_file = csv_files.max_by { |f| File.mtime(f) }

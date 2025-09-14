@@ -88,7 +88,7 @@ module DhanScalper
     end
 
     desc "dryrun", "Run signals only, no orders"
-    option :config, type: :string, aliases: "-c"
+    option :config, type: :string, aliases: "-c", default: "config/scalper.yml"
     option :quiet, type: :boolean, aliases: "-q", desc: "Run in quiet mode (minimal output)", default: false
     option :enhanced, type: :boolean, aliases: "-e", desc: "Use enhanced indicators (Holy Grail, Supertrend)",
                       default: true
@@ -104,7 +104,7 @@ module DhanScalper
     end
 
     desc "paper", "Start paper trading with WebSocket position tracking"
-    option :config, type: :string, aliases: "-c"
+    option :config, type: :string, aliases: "-c", default: "config/scalper.yml"
     option :quiet, type: :boolean, aliases: "-q", desc: "Run in quiet mode (minimal output)", default: false
     option :enhanced, type: :boolean, aliases: "-e", desc: "Use enhanced indicators (Holy Grail, Supertrend)",
                       default: true
@@ -126,7 +126,7 @@ module DhanScalper
     end
 
     desc "live", "Start live trading with real money"
-    option :config, type: :string, aliases: "-c"
+    option :config, type: :string, aliases: "-c", default: "config/scalper.yml"
     option :quiet, type: :boolean, aliases: "-q", desc: "Run in quiet mode (minimal output)", default: false
     option :enhanced, type: :boolean, aliases: "-e", desc: "Use enhanced indicators (Holy Grail, Supertrend)",
                       default: true

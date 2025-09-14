@@ -5,13 +5,16 @@ require "json"
 require "fileutils"
 require "time"
 require_relative "../support/money"
+require_relative "trading_day_service"
 
 module DhanScalper
   module Services
     class SessionReporter
-      def initialize
+      def initialize(config: nil, logger: nil)
         @data_dir = "data"
         @reports_dir = File.join(@data_dir, "reports")
+        @logger = logger || Logger.new($stdout)
+        @trading_day_service = TradingDayService.new(config: config || {}, logger: @logger)
 
         # Ensure the reports directory exists
         begin
@@ -27,12 +30,10 @@ module DhanScalper
 
       # Generate a comprehensive session report
       def generate_session_report(session_data)
-        session_id = session_data[:session_id] || generate_session_id
-        timestamp = Time.now.strftime("%Y%m%d_%H%M%S")
+        session_id = session_data[:session_id] || generate_session_id(session_data[:mode] || "PAPER")
 
         report_data = {
           session_id: session_id,
-          timestamp: timestamp,
           start_time: session_data[:start_time],
           end_time: session_data[:end_time],
           duration_minutes: session_data[:duration_minutes],
@@ -59,25 +60,25 @@ module DhanScalper
         # Ensure reports directory exists before writing
         ensure_reports_directory
 
-        # Save JSON report
-        json_file = File.join(@reports_dir, "session_#{session_id}_#{timestamp}.json")
+        # Save JSON report (single file per session)
+        json_file = File.join(@reports_dir, "#{session_id}.json")
         begin
           File.write(json_file, JSON.pretty_generate(report_data))
         rescue StandardError => e
           puts "[REPORTS] Error writing JSON report: #{e.message}"
           # Fallback to current directory
-          json_file = "session_#{session_id}_#{timestamp}.json"
+          json_file = "#{session_id}.json"
           File.write(json_file, JSON.pretty_generate(report_data))
         end
 
-        # Save CSV report
-        csv_file = File.join(@reports_dir, "session_#{session_id}_#{timestamp}.csv")
+        # Save CSV report (single file per session)
+        csv_file = File.join(@reports_dir, "#{session_id}.csv")
         begin
           save_csv_report(csv_file, report_data)
         rescue StandardError => e
           puts "[REPORTS] Error writing CSV report: #{e.message}"
           # Fallback to current directory
-          csv_file = "session_#{session_id}_#{timestamp}.csv"
+          csv_file = "#{session_id}.csv"
           save_csv_report(csv_file, report_data)
         end
 
@@ -94,16 +95,14 @@ module DhanScalper
 
       # Generate report for a specific session
       def generate_report_for_session(session_id)
-        json_files = Dir.glob(File.join(@reports_dir, "session_#{session_id}_*.json"))
+        json_file = File.join(@reports_dir, "#{session_id}.json")
 
-        if json_files.empty?
+        unless File.exist?(json_file)
           puts "No report found for session ID: #{session_id}"
           return nil
         end
 
-        # Get the latest file for this session
-        latest_file = json_files.max_by { |f| File.mtime(f) }
-        report_data = JSON.parse(File.read(latest_file), symbolize_names: true)
+        report_data = JSON.parse(File.read(json_file), symbolize_names: true)
 
         generate_console_summary(report_data)
         report_data
@@ -111,7 +110,7 @@ module DhanScalper
 
       # Generate report for the latest session
       def generate_latest_session_report
-        json_files = Dir.glob(File.join(@reports_dir, "session_*.json"))
+        json_files = Dir.glob(File.join(@reports_dir, "*.json"))
 
         if json_files.empty?
           puts "No session reports found"
@@ -128,7 +127,7 @@ module DhanScalper
 
       # List available sessions
       def list_available_sessions
-        json_files = Dir.glob(File.join(@reports_dir, "session_*.json"))
+        json_files = Dir.glob(File.join(@reports_dir, "*.json"))
 
         json_files.map do |file|
           data = JSON.parse(File.read(file), symbolize_names: true)
@@ -138,6 +137,20 @@ module DhanScalper
             size: File.size(file),
           }
         end.sort_by { |s| s[:created] }.reverse
+      end
+
+      # Load or create session data for the current trading day
+      def load_or_create_session(mode: "PAPER", starting_balance: 200_000.0)
+        @trading_day_service.load_or_create_session(
+          mode: mode,
+          starting_balance: starting_balance,
+          reports_dir: @reports_dir,
+        )
+      end
+
+      # Finalize session data with end time and duration
+      def finalize_session(session_data)
+        @trading_day_service.finalize_session(session_data)
       end
 
       private
@@ -157,8 +170,8 @@ module DhanScalper
         end
       end
 
-      def generate_session_id
-        "PAPER_#{Time.now.strftime("%Y%m%d_%H%M%S")}"
+      def generate_session_id(mode: "PAPER")
+        @trading_day_service.current_session_id(mode: mode)
       end
 
       def save_csv_report(csv_file, report_data)

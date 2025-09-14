@@ -39,8 +39,8 @@ module DhanScalper
         # Initialize CSV master for exchange segment mapping
         @csv_master = CsvMaster.new
 
-        # Initialize session reporter
-        @session_reporter = Services::SessionReporter.new
+        # Initialize session reporter with config
+        @session_reporter = Services::SessionReporter.new(config: @config, logger: @logger)
 
         # Session tracking variables
         @session_data = {
@@ -68,10 +68,11 @@ module DhanScalper
         DhanHQ.configure_with_env
         DhanHQ.logger.level = Logger::WARN
 
-        # Initialize session data
-        @session_data[:session_id] = "PAPER_#{Time.now.strftime("%Y%m%d_%H%M%S")}"
-        @session_data[:start_time] = Time.now.strftime("%Y-%m-%d %H:%M:%S")
-        @session_data[:starting_balance] = @balance_provider.available_balance
+        # Load or create session data for the current trading day
+        @session_data = @session_reporter.load_or_create_session(
+          mode: "PAPER",
+          starting_balance: @balance_provider.available_balance,
+        )
 
         puts "[PAPER] Starting paper trading mode"
         puts "[PAPER] Session ID: #{@session_data[:session_id]}"
@@ -636,8 +637,7 @@ module DhanScalper
         puts "\n[REPORT] Generating comprehensive session report..."
 
         # Finalize session data
-        @session_data[:end_time] = Time.now.strftime("%Y-%m-%d %H:%M:%S")
-        @session_data[:duration_minutes] = (Time.now - @start_time) / 60.0
+        @session_data = @session_reporter.finalize_session(@session_data)
 
         # Get current balance information
         @session_data[:available_balance] = @balance_provider.available_balance

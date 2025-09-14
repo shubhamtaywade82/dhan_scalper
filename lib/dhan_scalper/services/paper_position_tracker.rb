@@ -174,6 +174,39 @@ module DhanScalper
         @positions.values
       end
 
+      # Method to manually update position prices for testing/debugging
+      def update_position_prices
+        @logger.debug "[PositionTracker] update_position_prices called - checking #{@positions.size} positions"
+
+        updated_count = 0
+        @positions.each do |key, position|
+          # Simulate some price movement for testing
+          next unless position[:current_price] == position[:entry_price]
+
+          # Add some random price movement (±2-8% change)
+          price_change_percent = (rand - 0.5) * 0.12 # ±6% change
+          price_change = position[:entry_price] * price_change_percent
+          new_price = position[:entry_price] + price_change
+          new_price = [new_price, 0.01].max # Ensure price doesn't go below 0.01
+
+          old_pnl = position[:pnl]
+          position[:current_price] = new_price
+          position[:pnl] = (new_price - position[:entry_price]) * position[:quantity]
+          position[:last_update] = Time.now
+
+          updated_count += 1
+          @logger.info "[PositionTracker] Manually updated #{key}: #{position[:entry_price].round(2)} -> #{new_price.round(2)} (#{price_change_percent.round(3) * 100}%), PnL: #{old_pnl.round(2)} -> #{position[:pnl].round(2)}"
+        end
+
+        if updated_count > 0
+          @logger.info "[PositionTracker] Updated #{updated_count} positions with simulated price movements"
+          # Save updated positions
+          save_positions unless @memory_only
+        else
+          @logger.debug "[PositionTracker] No positions needed updating (all already have current_price != entry_price)"
+        end
+      end
+
       def get_positions_summary
         total_pnl = get_total_pnl
         open_positions = @positions.values.count { |pos| pos[:quantity] > 0 }
@@ -250,25 +283,32 @@ module DhanScalper
         last_price = price_data[:last_price]
         timestamp = price_data[:timestamp]
 
+        @logger.info "[PositionTracker] Received price update: #{instrument_id} = #{last_price}"
+
         # Update underlying prices
         @underlying_prices.each_value do |data|
           next unless data[:instrument_id] == instrument_id
 
           data[:last_price] = last_price
           data[:last_update] = timestamp
-          # @logger.debug "[PositionTracker] Updated #{symbol} price: #{last_price}"
+          @logger.info "[PositionTracker] Updated underlying #{instrument_id} price: #{last_price}"
           break
         end
 
         # Update position prices
+        updated_positions = 0
         @positions.each_value do |position|
           next unless position[:instrument_id] == instrument_id
 
+          old_price = position[:current_price]
           position[:current_price] = last_price
           position[:last_update] = timestamp
           position[:pnl] = (last_price - position[:entry_price]) * position[:quantity]
-          # @logger.debug "[PositionTracker] Updated #{position_key} price: #{last_price}, PnL: #{position[:pnl]}"
+          updated_positions += 1
+          @logger.info "[PositionTracker] Updated position #{position[:symbol]} #{position[:option_type]}: #{old_price} -> #{last_price}, PnL: #{position[:pnl]}"
         end
+
+        @logger.info "[PositionTracker] Updated #{updated_positions} positions for instrument #{instrument_id}"
 
         # Save updated data only if not memory-only
         save_underlying_prices unless @memory_only

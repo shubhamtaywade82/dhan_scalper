@@ -136,6 +136,8 @@ module DhanScalper
 
         # Setup tick handler to store data in TickCache
         @websocket_manager.on_price_update do |price_data|
+          puts "[DEBUG] Received price update: #{price_data[:instrument_id]} = #{price_data[:last_price]}" if @cfg.dig("global", "log_level") == "DEBUG"
+
           # Use the segment provided by WebSocket manager (it already has the correct segment)
           exchange_segment = price_data[:segment] || "NSE_FNO"
 
@@ -207,6 +209,8 @@ module DhanScalper
 
             # Show position summary periodically
             if Time.now - last_status_update >= 60 # Every minute
+              # Manually update position prices for testing (since WebSocket might not be working)
+              @position_tracker.update_position_prices
               show_position_summary
               if @timeout_minutes
                 elapsed = (Time.now - @start_time) / 60
@@ -214,6 +218,11 @@ module DhanScalper
                 puts "[TIMEOUT] #{remaining.round(1)} minutes remaining" if remaining.positive?
               end
               last_status_update = Time.now
+            end
+
+            # Update position prices every 10 seconds
+            if Time.now - last_ltp_update >= 10 # Every 10 seconds
+              @position_tracker.update_position_prices
             end
 
             # Show LTPs every 30 seconds
@@ -236,6 +245,9 @@ module DhanScalper
         # Finalize session data
         @session_data[:end_time] = Time.now.strftime("%Y-%m-%d %H:%M:%S")
         @session_data[:duration_minutes] = (Time.now - @start_time) / 60.0
+
+        # Update position prices one final time before generating report
+        @position_tracker.update_position_prices
 
         # Get positions summary first
         positions_summary = @position_tracker.get_positions_summary

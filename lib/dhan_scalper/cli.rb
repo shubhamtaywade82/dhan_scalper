@@ -26,6 +26,7 @@ module DhanScalper
       commands = [
         ["start", "Start the scalper (Ctrl+C to stop)"],
         ["paper", "Start paper trading (alias for start -m paper)"],
+        ["live", "Start live trading with real money"],
         ["dryrun", "Run signals only, no orders"],
         ["orders", "Show order history"],
         ["positions", "Show open positions"],
@@ -100,53 +101,6 @@ module DhanScalper
       DhanHQ.configure_with_env
       DhanHQ.logger.level = Logger::INFO
       DryrunApp.new(cfg, quiet: quiet, enhanced: enhanced, once: once).start
-    end
-
-    desc "event-driven", "Start event-driven trading with atomic state management"
-    option :config, type: :string, aliases: "-c"
-    option :quiet, type: :boolean, aliases: "-q", desc: "Run in quiet mode (minimal output)", default: false
-    option :enhanced, type: :boolean, aliases: "-e", desc: "Use enhanced indicators (Holy Grail, Supertrend)",
-                      default: true
-    option :timeout, type: :numeric, aliases: "-t", desc: "Auto-exit after specified minutes (default: no timeout)"
-    def event_driven
-      cfg = Config.load(path: options[:config])
-      quiet = options[:quiet]
-      enhanced = options[:enhanced]
-      timeout_minutes = options[:timeout]
-
-      # Initialize logger
-      DhanScalper::Support::Logger.setup(level: quiet ? :warn : :info)
-
-      DhanHQ.configure_with_env
-      DhanHQ.logger.level = Logger::INFO
-
-      app = EventDrivenApp.new(cfg, quiet: quiet, enhanced: enhanced)
-
-      if timeout_minutes
-        # Schedule auto-exit
-        Thread.new do
-          sleep(timeout_minutes * 60)
-          puts "\n[EVENT-DRIVEN] Auto-exiting after #{timeout_minutes} minutes"
-          app.stop
-        end
-      end
-
-      # Handle graceful shutdown
-      trap("INT") do
-        puts "\n[EVENT-DRIVEN] Shutting down gracefully..."
-        app.stop
-        exit(0)
-      end
-
-      app.start
-
-      # Keep main thread alive
-      begin
-        sleep(1) while app.running?
-      rescue Interrupt
-        puts "\n[EVENT-DRIVEN] Interrupted, shutting down..."
-        app.stop
-      end
     end
 
     desc "paper", "Start paper trading with WebSocket position tracking"
@@ -289,37 +243,16 @@ module DhanScalper
       end
     end
 
+    desc "version", "Show version"
+    map %w[-v --version] => :version
+    def version
+      puts DhanScalper::VERSION
+    end
+
     private
 
     def clear_screen
       system("clear") || system("cls")
-    end
-
-    desc "headless", "Run headless options buying bot"
-    option :config, type: :string, aliases: "-c", desc: "Path to scalper.yml", default: "config/scalper.yml"
-    option :mode, aliases: "-m", desc: "Trading mode (live/paper)", default: "paper"
-    def headless
-      require_relative "headless_app"
-
-      cfg = Config.load(path: options[:config])
-      mode = options[:mode].to_sym
-
-      app = HeadlessApp.new(cfg, mode: mode)
-      app.start
-    end
-
-    desc "enhanced", "Start enhanced trading mode with No-Loss Trend Rider"
-    option :config, type: :string, aliases: "-c", desc: "Path to enhanced_scalper.yml",
-                    default: "config/enhanced_scalper.yml"
-    def enhanced
-      require_relative "enhanced_app"
-
-      puts "[ENHANCED] Starting enhanced trading mode"
-      puts "[ENHANCED] Config: #{options[:config]}"
-      puts "[ENHANCED] Features: No-Loss Trend Rider, Advanced Risk Management, Telegram Notifications"
-
-      app = EnhancedApp.new(config_path: options[:config])
-      app.start
     end
 
     desc "report", "Generate session report from CSV data"
@@ -520,12 +453,6 @@ module DhanScalper
 
         { name: parts[0], segment: parts[1], security_id: parts[2] }
       end
-    end
-
-    desc "version", "Show version"
-    map %w[-v --version] => :version
-    def version
-      puts DhanScalper::VERSION
     end
   end
 end

@@ -268,7 +268,7 @@ module DhanScalper
         puts "  Avg Trade P&L: #{DhanScalper::Support::Money.format(report_data[:average_trade_pnl] || 0)}"
 
         # Performance Rating
-        pnl = report_data[:total_pnl] || 0
+        pnl = (report_data[:total_pnl] || 0).to_f
         if pnl.positive?
           puts "\n✅ SESSION RESULT: PROFITABLE"
         elsif pnl.negative?

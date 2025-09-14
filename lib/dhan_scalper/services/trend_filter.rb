@@ -50,7 +50,7 @@ module DhanScalper
       private
 
       def yield_config(symbol)
-        # Expecting EnhancedApp to pass a block resolving config for symbol
+        # Expecting caller to pass a block resolving config for symbol
         # Example: trend_filter.get_signal(symbol, spot) { |s| config["SYMBOLS"][s] }
         # This indirection keeps service DRY/decoupled from config layout.
         @config.dig("SYMBOLS", symbol)

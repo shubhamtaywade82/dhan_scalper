@@ -130,6 +130,8 @@ module DhanScalper
           total_pnl: 0.0,
           max_drawdown: 0.0,
           max_profit: 0.0,
+          max_pnl: 0.0,
+          min_pnl: 0.0,
           win_rate: 0.0,
           average_trade_pnl: 0.0,
           symbols_traded: Set.new,

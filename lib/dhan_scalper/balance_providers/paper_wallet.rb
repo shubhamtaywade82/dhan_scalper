@@ -45,8 +45,15 @@ module DhanScalper
       end
 
       def used_balance
-        # Always calculate used balance from current positions in session report
-        calculate_used_balance_from_positions
+        # Use internal state if it has been updated (non-zero used balance)
+        # Otherwise fall back to session report calculation (for CLI commands with no activity)
+        if @used > 0
+          # Internal state has been updated, use it
+          DhanScalper::Support::Money.dec(@used).to_f
+        else
+          # No internal activity, calculate from session report
+          calculate_used_balance_from_positions
+        end
       end
 
       def update_balance(amount, type: :debit)

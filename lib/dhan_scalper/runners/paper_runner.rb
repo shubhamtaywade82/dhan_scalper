@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require "DhanHQ"
+require "json"
+require "fileutils"
 require_relative "base_runner"
 require_relative "../services/websocket_manager"
 require_relative "../services/paper_position_tracker"
@@ -73,6 +75,26 @@ module DhanScalper
           mode: "PAPER",
           starting_balance: @balance_provider.available_balance,
         )
+
+        # If resuming an existing session, update the balance provider to reflect the correct state
+        if @session_data[:starting_balance] && @session_data[:starting_balance] != @balance_provider.available_balance
+          puts "[PAPER] Resuming existing session - updating balance provider"
+          puts "[PAPER] Session starting balance: ₹#{@session_data[:starting_balance]}"
+          puts "[PAPER] Current balance provider: ₹#{@balance_provider.available_balance}"
+
+          # Reset the balance provider to match the session's starting balance
+          @balance_provider.reset_balance(@session_data[:starting_balance])
+
+          # Update the balance provider with the correct used balance from positions
+          if @session_data[:positions] && @session_data[:positions].any?
+            used_balance = calculate_used_balance_from_positions(@session_data[:positions])
+            @balance_provider.instance_variable_set(:@used, DhanScalper::Support::Money.bd(used_balance))
+            @balance_provider.instance_variable_set(:@available, DhanScalper::Support::Money.bd(@session_data[:starting_balance] - used_balance))
+            @balance_provider.instance_variable_set(:@total, DhanScalper::Support::Money.bd(@session_data[:starting_balance]))
+
+            puts "[PAPER] Updated balance - Available: ₹#{@balance_provider.available_balance}, Used: ₹#{@balance_provider.used_balance}"
+          end
+        end
 
         puts "[PAPER] Starting paper trading mode"
         puts "[PAPER] Session ID: #{@session_data[:session_id]}"
@@ -480,6 +502,9 @@ module DhanScalper
             strike: actual_strike,
           }
 
+          # Update session data with current balance and positions
+          update_session_data_with_current_state
+
           puts "[#{symbol}] Position added to tracker: #{position_key}"
         else
           puts "[#{symbol}] Order failed: #{order_result[:error]}"
@@ -641,8 +666,8 @@ module DhanScalper
 
         # Update session P&L tracking
         current_pnl = summary[:total_pnl]
-        @session_data[:max_pnl] = [@session_data[:max_pnl], current_pnl].max
-        @session_data[:min_pnl] = [@session_data[:min_pnl], current_pnl].min
+        @session_data[:max_pnl] = [@session_data[:max_pnl] || 0.0, current_pnl].max
+        @session_data[:min_pnl] = [@session_data[:min_pnl] || 0.0, current_pnl].min
 
         puts "\n#{"=" * 60}"
         puts "[POSITION SUMMARY]"
@@ -757,6 +782,74 @@ module DhanScalper
         super
         @websocket_manager.disconnect
         @position_tracker.save_session_data
+      end
+
+      private
+
+      def calculate_used_balance_from_positions(positions)
+        return 0.0 if positions.nil? || positions.empty?
+
+        # Calculate position values
+        position_values = positions.sum do |position|
+          quantity = position[:quantity] || position["quantity"] || 0
+          entry_price = position[:entry_price] || position["entry_price"] || 0
+          quantity * entry_price
+        end
+
+        # Calculate total fees (₹20 per order)
+        fee_per_order = @config.dig("global", "charge_per_order") || 20.0
+        total_fees = positions.length * fee_per_order
+
+        total_used = position_values + total_fees
+
+        DhanScalper::Support::Logger.debug(
+          "Calculated used balance from positions - positions: #{position_values}, fees: #{total_fees}, total: #{total_used}",
+          component: "PaperRunner",
+        )
+
+        total_used.to_f
+      end
+
+      def update_session_data_with_current_state
+        # Update session data with current balance and positions
+        @session_data[:available_balance] = @balance_provider.available_balance
+        @session_data[:used_balance] = @balance_provider.used_balance
+        @session_data[:total_balance] = @balance_provider.total_balance
+
+        # Update positions from position tracker
+        positions_summary = @position_tracker.get_positions_summary
+        @session_data[:positions] = positions_summary[:positions].values
+
+        # Save session data to file for real-time access
+        save_session_data_to_file
+      end
+
+      def save_session_data_to_file
+        # Save current session data to JSON file for real-time access
+        session_file = File.join("data/reports", "#{@session_data[:session_id]}.json")
+
+        # Ensure directory exists
+        FileUtils.mkdir_p(File.dirname(session_file))
+
+        # Convert Set to Array for JSON serialization
+        session_data_for_save = @session_data.dup
+        session_data_for_save[:symbols_traded] = if session_data_for_save[:symbols_traded].is_a?(Set)
+                                                   session_data_for_save[:symbols_traded].to_a
+                                                 else
+                                                   session_data_for_save[:symbols_traded]
+                                                 end
+
+        File.write(session_file, JSON.pretty_generate(session_data_for_save))
+
+        DhanScalper::Support::Logger.debug(
+          "Session data saved to #{session_file}",
+          component: "PaperRunner",
+        )
+      rescue StandardError => e
+        DhanScalper::Support::Logger.debug(
+          "Failed to save session data: #{e.message}",
+          component: "PaperRunner",
+        )
       end
     end
   end

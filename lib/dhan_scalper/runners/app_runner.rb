@@ -5,6 +5,7 @@ require_relative "base_runner"
 require_relative "../services/dhanhq_config"
 require_relative "../services/market_feed"
 require_relative "../services/websocket_cleanup"
+require_relative "../services/session_reporter"
 
 module DhanScalper
   module Runners
@@ -22,6 +23,10 @@ module DhanScalper
         @traders = {}
         @ce_map = {}
         @pe_map = {}
+
+        # Initialize session tracking
+        @session_reporter = Services::SessionReporter.new(config: @config, logger: @quiet ? Logger.new(File::NULL) : Logger.new($stdout))
+        @session_data = nil
       end
 
       def start
@@ -29,6 +34,18 @@ module DhanScalper
 
         # Initialize core infrastructure
         initialize_core_infrastructure
+
+        # Load or create session data for the current trading day
+        @session_data = @session_reporter.load_or_create_session(
+          mode: "LIVE",
+          starting_balance: @balance_provider.available_balance,
+        )
+
+        puts "[LIVE] Starting live trading mode"
+        puts "[LIVE] Session ID: #{@session_data[:session_id]}"
+        puts "[LIVE] WebSocket connection will be established"
+        puts "[LIVE] Positions will be tracked in real-time"
+        puts "[LIVE] Real money will be used - trade carefully!"
 
         # Ensure global WebSocket cleanup is registered
         DhanScalper::Services::WebSocketCleanup.register_cleanup
@@ -47,6 +64,7 @@ module DhanScalper
         if ws
           setup_websocket_handlers(ws)
           setup_traders(ws)
+          load_existing_positions(ws)
           display_startup_info
           run_main_loop(ws)
         else
@@ -123,6 +141,32 @@ module DhanScalper
         )
 
         puts "[APP] Live trading components initialized"
+      end
+
+      def load_existing_positions(ws)
+        return unless @position_tracker
+
+        puts "\n[POSITION LOADER] Loading existing positions from DhanHQ..."
+
+        # Update the position tracker with the websocket manager
+        @position_tracker.instance_variable_set(:@websocket_manager, ws)
+
+        # Load existing positions
+        @position_tracker.load_existing_positions
+
+        # Display loaded positions summary
+        positions_summary = @position_tracker.get_positions_summary
+        if positions_summary[:total_positions] > 0
+          puts "\n[POSITION SUMMARY]"
+          puts "Total Positions: #{positions_summary[:total_positions]}"
+          puts "Total P&L: ₹#{positions_summary[:total_pnl].round(2)}"
+          puts "Max Profit: ₹#{positions_summary[:max_profit].round(2)}"
+          puts "Max Drawdown: ₹#{positions_summary[:max_drawdown].round(2)}"
+        else
+          puts "[POSITION LOADER] No existing positions found"
+        end
+
+        puts "[POSITION LOADER] Position loading complete"
       end
 
       def setup_websocket_handlers(ws)
@@ -472,6 +516,32 @@ module DhanScalper
         super
         # Stop market feed
         @market_feed&.stop
+
+        # Finalize session data
+        if @session_data && @session_reporter
+          @session_data[:end_time] = Time.now.strftime("%Y-%m-%d %H:%M:%S")
+          @session_data[:duration_minutes] = (Time.now - @start_time) / 60.0
+
+          # Get current balance information
+          @session_data[:available_balance] = @balance_provider.available_balance
+          @session_data[:used_balance] = @balance_provider.used_balance
+          @session_data[:total_balance] = @balance_provider.total_balance
+          @session_data[:ending_balance] = @balance_provider.available_balance
+
+          # Calculate P&L correctly
+          @session_data[:total_pnl] = @session_data[:total_balance] - @session_data[:starting_balance]
+
+          # Get positions summary
+          if @position_tracker
+            positions_summary = @position_tracker.get_positions_summary
+            @session_data[:positions] = positions_summary[:positions].values
+            @session_data[:total_positions] = positions_summary[:total_positions]
+            @session_data[:total_pnl] = positions_summary[:total_pnl]
+          end
+
+          # Generate session report
+          @session_reporter.generate_session_report(@session_data)
+        end
 
         # Memory-only storage cleanup complete
 

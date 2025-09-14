@@ -261,14 +261,18 @@ module DhanScalper
         total_pnl = total_unrealized_pnl + total_realized_pnl
 
         # Calculate max profit and drawdown
-        max_profit = @positions.values.map do |pos|
+        pnl_values = @positions.values.map do |pos|
           DhanScalper::Support::Money.dec(pos[:unrealized_pnl] || DhanScalper::Support::Money.bd(0))
-        end.max || 0.0
+        end
 
-        max_drawdown = @positions.values.map do |pos|
+        max_profit = pnl_values.empty? ? 0.0 : pnl_values.max
+
+        drawdown_values = @positions.values.map do |pos|
           pnl = DhanScalper::Support::Money.dec(pos[:unrealized_pnl] || DhanScalper::Support::Money.bd(0))
           pnl.negative? ? pnl.abs : 0.0
-        end.max || 0.0
+        end
+
+        max_drawdown = drawdown_values.empty? ? 0.0 : drawdown_values.max
 
         # Count winning and losing trades
         winning_trades = @positions.values.count do |pos|

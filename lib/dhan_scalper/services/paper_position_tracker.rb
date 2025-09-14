@@ -209,8 +209,9 @@ module DhanScalper
         closed_positions = @positions.size - open_positions
 
         # Calculate max profit and drawdown
-        max_profit = @positions.values.map { |pos| pos[:pnl] }.max || 0.0
-        max_drawdown = @positions.values.map { |pos| pos[:pnl].negative? ? pos[:pnl].abs : 0.0 }.max || 0.0
+        pnl_values = @positions.values.map { |pos| pos[:pnl] }
+        max_profit = pnl_values.empty? ? 0.0 : pnl_values.max
+        max_drawdown = pnl_values.empty? ? 0.0 : pnl_values.map { |pnl| pnl.negative? ? pnl.abs : 0.0 }.max
 
         # Count winning and losing trades
         winning_trades = @positions.values.count { |pos| pos[:pnl].positive? }

@@ -89,6 +89,26 @@ module DhanScalper
         starting_balance: @balance_provider.available_balance,
       )
 
+      # If resuming an existing session, update the balance provider to reflect the correct state
+      if @session_data[:starting_balance] && @session_data[:starting_balance] != @balance_provider.available_balance
+        puts "[PAPER] Resuming existing session - updating balance provider"
+        puts "[PAPER] Session starting balance: ₹#{@session_data[:starting_balance]}"
+        puts "[PAPER] Current balance provider: ₹#{@balance_provider.available_balance}"
+
+        # Reset the balance provider to match the session's starting balance
+        @balance_provider.reset_balance(@session_data[:starting_balance])
+
+        # Update the balance provider with the correct used balance from positions
+        if @session_data[:positions] && @session_data[:positions].any?
+          used_balance = calculate_used_balance_from_positions(@session_data[:positions])
+          @balance_provider.instance_variable_set(:@used, DhanScalper::Support::Money.bd(used_balance))
+          @balance_provider.instance_variable_set(:@available, DhanScalper::Support::Money.bd(@session_data[:starting_balance] - used_balance))
+          @balance_provider.instance_variable_set(:@total, DhanScalper::Support::Money.bd(@session_data[:starting_balance]))
+
+          puts "[PAPER] Updated balance - Available: ₹#{@balance_provider.available_balance}, Used: ₹#{@balance_provider.used_balance}"
+        end
+      end
+
       puts "[PAPER] Starting paper trading mode"
       puts "[PAPER] Session ID: #{@session_data[:session_id]}"
       puts "[PAPER] WebSocket connection will be established"
@@ -580,8 +600,8 @@ module DhanScalper
 
       # Update session P&L tracking
       current_pnl = summary[:total_pnl]
-      @session_data[:max_pnl] = [@session_data[:max_pnl], current_pnl].max
-      @session_data[:min_pnl] = [@session_data[:min_pnl], current_pnl].min
+      @session_data[:max_pnl] = [@session_data[:max_pnl] || 0.0, current_pnl].max
+      @session_data[:min_pnl] = [@session_data[:min_pnl] || 0.0, current_pnl].min
 
       puts "\n#{"=" * 60}"
       puts "[POSITION SUMMARY]"
@@ -839,6 +859,30 @@ module DhanScalper
       else
         puts "\n[REPORT] Failed to generate session report"
       end
+    end
+
+    def calculate_used_balance_from_positions(positions)
+      return 0.0 if positions.nil? || positions.empty?
+
+      # Calculate position values
+      position_values = positions.sum do |position|
+        quantity = position[:quantity] || position["quantity"] || 0
+        entry_price = position[:entry_price] || position["entry_price"] || 0
+        quantity * entry_price
+      end
+
+      # Calculate total fees (₹20 per order)
+      fee_per_order = @cfg.dig("global", "charge_per_order") || 20.0
+      total_fees = positions.length * fee_per_order
+
+      total_used = position_values + total_fees
+
+      DhanScalper::Support::Logger.debug(
+        "Calculated used balance from positions - positions: #{position_values}, fees: #{total_fees}, total: #{total_used}",
+        component: "PaperApp",
+      )
+
+      total_used.to_f
     end
   end
 end

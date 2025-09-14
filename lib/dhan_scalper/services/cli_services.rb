@@ -386,13 +386,13 @@ module DhanScalper
       end
 
       def display_paper_balance
-        # Use current balance provider for accurate data
-        balance_provider = BalanceProviders::PaperWallet.new
+        # Try to get balance from active session first, then fall back to session report
+        balance_data = get_current_balance_data
 
-        available = balance_provider.available_balance
-        used = balance_provider.used_balance
-        total = balance_provider.total_balance
-        realized_pnl = balance_provider.realized_pnl
+        available = balance_data[:available]
+        used = balance_data[:used]
+        total = balance_data[:total]
+        realized_pnl = balance_data[:realized_pnl]
 
         if @options[:format] == "json"
           display_balance_json(available, used, total, realized_pnl)
@@ -434,6 +434,83 @@ module DhanScalper
           total: total,
         }
         puts JSON.pretty_generate(balance_data)
+      end
+
+      def get_current_balance_data
+        # First, try to get balance from active session data (if paper mode is running)
+        active_session_balance = get_active_session_balance
+        return active_session_balance if active_session_balance
+
+        # Fallback to session report data
+        get_session_report_balance
+      end
+
+      def get_active_session_balance
+        # Check if there's an active paper session by looking for session data files
+        # that were recently modified (within last 5 minutes)
+        recent_sessions = Dir.glob(File.join("data/reports", "PAPER_*.json"))
+                             .select { |f| File.mtime(f) > (Time.now - 300) } # 5 minutes ago
+                             .sort_by { |f| File.mtime(f) }
+                             .reverse
+
+        return nil if recent_sessions.empty?
+
+        # Load the most recent session data
+        latest_session_file = recent_sessions.first
+        session_data = JSON.parse(File.read(latest_session_file), symbolize_names: true)
+
+        # Check if this session has recent activity (trades in last 5 minutes)
+        recent_trades = session_data[:trades]&.select do |trade|
+          trade_time = begin
+            Time.parse(trade[:timestamp])
+          rescue StandardError
+            nil
+          end
+          trade_time && trade_time > (Time.now - 300) # 5 minutes ago
+        end
+
+        # If there's recent activity, calculate current balance from positions
+        if recent_trades&.any?
+          positions = session_data[:positions] || []
+          starting_balance = session_data[:starting_balance] || 200_000.0
+
+          # Calculate used balance from current positions
+          position_values = positions.sum do |position|
+            quantity = position[:quantity] || 0
+            entry_price = position[:entry_price] || 0
+            quantity * entry_price
+          end
+
+          # Calculate total fees (₹20 per order)
+          fee_per_order = 20.0
+          total_fees = positions.length * fee_per_order
+          used_balance = position_values + total_fees
+          available_balance = starting_balance - used_balance
+
+          return {
+            available: available_balance,
+            used: used_balance,
+            total: starting_balance,
+            realized_pnl: 0.0,
+          }
+        end
+
+        nil
+      rescue StandardError => e
+        @logger.debug("Failed to get active session balance: #{e.message}")
+        nil
+      end
+
+      def get_session_report_balance
+        # Fallback to creating a new PaperWallet instance (reads from session report)
+        balance_provider = BalanceProviders::PaperWallet.new
+
+        {
+          available: balance_provider.available_balance,
+          used: balance_provider.used_balance,
+          total: balance_provider.total_balance,
+          realized_pnl: balance_provider.realized_pnl,
+        }
       end
     end
 

@@ -25,17 +25,17 @@ module DhanScalper
 
             # Field mapping based on instrument type
             normalized = case instrument_type
-            when :index
-              normalize_index_payload(h, overrides, segment)
-            when :nse_fno
-              normalize_nse_fno_payload(h, overrides, segment)
-            when :bse_fno
-              normalize_bse_fno_payload(h, overrides, segment)
-            when :equity
-              normalize_equity_payload(h, overrides, segment)
-            else
-              normalize_generic_payload(h, overrides, segment)
-            end
+                         when :index
+                           normalize_index_payload(h, overrides, segment)
+                         when :nse_fno
+                           normalize_nse_fno_payload(h, overrides, segment)
+                         when :bse_fno
+                           normalize_bse_fno_payload(h, overrides, segment)
+                         when :equity
+                           normalize_equity_payload(h, overrides, segment)
+                         else
+                           normalize_generic_payload(h, overrides, segment)
+                         end
 
             return nil unless normalized && normalized[:segment] && normalized[:security_id]
 
@@ -116,7 +116,7 @@ module DhanScalper
             day_low: numeric(overrides[:day_low] || h[:day_low] || h[:low]),
             atp: numeric(overrides[:atp] || h[:atp] || h[:ltp] || h[:last_price]),
             vol: integer(overrides[:vol] || h[:vol] || h[:volume]),
-            instrument_type: "INDEX"
+            instrument_type: "INDEX",
           }
         end
 
@@ -125,43 +125,41 @@ module DhanScalper
           # Additional fields: expiry_date, strike_price, option_type, lot_size
           base = normalize_index_payload(h, overrides, segment)
           base.merge({
-            instrument_type: "OPTION", # or "FUTURE" based on payload
-            expiry_date: h[:expiry_date] || h[:expiry],
-            strike_price: numeric(h[:strike_price] || h[:strike]),
-            option_type: h[:option_type] || h[:opt_type],
-            lot_size: integer(h[:lot_size] || h[:lot]),
-            tick_size: numeric(h[:tick_size] || h[:tick]),
-            underlying: h[:underlying] || h[:underlying_symbol]
-          })
+                       instrument_type: "OPTION", # or "FUTURE" based on payload
+                       expiry_date: h[:expiry_date] || h[:expiry],
+                       strike_price: numeric(h[:strike_price] || h[:strike]),
+                       option_type: h[:option_type] || h[:opt_type],
+                       lot_size: integer(h[:lot_size] || h[:lot]),
+                       tick_size: numeric(h[:tick_size] || h[:tick]),
+                       underlying: h[:underlying] || h[:underlying_symbol],
+                     })
         end
 
         def normalize_bse_fno_payload(h, overrides, segment)
           # BSE Futures and Options (similar to NSE but with BSE-specific fields)
           base = normalize_nse_fno_payload(h, overrides, segment)
           base.merge({
-            exchange: "BSE",
-            # BSE might have different field names or additional fields
-            bse_instrument_id: h[:bse_instrument_id] || h[:bse_id]
-          })
+                       exchange: "BSE",
+                       # BSE might have different field names or additional fields
+                       bse_instrument_id: h[:bse_instrument_id] || h[:bse_id],
+                     })
         end
 
         def normalize_equity_payload(h, overrides, segment)
           # Equity instruments
           base = normalize_index_payload(h, overrides, segment)
           base.merge({
-            instrument_type: "EQUITY",
-            symbol: h[:symbol] || h[:trading_symbol],
-            company_name: h[:company_name] || h[:name],
-            isin: h[:isin]
-          })
+                       instrument_type: "EQUITY",
+                       symbol: h[:symbol] || h[:trading_symbol],
+                       company_name: h[:company_name] || h[:name],
+                       isin: h[:isin],
+                     })
         end
 
         def normalize_generic_payload(h, overrides, segment)
           # Generic fallback for unknown instrument types
           normalize_index_payload(h, overrides, segment)
         end
-
-        private
 
         def symbolize_keys(hash)
           hash.transform_keys { |k| k.respond_to?(:to_sym) ? k.to_sym : k }
@@ -170,6 +168,7 @@ module DhanScalper
         def numeric(value)
           return nil if value.nil?
           return value if value.is_a?(Numeric)
+
           s = value.to_s
           s.include?(".") ? s.to_f : s.to_i
         rescue StandardError
@@ -179,6 +178,7 @@ module DhanScalper
         def integer(value)
           return nil if value.nil?
           return value.to_i if value.is_a?(Numeric) || value.is_a?(String)
+
           nil
         rescue StandardError
           nil
@@ -187,4 +187,3 @@ module DhanScalper
     end
   end
 end
-

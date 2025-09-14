@@ -282,7 +282,7 @@ module DhanScalper
         end
 
         # Format positions for reporting
-        formatted_positions = @positions.values.map do |pos|
+        @positions.values.map do |pos|
           {
             symbol: pos[:symbol] || pos[:underlying_symbol] || "UNKNOWN",
             option_type: pos[:option_type] || "UNKNOWN",

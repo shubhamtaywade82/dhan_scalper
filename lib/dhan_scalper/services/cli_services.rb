@@ -117,34 +117,32 @@ module DhanScalper
 
         puts JSON.pretty_generate({ orders: formatted_orders })
       end
+
       def read_orders_from_latest_report(limit)
-        begin
-          reporter = DhanScalper::Services::SessionReporter.new
-          sessions = reporter.list_available_sessions
-          return nil if sessions.nil? || sessions.empty?
+        reporter = DhanScalper::Services::SessionReporter.new
+        sessions = reporter.list_available_sessions
+        return nil if sessions.nil? || sessions.empty?
 
-          # Load latest session JSON
-          latest = sessions.first
-          report = reporter.generate_report_for_session(latest[:session_id])
-          trades = report && report[:trades].is_a?(Array) ? report[:trades] : []
-          return nil if trades.empty?
+        # Load latest session JSON
+        latest = sessions.first
+        report = reporter.generate_report_for_session(latest[:session_id])
+        trades = report && report[:trades].is_a?(Array) ? report[:trades] : []
+        return nil if trades.empty?
 
-          trades.last(limit).map do |t|
-            {
-              order_id: t[:order_id] || t[:id],
-              symbol: t[:symbol],
-              action: t[:side] || t[:action],
-              quantity: t[:quantity] || t[:qty],
-              price: t[:price] || t[:avg_price],
-              status: t[:status] || "COMPLETED",
-              timestamp: t[:timestamp],
-            }
-          end
-        rescue StandardError
-          nil
+        trades.last(limit).map do |t|
+          {
+            order_id: t[:order_id] || t[:id],
+            symbol: t[:symbol],
+            action: t[:side] || t[:action],
+            quantity: t[:quantity] || t[:qty],
+            price: t[:price] || t[:avg_price],
+            status: t[:status] || "COMPLETED",
+            timestamp: t[:timestamp],
+          }
         end
+      rescue StandardError
+        nil
       end
-
     end
 
     # Service for handling positions display
@@ -238,29 +236,27 @@ module DhanScalper
       end
 
       def read_positions_from_latest_report
-        begin
-          reporter = DhanScalper::Services::SessionReporter.new
-          sessions = reporter.list_available_sessions
-          return nil if sessions.nil? || sessions.empty?
+        reporter = DhanScalper::Services::SessionReporter.new
+        sessions = reporter.list_available_sessions
+        return nil if sessions.nil? || sessions.empty?
 
-          latest = sessions.first
-          report = reporter.generate_report_for_session(latest[:session_id])
-          positions = report && report[:positions].is_a?(Array) ? report[:positions] : []
-          return nil if positions.empty?
+        latest = sessions.first
+        report = reporter.generate_report_for_session(latest[:session_id])
+        positions = report && report[:positions].is_a?(Array) ? report[:positions] : []
+        return nil if positions.empty?
 
-          positions.map do |p|
-            {
-              symbol: p[:symbol],
-              quantity: p[:quantity] || p[:qty],
-              side: p[:side] || p[:option_type],
-              entry_price: p[:entry_price] || 0,
-              current_price: p[:current_price] || 0,
-              pnl: p[:pnl] || 0,
-            }
-          end
-        rescue StandardError
-          nil
+        positions.map do |p|
+          {
+            symbol: p[:symbol],
+            quantity: p[:quantity] || p[:qty],
+            side: p[:side] || p[:option_type],
+            entry_price: p[:entry_price] || 0,
+            current_price: p[:current_price] || 0,
+            pnl: p[:pnl] || 0,
+          }
         end
+      rescue StandardError
+        nil
       end
     end
 

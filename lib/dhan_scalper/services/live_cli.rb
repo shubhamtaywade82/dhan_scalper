@@ -46,4 +46,3 @@ module DhanScalper
     end
   end
 end
-

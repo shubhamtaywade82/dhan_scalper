@@ -347,7 +347,6 @@ module DhanScalper
         # Debug: Log the raw tick data
         puts "[DEBUG] Raw tick data: #{tick_data.inspect}" if ENV["DHAN_LOG_LEVEL"] == "DEBUG"
 
-
         # Normalize and store
         normalized = DhanScalper::Support::TickNormalizer.normalize(
           tick_data,
@@ -358,13 +357,9 @@ module DhanScalper
 
         DhanScalper::TickCache.put(normalized) if normalized
 
-
-
-
         # Create price data for handlers (keeping original format for compatibility)
         # Only process if we have LTP data (quote packets)
         return unless tick_data[:ltp]
-
 
         price_data = {
           instrument_id: instrument_id,

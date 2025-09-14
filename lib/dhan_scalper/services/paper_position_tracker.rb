@@ -57,55 +57,51 @@ module DhanScalper
         success = @websocket_manager&.subscribe_to_instrument(instrument_id, "OPTION") || true
 
         # Always add position even if WebSocket subscription fails (for testing)
-        if true
-          if @positions[position_key]
-            # Aggregate with existing position
-            existing = @positions[position_key]
-            total_quantity = existing[:quantity] + quantity
-            # Calculate weighted average entry price
-            total_value = (existing[:entry_price] * existing[:quantity]) + (entry_price * quantity)
-            weighted_avg_price = total_value / total_quantity
+        if @positions[position_key]
+          # Aggregate with existing position
+          existing = @positions[position_key]
+          total_quantity = existing[:quantity] + quantity
+          # Calculate weighted average entry price
+          total_value = (existing[:entry_price] * existing[:quantity]) + (entry_price * quantity)
+          weighted_avg_price = total_value / total_quantity
 
-            @positions[position_key] = {
-              symbol: symbol,
-              option_type: option_type, # CE or PE
-              strike: strike.to_i, # Use the latest strike
-              expiry: expiry, # Use the latest expiry
-              instrument_id: instrument_id, # Use the latest instrument_id
-              quantity: total_quantity,
-              entry_price: weighted_avg_price,
-              current_price: entry_price, # Use current market price
-              pnl: 0.0, # Will be calculated later
-              created_at: existing[:created_at], # Keep original creation time
-              last_update: Time.now,
-              subscribed: true,
-            }
+          @positions[position_key] = {
+            symbol: symbol,
+            option_type: option_type, # CE or PE
+            strike: strike.to_i, # Use the latest strike
+            expiry: expiry, # Use the latest expiry
+            instrument_id: instrument_id, # Use the latest instrument_id
+            quantity: total_quantity,
+            entry_price: weighted_avg_price,
+            current_price: entry_price, # Use current market price
+            pnl: 0.0, # Will be calculated later
+            created_at: existing[:created_at], # Keep original creation time
+            last_update: Time.now,
+            subscribed: true,
+          }
 
-            @logger.info "[PositionTracker] Position aggregated: #{position_key} (total qty: #{total_quantity})"
-          else
-            # Create new position
-            @positions[position_key] = {
-              symbol: symbol,
-              option_type: option_type, # CE or PE
-              strike: strike.to_i,
-              expiry: expiry,
-              instrument_id: instrument_id,
-              quantity: quantity,
-              entry_price: entry_price,
-              current_price: entry_price,
-              pnl: 0.0,
-              created_at: Time.now,
-              last_update: Time.now,
-              subscribed: true,
-            }
-
-            @logger.info "[PositionTracker] Position created: #{position_key}"
-          end
-
-          save_positions
+          @logger.info "[PositionTracker] Position aggregated: #{position_key} (total qty: #{total_quantity})"
         else
-          @logger.error "[PositionTracker] Failed to subscribe to option #{instrument_id}"
+          # Create new position
+          @positions[position_key] = {
+            symbol: symbol,
+            option_type: option_type, # CE or PE
+            strike: strike.to_i,
+            expiry: expiry,
+            instrument_id: instrument_id,
+            quantity: quantity,
+            entry_price: entry_price,
+            current_price: entry_price,
+            pnl: 0.0,
+            created_at: Time.now,
+            last_update: Time.now,
+            subscribed: true,
+          }
+
+          @logger.info "[PositionTracker] Position created: #{position_key}"
         end
+
+        save_positions
 
         success
       end
@@ -198,7 +194,7 @@ module DhanScalper
           @logger.info "[PositionTracker] Manually updated #{key}: #{position[:entry_price].round(2)} -> #{new_price.round(2)} (#{price_change_percent.round(3) * 100}%), PnL: #{old_pnl.round(2)} -> #{position[:pnl].round(2)}"
         end
 
-        if updated_count > 0
+        if updated_count.positive?
           @logger.info "[PositionTracker] Updated #{updated_count} positions with simulated price movements"
           # Save updated positions
           save_positions unless @memory_only
@@ -209,16 +205,16 @@ module DhanScalper
 
       def get_positions_summary
         total_pnl = get_total_pnl
-        open_positions = @positions.values.count { |pos| pos[:quantity] > 0 }
+        open_positions = @positions.values.count { |pos| pos[:quantity].positive? }
         closed_positions = @positions.size - open_positions
 
         # Calculate max profit and drawdown
         max_profit = @positions.values.map { |pos| pos[:pnl] }.max || 0.0
-        max_drawdown = @positions.values.map { |pos| pos[:pnl] < 0 ? pos[:pnl].abs : 0.0 }.max || 0.0
+        max_drawdown = @positions.values.map { |pos| pos[:pnl].negative? ? pos[:pnl].abs : 0.0 }.max || 0.0
 
         # Count winning and losing trades
-        winning_trades = @positions.values.count { |pos| pos[:pnl] > 0 }
-        losing_trades = @positions.values.count { |pos| pos[:pnl] < 0 }
+        winning_trades = @positions.values.count { |pos| pos[:pnl].positive? }
+        losing_trades = @positions.values.count { |pos| pos[:pnl].negative? }
 
         summary = {
           total_positions: @positions.size,

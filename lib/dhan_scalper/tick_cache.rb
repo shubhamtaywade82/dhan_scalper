@@ -98,7 +98,6 @@ module DhanScalper
         }
       end
 
-
       # Fallback method to get LTP from DhanHQ API when not cached
       # @param segment [String] Exchange segment
       # @param security_id [String] Security ID

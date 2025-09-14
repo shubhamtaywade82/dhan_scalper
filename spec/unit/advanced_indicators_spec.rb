@@ -5,12 +5,12 @@ require "spec_helper"
 RSpec.describe DhanScalper::Indicators::HolyGrail, :unit do
   let(:candle_data) do
     {
-      "timestamp" => (1..200).map { |i| Time.now - ((200 - i) * 60) },
-      "open" => (1..200).map { |_i| rand(24_900..25_100) },
-      "high" => (1..200).map { |_i| rand(25_050..25_150) },
-      "low" => (1..200).map { |_i| rand(24_850..24_950) },
-      "close" => (1..200).map { |_i| rand(24_950..25_050) },
-      "volume" => (1..200).map { |_i| rand(1_000..10_000) },
+      timestamp: (1..200).map { |i| Time.now - ((200 - i) * 60) },
+      open: (1..200).map { |_i| rand(24_900..25_100) },
+      high: (1..200).map { |_i| rand(25_050..25_150) },
+      low: (1..200).map { |_i| rand(24_850..24_950) },
+      close: (1..200).map { |_i| rand(24_950..25_050) },
+      volume: (1..200).map { |_i| rand(1_000..10_000) },
     }
   end
 
@@ -36,7 +36,7 @@ RSpec.describe DhanScalper::Indicators::HolyGrail, :unit do
 
       it "shows appropriate momentum" do
         result = holy_grail.call
-        expect([:strong, :up, :flat]).to include(result.momentum)
+        expect(%i[strong up flat]).to include(result.momentum)
       end
 
       it "has high ADX indicating strong trend" do
@@ -75,7 +75,7 @@ RSpec.describe DhanScalper::Indicators::HolyGrail, :unit do
 
       it "shows appropriate momentum" do
         result = holy_grail.call
-        expect([:strong, :down, :flat]).to include(result.momentum)
+        expect(%i[strong down flat]).to include(result.momentum)
       end
 
       it "has high ADX indicating strong trend" do
@@ -109,12 +109,12 @@ RSpec.describe DhanScalper::Indicators::HolyGrail, :unit do
 
       it "identifies appropriate bias" do
         result = holy_grail.call
-        expect([:neutral, :bullish, :bearish]).to include(result.bias)
+        expect(%i[neutral bullish bearish]).to include(result.bias)
       end
 
       it "shows appropriate momentum" do
         result = holy_grail.call
-        expect([:weak, :flat, :up, :down]).to include(result.momentum)
+        expect(%i[weak flat up down]).to include(result.momentum)
       end
 
       it "has variable ADX" do
@@ -140,19 +140,19 @@ RSpec.describe DhanScalper::Indicators::HolyGrail, :unit do
     context "with insufficient data" do
       let(:insufficient_data) do
         {
-          "timestamp" => (1..50).map { |i| Time.now - ((50 - i) * 60) },
-          "open" => (1..50).map { |_i| rand(24_900..25_100) },
-          "high" => (1..50).map { |_i| rand(25_050..25_150) },
-          "low" => (1..50).map { |_i| rand(24_850..24_950) },
-          "close" => (1..50).map { |_i| rand(24_950..25_050) },
-          "volume" => (1..50).map { |_i| rand(1_000..10_000) },
+          timestamp: (1..50).map { |i| Time.now - ((50 - i) * 60) },
+          open: (1..50).map { |_i| rand(24_900..25_100) },
+          high: (1..50).map { |_i| rand(25_050..25_150) },
+          low: (1..50).map { |_i| rand(24_850..24_950) },
+          close: (1..50).map { |_i| rand(24_950..25_050) },
+          volume: (1..50).map { |_i| rand(1_000..10_000) },
         }
       end
 
       it "raises error for insufficient data" do
-        expect {
+        expect do
           described_class.new(candles: insufficient_data)
-        }.to raise_error(ArgumentError, "need ≥ 100 candles")
+        end.to raise_error(ArgumentError, "need ≥ 100 candles")
       end
     end
 
@@ -192,13 +192,13 @@ RSpec.describe DhanScalper::Indicators::HolyGrail, :unit do
   describe "#generate_options_signal" do
     it "generates bullish signal for strong bullish indicators" do
       signal, strength = holy_grail.send(:generate_options_signal, :bullish, :strong, 30.0, 70.0, { macd: 1.0, signal: 0.5, hist: 0.5 })
-      expect([:bullish, :buy_ce, :buy_ce_weak]).to include(signal)
+      expect(%i[bullish buy_ce buy_ce_weak]).to include(signal)
       expect(strength).to be > 0.5
     end
 
     it "generates bearish signal for strong bearish indicators" do
       signal, strength = holy_grail.send(:generate_options_signal, :bearish, :strong, 30.0, 30.0, { macd: -1.0, signal: -0.5, hist: -0.5 })
-      expect([:bearish, :buy_pe, :buy_pe_weak]).to include(signal)
+      expect(%i[bearish buy_pe buy_pe_weak]).to include(signal)
       expect(strength).to be > 0.5
     end
 
@@ -211,7 +211,7 @@ RSpec.describe DhanScalper::Indicators::HolyGrail, :unit do
     it "handles edge cases in signal generation" do
       # Test with extreme values
       signal, strength = holy_grail.send(:generate_options_signal, :bullish, :strong, 50.0, 90.0, { macd: 2.0, signal: 1.0, hist: 1.0 })
-      expect([:bullish, :buy_ce, :buy_ce_weak]).to include(signal)
+      expect(%i[bullish buy_ce buy_ce_weak]).to include(signal)
       expect(strength).to be_between(0.0, 1.0)
     end
   end
@@ -219,12 +219,12 @@ RSpec.describe DhanScalper::Indicators::HolyGrail, :unit do
   describe "performance characteristics" do
     it "processes large datasets efficiently" do
       large_candle_data = {
-        "timestamp" => (1..1_000).map { |i| Time.now - ((1_000 - i) * 60) },
-        "open" => (1..1_000).map { |_i| rand(24_900..25_100) },
-        "high" => (1..1_000).map { |_i| rand(25_050..25_150) },
-        "low" => (1..1_000).map { |_i| rand(24_850..24_950) },
-        "close" => (1..1_000).map { |_i| rand(24_950..25_050) },
-        "volume" => (1..1_000).map { |_i| rand(1_000..10_000) },
+        timestamp: (1..1_000).map { |i| Time.now - ((1_000 - i) * 60) },
+        open: (1..1_000).map { |_i| rand(24_900..25_100) },
+        high: (1..1_000).map { |_i| rand(25_050..25_150) },
+        low: (1..1_000).map { |_i| rand(24_850..24_950) },
+        close: (1..1_000).map { |_i| rand(24_950..25_050) },
+        volume: (1..1_000).map { |_i| rand(1_000..10_000) },
       }
 
       large_holy_grail = described_class.new(candles: large_candle_data)
@@ -322,12 +322,12 @@ end
 RSpec.describe DhanScalper::CandleSeries, :unit do
   let(:candle_data) do
     {
-      "timestamp" => (1..100).map { |i| Time.now - ((100 - i) * 60) },
-      "open" => (1..100).map { |_i| rand(24_950..25_050) },
-      "high" => (1..100).map { |_i| rand(25_000..25_100) },
-      "low" => (1..100).map { |_i| rand(24_900..25_000) },
-      "close" => (1..100).map { |_i| rand(24_975..25_025) },
-      "volume" => (1..100).map { |_i| rand(1_000..10_000) },
+      timestamp: (1..100).map { |i| Time.now - ((100 - i) * 60) },
+      open: (1..100).map { |_i| rand(24_950..25_050) },
+      high: (1..100).map { |_i| rand(25_000..25_100) },
+      low: (1..100).map { |_i| rand(24_900..25_000) },
+      close: (1..100).map { |_i| rand(24_975..25_025) },
+      volume: (1..100).map { |_i| rand(1_000..10_000) },
     }
   end
 
@@ -415,12 +415,12 @@ RSpec.describe DhanScalper::CandleSeries, :unit do
   describe "performance characteristics" do
     it "handles large datasets efficiently" do
       large_candle_data = {
-        "timestamp" => (1..1_000).map { |i| Time.now - ((1_000 - i) * 60) },
-        "open" => (1..1_000).map { |_i| rand(24_950..25_050) },
-        "high" => (1..1_000).map { |_i| rand(25_000..25_100) },
-        "low" => (1..1_000).map { |_i| rand(24_900..25_000) },
-        "close" => (1..1_000).map { |_i| rand(24_975..25_025) },
-        "volume" => (1..1_000).map { |_i| rand(1_000..10_000) },
+        timestamp: (1..1_000).map { |i| Time.now - ((1_000 - i) * 60) },
+        open: (1..1_000).map { |_i| rand(24_950..25_050) },
+        high: (1..1_000).map { |_i| rand(25_000..25_100) },
+        low: (1..1_000).map { |_i| rand(24_900..25_000) },
+        close: (1..1_000).map { |_i| rand(24_975..25_025) },
+        volume: (1..1_000).map { |_i| rand(1_000..10_000) },
       }
 
       large_series = described_class.new(symbol: "NIFTY", interval: "1m")

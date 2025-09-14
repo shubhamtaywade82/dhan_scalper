@@ -61,85 +61,83 @@ module DhanScalper
       end
 
       def get_holdings
-        begin
-          holdings = DhanHQ::Models::Holding.all
-          return [] unless holdings
+        holdings = DhanHQ::Models::Holding.all
+        return [] unless holdings
 
-          holdings.map do |holding|
-            {
-              security_id: holding.security_id,
-              symbol: holding.symbol,
-              quantity: holding.quantity.to_i,
-              average_price: holding.average_price.to_f,
-              current_price: holding.current_price.to_f,
-              pnl: holding.pnl.to_f,
-              pnl_percentage: holding.pnl_percentage.to_f
-            }
-          end
-        rescue StandardError => e
-          @logger.error "[LIVE_BALANCE] Error fetching holdings: #{e.message}"
-          []
+        holdings.map do |holding|
+          {
+            security_id: holding.security_id,
+            symbol: holding.symbol,
+            quantity: holding.quantity.to_i,
+            average_price: holding.average_price.to_f,
+            current_price: holding.current_price.to_f,
+            pnl: holding.pnl.to_f,
+            pnl_percentage: holding.pnl_percentage.to_f,
+          }
         end
+      rescue StandardError => e
+        @logger.error "[LIVE_BALANCE] Error fetching holdings: #{e.message}"
+        []
       end
 
       def get_trades(order_id: nil, from_date: nil, to_date: nil)
-        begin
-          trades = DhanHQ::Models::Trade.all
-          return [] unless trades
+        trades = DhanHQ::Models::Trade.all
+        return [] unless trades
 
-          # Filter by order_id if provided
-          trades = trades.select { |t| t.order_id == order_id } if order_id
+        # Filter by order_id if provided
+        trades = trades.select { |t| t.order_id == order_id } if order_id
 
-          # Filter by date range if provided
-          if from_date || to_date
-            trades = trades.select do |t|
-              trade_date = Time.parse(t.trade_date) rescue Time.now
-              (from_date.nil? || trade_date >= from_date) &&
-              (to_date.nil? || trade_date <= to_date)
+        # Filter by date range if provided
+        if from_date || to_date
+          trades = trades.select do |t|
+            trade_date = begin
+              Time.parse(t.trade_date)
+            rescue StandardError
+              Time.now
             end
+            (from_date.nil? || trade_date >= from_date) &&
+              (to_date.nil? || trade_date <= to_date)
           end
-
-          trades.map do |trade|
-            {
-              trade_id: trade.trade_id,
-              order_id: trade.order_id,
-              security_id: trade.security_id,
-              quantity: trade.quantity.to_i,
-              price: trade.price.to_f,
-              trade_date: trade.trade_date,
-              timestamp: trade.timestamp
-            }
-          end
-        rescue StandardError => e
-          @logger.error "[LIVE_BALANCE] Error fetching trades: #{e.message}"
-          []
         end
+
+        trades.map do |trade|
+          {
+            trade_id: trade.trade_id,
+            order_id: trade.order_id,
+            security_id: trade.security_id,
+            quantity: trade.quantity.to_i,
+            price: trade.price.to_f,
+            trade_date: trade.trade_date,
+            timestamp: trade.timestamp,
+          }
+        end
+      rescue StandardError => e
+        @logger.error "[LIVE_BALANCE] Error fetching trades: #{e.message}"
+        []
       end
 
       def get_orders(status: nil)
-        begin
-          orders = DhanHQ::Models::Order.all
-          return [] unless orders
+        orders = DhanHQ::Models::Order.all
+        return [] unless orders
 
-          orders = orders.select { |order| order.order_status == status } if status
+        orders = orders.select { |order| order.order_status == status } if status
 
-          orders.map do |order|
-            {
-              order_id: order.order_id,
-              security_id: order.security_id,
-              symbol: order.symbol,
-              side: order.transaction_type,
-              quantity: order.quantity.to_i,
-              price: order.price.to_f,
-              status: order.order_status,
-              order_type: order.order_type,
-              created_at: order.created_at
-            }
-          end
-        rescue StandardError => e
-          @logger.error "[LIVE_BALANCE] Error fetching orders: #{e.message}"
-          []
+        orders.map do |order|
+          {
+            order_id: order.order_id,
+            security_id: order.security_id,
+            symbol: order.symbol,
+            side: order.transaction_type,
+            quantity: order.quantity.to_i,
+            price: order.price.to_f,
+            status: order.order_status,
+            order_type: order.order_type,
+            created_at: order.created_at,
+          }
         end
+      rescue StandardError => e
+        @logger.error "[LIVE_BALANCE] Error fetching orders: #{e.message}"
+        []
       end
 
       private
@@ -193,7 +191,7 @@ module DhanScalper
               current_price: pos.current_price.to_f,
               pnl: pos.pnl.to_f,
               pnl_percentage: pos.pnl_percentage.to_f,
-              last_updated: Time.now
+              last_updated: Time.now,
             }
           end
 

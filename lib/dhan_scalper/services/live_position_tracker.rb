@@ -69,7 +69,7 @@ module DhanScalper
               current_price: pos[:current_price],
               pnl: pos[:pnl],
               pnl_percentage: pos[:pnl_percentage],
-              last_updated: Time.now
+              last_updated: Time.now,
             }
           end
 

@@ -145,7 +145,7 @@ RSpec.describe DhanScalper::Indicators::Supertrend do
 
       expect(valid_values).not_to be_empty
       expect(valid_values.all? { |v| v > 0 }).to be true
-      expect(valid_values.all? { |v| v.is_a?(Numeric) }).to be true
+      expect(valid_values.all?(Numeric)).to be true
     end
 
     it "supertrend values follow price trends" do
@@ -155,6 +155,7 @@ RSpec.describe DhanScalper::Indicators::Supertrend do
       # Compare supertrend with close prices
       result.zip(closes).each do |st, close|
         next if st.nil? || close.nil?
+
         # Supertrend should be reasonably close to the price
         expect((st - close).abs).to be < (close * 0.1) # Within 10% of price
       end

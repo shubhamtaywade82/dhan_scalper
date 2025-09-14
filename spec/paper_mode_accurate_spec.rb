@@ -73,14 +73,14 @@ RSpec.describe "Paper Mode Accurate Test Suite" do
     allow(mock_position_tracker).to receive(:get_open_positions).and_return([])
     allow(mock_position_tracker).to receive(:get_total_pnl).and_return(0.0)
     allow(mock_position_tracker).to receive(:get_positions_summary).and_return({
-      total_positions: 0,
-      open_positions: 0,
-      closed_positions: 0,
-      total_pnl: 0.0,
-      winning_trades: 0,
-      losing_trades: 0,
-      positions: {},
-    })
+                                                                                 total_positions: 0,
+                                                                                 open_positions: 0,
+                                                                                 closed_positions: 0,
+                                                                                 total_pnl: 0.0,
+                                                                                 winning_trades: 0,
+                                                                                 losing_trades: 0,
+                                                                                 positions: {},
+                                                                               })
     allow(mock_position_tracker).to receive(:add_position)
     allow(mock_position_tracker).to receive(:update_all_positions)
     allow(mock_position_tracker).to receive(:get_underlying_price).and_return(25_000.0)
@@ -96,9 +96,9 @@ RSpec.describe "Paper Mode Accurate Test Suite" do
     # Mock Option Picker
     mock_option_picker = double("OptionPicker")
     allow(mock_option_picker).to receive(:pick).and_return({
-      ce: { strike: 25_000, security_id: "CE123", premium: 150.0 },
-      pe: { strike: 25_000, security_id: "PE123", premium: 120.0 },
-    })
+                                                             ce: { strike: 25_000, security_id: "CE123", premium: 150.0 },
+                                                             pe: { strike: 25_000, security_id: "PE123", premium: 120.0 },
+                                                           })
     allow(mock_option_picker).to receive(:nearest_strike).and_return(25_000)
     allow(mock_option_picker).to receive(:select_strike_for_signal).and_return(25_000)
 
@@ -106,11 +106,11 @@ RSpec.describe "Paper Mode Accurate Test Suite" do
     mock_trend_analyzer = double("TrendEnhanced")
     allow(mock_trend_analyzer).to receive(:decide).and_return(:bullish)
     allow(mock_trend_analyzer).to receive(:analyze).and_return({
-      signal: :bullish,
-      strength: 0.75,
-      adx: 28.5,
-      bias: :bullish,
-    })
+                                                                 signal: :bullish,
+                                                                 strength: 0.75,
+                                                                 adx: 28.5,
+                                                                 bias: :bullish,
+                                                               })
 
     # Set instance variables
     paper_app.instance_variable_set(:@websocket_manager, mock_ws_manager)
@@ -198,14 +198,14 @@ RSpec.describe "Paper Mode Accurate Test Suite" do
     it "tracks session statistics" do
       mock_position_tracker = paper_app.instance_variable_get(:@position_tracker)
       allow(mock_position_tracker).to receive(:get_positions_summary).and_return({
-        total_positions: 5,
-        open_positions: 2,
-        closed_positions: 3,
-        total_pnl: 1_500.0,
-        winning_trades: 2,
-        losing_trades: 1,
-        positions: {},
-      })
+                                                                                   total_positions: 5,
+                                                                                   open_positions: 2,
+                                                                                   closed_positions: 3,
+                                                                                   total_pnl: 1_500.0,
+                                                                                   winning_trades: 2,
+                                                                                   losing_trades: 1,
+                                                                                   positions: {},
+                                                                                 })
 
       # Update session data manually
       paper_app.instance_variable_get(:@session_data)[:total_positions] = 5
@@ -252,14 +252,14 @@ RSpec.describe "Paper Mode Accurate Test Suite" do
     it "shows position summary" do
       mock_position_tracker = paper_app.instance_variable_get(:@position_tracker)
       allow(mock_position_tracker).to receive(:get_positions_summary).and_return({
-        total_positions: 2,
-        open_positions: 1,
-        closed_positions: 1,
-        total_pnl: 500.0,
-        winning_trades: 1,
-        losing_trades: 0,
-        positions: {},
-      })
+                                                                                   total_positions: 2,
+                                                                                   open_positions: 1,
+                                                                                   closed_positions: 1,
+                                                                                   total_pnl: 500.0,
+                                                                                   winning_trades: 1,
+                                                                                   losing_trades: 0,
+                                                                                   positions: {},
+                                                                                 })
 
       expect(paper_app).to receive(:puts).with(/Position Summary/)
       expect(paper_app).to receive(:puts).with(/Total Positions: 2/)
@@ -271,10 +271,10 @@ RSpec.describe "Paper Mode Accurate Test Suite" do
     it "tracks position highs for trailing stops" do
       mock_position_tracker = paper_app.instance_variable_get(:@position_tracker)
       allow(mock_position_tracker).to receive(:get_positions).and_return([{
-        security_id: "CE123",
-        current_price: 160.0,
-        buy_avg: 150.0,
-      }])
+                                                                           security_id: "CE123",
+                                                                           current_price: 160.0,
+                                                                           buy_avg: 150.0,
+                                                                         }])
 
       # This method should update position highs
       paper_app.send(:update_position_highs)
@@ -291,17 +291,17 @@ RSpec.describe "Paper Mode Accurate Test Suite" do
     it "executes buy trade for bullish signal" do
       mock_broker = paper_app.instance_variable_get(:@broker)
       allow(mock_broker).to receive(:place_order).and_return({
-        success: true,
-        order_id: "P-1234567890",
-        order: double("Order", quantity: 75, price: 150.0),
-        position: double("Position", security_id: "CE123"),
-      })
+                                                               success: true,
+                                                               order_id: "P-1234567890",
+                                                               order: double("Order", quantity: 75, price: 150.0),
+                                                               position: double("Position", security_id: "CE123"),
+                                                             })
 
       expect(mock_broker).to receive(:place_order).with(hash_including(
-        symbol: symbol,
-        side: "BUY",
-        quantity: 75
-      ))
+                                                          symbol: symbol,
+                                                          side: "BUY",
+                                                          quantity: 75,
+                                                        ))
 
       paper_app.send(:execute_trade, symbol, direction, spot_price, symbol_config)
     end
@@ -309,17 +309,17 @@ RSpec.describe "Paper Mode Accurate Test Suite" do
     it "executes sell trade for bearish signal" do
       mock_broker = paper_app.instance_variable_get(:@broker)
       allow(mock_broker).to receive(:place_order).and_return({
-        success: true,
-        order_id: "P-1234567890",
-        order: double("Order", quantity: 75, price: 120.0),
-        position: double("Position", security_id: "PE123"),
-      })
+                                                               success: true,
+                                                               order_id: "P-1234567890",
+                                                               order: double("Order", quantity: 75, price: 120.0),
+                                                               position: double("Position", security_id: "PE123"),
+                                                             })
 
       expect(mock_broker).to receive(:place_order).with(hash_including(
-        symbol: symbol,
-        side: "BUY",
-        quantity: 75
-      ))
+                                                          symbol: symbol,
+                                                          side: "BUY",
+                                                          quantity: 75,
+                                                        ))
 
       paper_app.send(:execute_trade, symbol, :bearish, spot_price, symbol_config)
     end
@@ -327,11 +327,11 @@ RSpec.describe "Paper Mode Accurate Test Suite" do
     it "updates session data on successful trade" do
       mock_broker = paper_app.instance_variable_get(:@broker)
       allow(mock_broker).to receive(:place_order).and_return({
-        success: true,
-        order_id: "P-1234567890",
-        order: double("Order", quantity: 75, price: 150.0),
-        position: double("Position", security_id: "CE123"),
-      })
+                                                               success: true,
+                                                               order_id: "P-1234567890",
+                                                               order: double("Order", quantity: 75, price: 150.0),
+                                                               position: double("Position", security_id: "CE123"),
+                                                             })
 
       expect { paper_app.send(:execute_trade, symbol, direction, spot_price, symbol_config) }
         .to change { paper_app.instance_variable_get(:@session_data)[:total_trades] }.by(1)
@@ -340,9 +340,9 @@ RSpec.describe "Paper Mode Accurate Test Suite" do
     it "handles failed trades gracefully" do
       mock_broker = paper_app.instance_variable_get(:@broker)
       allow(mock_broker).to receive(:place_order).and_return({
-        success: false,
-        error: "Insufficient balance",
-      })
+                                                               success: false,
+                                                               error: "Insufficient balance",
+                                                             })
 
       expect { paper_app.send(:execute_trade, symbol, direction, spot_price, symbol_config) }
         .to change { paper_app.instance_variable_get(:@session_data)[:failed_trades] }.by(1)
@@ -447,8 +447,8 @@ RSpec.describe "Paper Mode Accurate Test Suite" do
   describe "Configuration and Customization" do
     it "respects custom configuration" do
       custom_config = config.merge({
-        global: config[:global].merge(decision_interval: 5)
-      })
+                                     global: config[:global].merge(decision_interval: 5),
+                                   })
       custom_app = DhanScalper::PaperApp.new(custom_config, quiet: true, enhanced: true)
       expect(custom_app.instance_variable_get(:@cfg)[:global][:decision_interval]).to eq(5)
     end

@@ -118,93 +118,89 @@ module DhanScalper
       end
 
       def cancel_order(order_id)
-        begin
-          result = DhanHQ::Order.cancel_order(order_id)
-          if result && result["success"]
-            @logger.info "[DHAN_BROKER] Order #{order_id} cancelled successfully"
-            @order_cache.delete(order_id)
-            true
-          else
-            @logger.error "[DHAN_BROKER] Failed to cancel order #{order_id}: #{result&.dig('message')}"
-            false
-          end
-        rescue StandardError => e
-          @logger.error "[DHAN_BROKER] Error cancelling order #{order_id}: #{e.message}"
+        result = DhanHQ::Order.cancel_order(order_id)
+        if result && result["success"]
+          @logger.info "[DHAN_BROKER] Order #{order_id} cancelled successfully"
+          @order_cache.delete(order_id)
+          true
+        else
+          @logger.error "[DHAN_BROKER] Failed to cancel order #{order_id}: #{result&.dig("message")}"
           false
         end
+      rescue StandardError => e
+        @logger.error "[DHAN_BROKER] Error cancelling order #{order_id}: #{e.message}"
+        false
       end
 
       def get_funds
-        begin
-          funds = DhanHQ::Models::Funds.fetch
-          return nil unless funds
+        funds = DhanHQ::Models::Funds.fetch
+        return nil unless funds
 
-          {
-            available_balance: funds.available_balance.to_f,
-            utilized_amount: funds.utilized_amount.to_f,
-            total_balance: (funds.available_balance.to_f + funds.utilized_amount.to_f),
-            timestamp: Time.now
-          }
-        rescue StandardError => e
-          @logger.error "[DHAN_BROKER] Error fetching funds: #{e.message}"
-          nil
-        end
+        {
+          available_balance: funds.available_balance.to_f,
+          utilized_amount: funds.utilized_amount.to_f,
+          total_balance: (funds.available_balance.to_f + funds.utilized_amount.to_f),
+          timestamp: Time.now,
+        }
+      rescue StandardError => e
+        @logger.error "[DHAN_BROKER] Error fetching funds: #{e.message}"
+        nil
       end
 
       def get_holdings
-        begin
-          holdings = DhanHQ::Models::Holding.all
-          return [] unless holdings
+        holdings = DhanHQ::Models::Holding.all
+        return [] unless holdings
 
-          holdings.map do |holding|
-            {
-              security_id: holding.security_id,
-              symbol: holding.symbol,
-              quantity: holding.quantity.to_i,
-              average_price: holding.average_price.to_f,
-              current_price: holding.current_price.to_f,
-              pnl: holding.pnl.to_f,
-              pnl_percentage: holding.pnl_percentage.to_f
-            }
-          end
-        rescue StandardError => e
-          @logger.error "[DHAN_BROKER] Error fetching holdings: #{e.message}"
-          []
+        holdings.map do |holding|
+          {
+            security_id: holding.security_id,
+            symbol: holding.symbol,
+            quantity: holding.quantity.to_i,
+            average_price: holding.average_price.to_f,
+            current_price: holding.current_price.to_f,
+            pnl: holding.pnl.to_f,
+            pnl_percentage: holding.pnl_percentage.to_f,
+          }
         end
+      rescue StandardError => e
+        @logger.error "[DHAN_BROKER] Error fetching holdings: #{e.message}"
+        []
       end
 
       def get_trades(order_id: nil, from_date: nil, to_date: nil)
-        begin
-          trades = DhanHQ::Models::Trade.all
-          return [] unless trades
+        trades = DhanHQ::Models::Trade.all
+        return [] unless trades
 
-          # Filter by order_id if provided
-          trades = trades.select { |t| t.order_id == order_id } if order_id
+        # Filter by order_id if provided
+        trades = trades.select { |t| t.order_id == order_id } if order_id
 
-          # Filter by date range if provided
-          if from_date || to_date
-            trades = trades.select do |t|
-              trade_date = Time.parse(t.trade_date) rescue Time.now
-              (from_date.nil? || trade_date >= from_date) &&
-              (to_date.nil? || trade_date <= to_date)
+        # Filter by date range if provided
+        if from_date || to_date
+          trades = trades.select do |t|
+            trade_date = begin
+              Time.parse(t.trade_date)
+            rescue StandardError
+              Time.now
             end
+            (from_date.nil? || trade_date >= from_date) &&
+              (to_date.nil? || trade_date <= to_date)
           end
-
-          trades.map do |trade|
-            {
-              trade_id: trade.trade_id,
-              order_id: trade.order_id,
-              security_id: trade.security_id,
-              quantity: trade.quantity.to_i,
-              price: trade.price.to_f,
-              trade_date: trade.trade_date,
-              timestamp: trade.timestamp
-            }
-          end
-        rescue StandardError => e
-          @logger.error "[DHAN_BROKER] Error fetching trades: #{e.message}"
-          []
         end
+
+        trades.map do |trade|
+          {
+            trade_id: trade.trade_id,
+            order_id: trade.order_id,
+            security_id: trade.security_id,
+            quantity: trade.quantity.to_i,
+            price: trade.price.to_f,
+            trade_date: trade.trade_date,
+            timestamp: trade.timestamp,
+          }
+        end
+      rescue StandardError => e
+        @logger.error "[DHAN_BROKER] Error fetching trades: #{e.message}"
+        []
       end
 
       def get_order_status(order_id)
@@ -338,7 +334,7 @@ module DhanScalper
               current_price: pos.current_price.to_f,
               pnl: pos.pnl.to_f,
               pnl_percentage: pos.pnl_percentage.to_f,
-              last_updated: Time.now
+              last_updated: Time.now,
             }
           end
 
@@ -368,7 +364,7 @@ module DhanScalper
               status: order.order_status,
               order_type: order.order_type,
               created_at: order.created_at,
-              last_updated: Time.now
+              last_updated: Time.now,
             }
           end
 

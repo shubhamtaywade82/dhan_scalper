@@ -33,7 +33,7 @@ module DhanScalper
         # Ensure global WebSocket cleanup is registered
         DhanScalper::Services::WebSocketCleanup.register_cleanup
 
-        puts "[APP] WebSocket cleanup registered #{ENV["DISABLE_WEBSOCKET"]}"
+        puts "[APP] WebSocket cleanup registered #{ENV.fetch("DISABLE_WEBSOCKET", nil)}"
         # Check if WebSocket is disabled via environment variable
         if ENV["DISABLE_WEBSOCKET"] == "true"
           puts "[WS] WebSocket disabled via DISABLE_WEBSOCKET=true"
@@ -99,27 +99,27 @@ module DhanScalper
 
         # Initialize live balance provider
         @balance_provider = DhanScalper::BalanceProviders::LiveBalance.new(
-          logger: @quiet ? Logger.new("/dev/null") : Logger.new($stdout)
+          logger: @quiet ? Logger.new(File::NULL) : Logger.new($stdout),
         )
 
         # Initialize live broker
         @broker = DhanScalper::Brokers::DhanBroker.new(
           balance_provider: @balance_provider,
-          logger: @quiet ? Logger.new("/dev/null") : Logger.new($stdout)
+          logger: @quiet ? Logger.new(File::NULL) : Logger.new($stdout),
         )
 
         # Initialize live position tracker
         @position_tracker = DhanScalper::Services::LivePositionTracker.new(
           broker: @broker,
           balance_provider: @balance_provider,
-          logger: @quiet ? Logger.new("/dev/null") : Logger.new($stdout)
+          logger: @quiet ? Logger.new(File::NULL) : Logger.new($stdout),
         )
 
         # Initialize live order manager
         @order_manager = DhanScalper::Services::LiveOrderManager.new(
           broker: @broker,
           position_tracker: @position_tracker,
-          logger: @quiet ? Logger.new("/dev/null") : Logger.new($stdout)
+          logger: @quiet ? Logger.new(File::NULL) : Logger.new($stdout),
         )
 
         puts "[APP] Live trading components initialized"
@@ -279,11 +279,11 @@ module DhanScalper
           ws = create_websocket_client
           return ws if ws
 
-          if attempt < max_retries
-            puts "[WS] Connection failed, retrying in #{retry_delay}s..."
-            sleep(retry_delay)
-            retry_delay *= 2 # Exponential backoff
-          end
+          next unless attempt < max_retries
+
+          puts "[WS] Connection failed, retrying in #{retry_delay}s..."
+          sleep(retry_delay)
+          retry_delay *= 2 # Exponential backoff
         end
 
         puts "[WS] Failed to establish WebSocket connection after #{max_retries} attempts"
@@ -360,21 +360,19 @@ module DhanScalper
         ]
 
         methods_to_try.each do |method|
-          begin
-            result = method.call
-            if result.respond_to?(:on)
-              puts "[WS] Successfully created WebSocket client"
-              return result
-            end
-          rescue StandardError => e
-            puts "Warning: Failed to create WebSocket client via method: #{e.message}"
-            # If it's a 429 error, wait longer before retrying
-            if e.message.include?("429")
-              puts "[WS] Rate limited (429), waiting 30s before retry"
-              sleep(30)
-            end
-            next
+          result = method.call
+          if result.respond_to?(:on)
+            puts "[WS] Successfully created WebSocket client"
+            return result
           end
+        rescue StandardError => e
+          puts "Warning: Failed to create WebSocket client via method: #{e.message}"
+          # If it's a 429 error, wait longer before retrying
+          if e.message.include?("429")
+            puts "[WS] Rate limited (429), waiting 30s before retry"
+            sleep(30)
+          end
+          next
         end
 
         puts "Error: Failed to create WebSocket client via all available methods"

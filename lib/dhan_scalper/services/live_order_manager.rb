@@ -13,59 +13,54 @@ module DhanScalper
       end
 
       def place_order(symbol:, instrument_id:, side:, quantity:, price:, order_type: "MARKET")
-        begin
-          @logger.info "[LIVE_ORDER_MANAGER] Placing #{side} order for #{symbol}: #{quantity} @ #{price}"
+        @logger.info "[LIVE_ORDER_MANAGER] Placing #{side} order for #{symbol}: #{quantity} @ #{price}"
 
-          result = @broker.place_order(
+        result = @broker.place_order(
+          symbol: symbol,
+          instrument_id: instrument_id,
+          side: side,
+          quantity: quantity,
+          price: price,
+          order_type: order_type,
+        )
+
+        if result[:success]
+          @logger.info "[LIVE_ORDER_MANAGER] Order placed successfully: #{result[:order_id]}"
+          @orders[result[:order_id]] = {
+            order_id: result[:order_id],
             symbol: symbol,
             instrument_id: instrument_id,
             side: side,
             quantity: quantity,
             price: price,
-            order_type: order_type
-          )
-
-          if result[:success]
-            @logger.info "[LIVE_ORDER_MANAGER] Order placed successfully: #{result[:order_id]}"
-            @orders[result[:order_id]] = {
-              order_id: result[:order_id],
-              symbol: symbol,
-              instrument_id: instrument_id,
-              side: side,
-              quantity: quantity,
-              price: price,
-              order_type: order_type,
-              status: "PENDING",
-              created_at: Time.now
-            }
-            result
-          else
-            @logger.error "[LIVE_ORDER_MANAGER] Failed to place order: #{result[:error]}"
-            result
-          end
-        rescue StandardError => e
-          @logger.error "[LIVE_ORDER_MANAGER] Error placing order: #{e.message}"
-          { success: false, error: e.message }
+            order_type: order_type,
+            status: "PENDING",
+            created_at: Time.now,
+          }
+        else
+          @logger.error "[LIVE_ORDER_MANAGER] Failed to place order: #{result[:error]}"
         end
+        result
+      rescue StandardError => e
+        @logger.error "[LIVE_ORDER_MANAGER] Error placing order: #{e.message}"
+        { success: false, error: e.message }
       end
 
       def cancel_order(order_id)
-        begin
-          @logger.info "[LIVE_ORDER_MANAGER] Cancelling order: #{order_id}"
+        @logger.info "[LIVE_ORDER_MANAGER] Cancelling order: #{order_id}"
 
-          success = @broker.cancel_order(order_id)
-          if success
-            @logger.info "[LIVE_ORDER_MANAGER] Order cancelled successfully: #{order_id}"
-            @orders.delete(order_id)
-            true
-          else
-            @logger.error "[LIVE_ORDER_MANAGER] Failed to cancel order: #{order_id}"
-            false
-          end
-        rescue StandardError => e
-          @logger.error "[LIVE_ORDER_MANAGER] Error cancelling order: #{e.message}"
+        success = @broker.cancel_order(order_id)
+        if success
+          @logger.info "[LIVE_ORDER_MANAGER] Order cancelled successfully: #{order_id}"
+          @orders.delete(order_id)
+          true
+        else
+          @logger.error "[LIVE_ORDER_MANAGER] Failed to cancel order: #{order_id}"
           false
         end
+      rescue StandardError => e
+        @logger.error "[LIVE_ORDER_MANAGER] Error cancelling order: #{e.message}"
+        false
       end
 
       def get_orders(status: nil)
@@ -98,51 +93,43 @@ module DhanScalper
       end
 
       def get_order_status(order_id)
-        begin
-          status = @broker.get_order_status(order_id)
-          return nil unless status
+        status = @broker.get_order_status(order_id)
+        return nil unless status
 
-          # Update local cache
-          if @orders[order_id]
-            @orders[order_id][:status] = status[:status]
-            @orders[order_id][:fill_price] = status[:fill_price]
-            @orders[order_id][:fill_quantity] = status[:fill_quantity]
-            @orders[order_id][:reason] = status[:reason]
-            @orders[order_id][:last_updated] = Time.now
-          end
-
-          status
-        rescue StandardError => e
-          @logger.error "[LIVE_ORDER_MANAGER] Error fetching order status: #{e.message}"
-          nil
+        # Update local cache
+        if @orders[order_id]
+          @orders[order_id][:status] = status[:status]
+          @orders[order_id][:fill_price] = status[:fill_price]
+          @orders[order_id][:fill_quantity] = status[:fill_quantity]
+          @orders[order_id][:reason] = status[:reason]
+          @orders[order_id][:last_updated] = Time.now
         end
+
+        status
+      rescue StandardError => e
+        @logger.error "[LIVE_ORDER_MANAGER] Error fetching order status: #{e.message}"
+        nil
       end
 
       def get_trades(order_id: nil, from_date: nil, to_date: nil)
-        begin
-          @broker.get_trades(order_id: order_id, from_date: from_date, to_date: to_date)
-        rescue StandardError => e
-          @logger.error "[LIVE_ORDER_MANAGER] Error fetching trades: #{e.message}"
-          []
-        end
+        @broker.get_trades(order_id: order_id, from_date: from_date, to_date: to_date)
+      rescue StandardError => e
+        @logger.error "[LIVE_ORDER_MANAGER] Error fetching trades: #{e.message}"
+        []
       end
 
       def get_funds
-        begin
-          @broker.get_funds
-        rescue StandardError => e
-          @logger.error "[LIVE_ORDER_MANAGER] Error fetching funds: #{e.message}"
-          nil
-        end
+        @broker.get_funds
+      rescue StandardError => e
+        @logger.error "[LIVE_ORDER_MANAGER] Error fetching funds: #{e.message}"
+        nil
       end
 
       def get_holdings
-        begin
-          @broker.get_holdings
-        rescue StandardError => e
-          @logger.error "[LIVE_ORDER_MANAGER] Error fetching holdings: #{e.message}"
-          []
-        end
+        @broker.get_holdings
+      rescue StandardError => e
+        @logger.error "[LIVE_ORDER_MANAGER] Error fetching holdings: #{e.message}"
+        []
       end
 
       private
@@ -166,7 +153,7 @@ module DhanScalper
               order_type: order[:order_type],
               status: order[:status],
               created_at: order[:created_at],
-              last_updated: Time.now
+              last_updated: Time.now,
             }
           end
 

@@ -192,7 +192,7 @@ RSpec.describe "Live Mode Final Integration", :integration do
             utilizedAmount: 50_000.0,
             totalBalance: 150_000.0,
           }.to_json,
-          headers: { "Content-Type" => "application/json" },
+          headers: { "Content-Type": "application/json" },
         )
 
       # This demonstrates WebMock is working

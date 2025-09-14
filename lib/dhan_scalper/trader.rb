@@ -220,7 +220,7 @@ module DhanScalper
                     charge_per_order: charge_per_order)
       @session_pnl += net
 
-      # Note: Balance updates (including realized PnL) are handled by PaperBroker#sell_market
+      # NOTE: Balance updates (including realized PnL) are handled by PaperBroker#sell_market
       # No need to call add_realized_pnl here as it would be duplicate
 
       puts "\n[#{@symbol}] EXIT #{reason} sid=#{@open.sid} ltp≈#{ltp.round(2)} net=#{net.round(0)} session=#{@session_pnl.round(0)}"

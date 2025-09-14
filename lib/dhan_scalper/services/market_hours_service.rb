@@ -34,16 +34,16 @@ module DhanScalper
 
         # Parse market hours
         market_start = Time.new(current_date.year, current_date.month, current_date.day,
-                               start_time_str.split(":")[0].to_i,
-                               start_time_str.split(":")[1].to_i, 0)
+                                start_time_str.split(":")[0].to_i,
+                                start_time_str.split(":")[1].to_i, 0)
         market_end = Time.new(current_date.year, current_date.month, current_date.day,
-                             end_time_str.split(":")[0].to_i,
-                             end_time_str.split(":")[1].to_i, 0)
+                              end_time_str.split(":")[0].to_i,
+                              end_time_str.split(":")[1].to_i, 0)
 
         # Check if current time is within market hours
         is_open = current_time.between?(market_start, market_end)
 
-        @logger.debug "[MARKET_HOURS] Market #{is_open ? 'open' : 'closed'} (#{current_time.strftime('%H:%M:%S')} between #{start_time_str}-#{end_time_str})" if @logger
+        @logger.debug "[MARKET_HOURS] Market #{is_open ? "open" : "closed"} (#{current_time.strftime("%H:%M:%S")} between #{start_time_str}-#{end_time_str})" if @logger
         is_open
       end
 
@@ -51,12 +51,12 @@ module DhanScalper
       # @return [Boolean] true if market hours should be enforced
       def market_hours_enforced?
         # Check environment variable first
-        env_setting = ENV["ENFORCE_MARKET_HOURS"]
+        env_setting = ENV.fetch("ENFORCE_MARKET_HOURS", nil)
         return env_setting.downcase == "true" if env_setting
 
         # Check config setting
         config_setting = @config.dig("global", "enforce_market_hours")
-        return config_setting == true if !config_setting.nil?
+        return config_setting == true unless config_setting.nil?
 
         # Default to true (enforce market hours)
         true
@@ -92,19 +92,19 @@ module DhanScalper
         start_time_str = session_hours[0]
 
         next_market_open = Time.new(next_trading_date.year, next_trading_date.month, next_trading_date.day,
-                                   start_time_str.split(":")[0].to_i,
-                                   start_time_str.split(":")[1].to_i, 0)
+                                    start_time_str.split(":")[0].to_i,
+                                    start_time_str.split(":")[1].to_i, 0)
 
         # If it's the same day and we're before market close, market opens tomorrow
         if current_date == next_trading_date && current_time.hour < 15
           next_market_open = Time.new(current_date.year, current_date.month, current_date.day,
-                                     start_time_str.split(":")[0].to_i,
-                                     start_time_str.split(":")[1].to_i, 0)
+                                      start_time_str.split(":")[0].to_i,
+                                      start_time_str.split(":")[1].to_i, 0)
         end
 
         time_diff = next_market_open - current_time
-        hours = (time_diff / 3600).to_i
-        minutes = ((time_diff % 3600) / 60).to_i
+        hours = (time_diff / 3_600).to_i
+        minutes = ((time_diff % 3_600) / 60).to_i
 
         "#{hours}h #{minutes}m"
       end

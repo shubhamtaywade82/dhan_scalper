@@ -40,7 +40,7 @@ module DhanScalper
 
       def update_balance(amount, type: :debit)
         amount_bd = DhanScalper::Support::Money.bd(amount)
-        
+
         # Skip validation for zero or negative amounts in edge cases
         unless amount == 0 || amount < 0
           DhanScalper::Support::Validations.validate_price_positive(amount)

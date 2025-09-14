@@ -47,7 +47,7 @@ RSpec.describe DhanScalper::BalanceProviders::Base do
   describe "method signatures" do
     it "allows update_balance to accept type parameter" do
       # Test that the method signature allows the type parameter
-      expect(described_class.instance_method(:update_balance).parameters).to include(%i[opt type])
+      expect(described_class.instance_method(:update_balance).parameters).to include(%i[key type])
     end
   end
 

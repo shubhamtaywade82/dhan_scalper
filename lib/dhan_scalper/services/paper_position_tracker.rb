@@ -2,27 +2,116 @@
 
 require "json"
 require "fileutils"
+require_relative "../stores/redis_store"
 
 module DhanScalper
   module Services
     class PaperPositionTracker
       attr_reader :positions, :underlying_prices, :websocket_manager
 
-      def initialize(websocket_manager:, logger: nil, memory_only: true)
+      def initialize(websocket_manager:, logger: nil, memory_only: true, session_id: nil, redis_store: nil)
         @websocket_manager = websocket_manager
         @logger = logger || Logger.new($stdout)
         @memory_only = memory_only
         @positions = {}
         @underlying_prices = {}
-        @position_file = "data/paper_positions.json"
-        @price_file = "data/underlying_prices.json"
+        @session_id = session_id || generate_session_id
+        @redis_store = redis_store || DhanScalper::Stores::RedisStore.new
 
-        # Load existing positions and prices only if not memory-only
-        load_positions unless @memory_only
-        load_underlying_prices unless @memory_only
+        # Connect to Redis if not already connected
+        @redis_store.connect unless @redis_store.redis
+
+        # Load existing positions from Redis
+        load_positions_from_redis unless @memory_only
 
         # Setup WebSocket handlers
         setup_websocket_handlers
+      end
+
+      def generate_session_id
+        "PAPER_#{Time.now.strftime("%Y%m%d")}"
+      end
+
+      def load_positions_from_redis
+        positions_key = "dhan_scalper:v1:positions:#{@session_id}"
+        position_ids = @redis_store.redis.smembers(positions_key)
+
+        position_ids.each do |position_id|
+          position_key = "dhan_scalper:v1:position:#{position_id}"
+          position_data = @redis_store.redis.hgetall(position_key)
+
+          next if position_data.empty?
+
+          # Convert string values back to appropriate types
+          position = {
+            position_key: position_id,  # Add the position_key field
+            exchange_segment: position_data["exchange_segment"],
+            security_id: position_data["security_id"],
+            side: position_data["side"],
+            net_qty: DhanScalper::Support::Money.bd(position_data["net_qty"] || 0),
+            buy_qty: DhanScalper::Support::Money.bd(position_data["buy_qty"] || 0),
+            buy_avg: DhanScalper::Support::Money.bd(position_data["buy_avg"] || 0),
+            sell_qty: DhanScalper::Support::Money.bd(position_data["sell_qty"] || 0),
+            sell_avg: DhanScalper::Support::Money.bd(position_data["sell_avg"] || 0),
+            day_buy_qty: DhanScalper::Support::Money.bd(position_data["day_buy_qty"] || 0),
+            day_sell_qty: DhanScalper::Support::Money.bd(position_data["day_sell_qty"] || 0),
+            realized_pnl: DhanScalper::Support::Money.bd(position_data["realized_pnl"] || 0),
+            unrealized_pnl: DhanScalper::Support::Money.bd(position_data["unrealized_pnl"] || 0),
+            current_price: DhanScalper::Support::Money.bd(position_data["current_price"] || 0),
+            option_type: position_data["option_type"] || "",
+            strike_price: position_data["strike_price"]&.to_i || 0,
+            expiry_date: position_data["expiry_date"] || "",
+            underlying_symbol: position_data["underlying_symbol"] || "",
+            symbol: position_data["symbol"] || "",
+            created_at: position_data["created_at"] ? Time.parse(position_data["created_at"]) : Time.now,
+            last_updated: position_data["last_updated"] ? Time.parse(position_data["last_updated"]) : Time.now,
+          }
+
+          @positions[position_id] = position
+        end
+
+        @logger.debug("Loaded #{@positions.size} positions from Redis")
+      end
+
+      def save_position_to_redis(position_id)
+        position = @positions[position_id]
+        return unless position
+
+        position_key = "dhan_scalper:v1:position:#{position_id}"
+
+        # Convert position to Redis-compatible format
+        position_data = {
+          exchange_segment: position[:exchange_segment] || "",
+          security_id: position[:security_id] || "",
+          side: position[:side] || "",
+          net_qty: DhanScalper::Support::Money.dec(position[:net_qty] || 0).to_s,
+          buy_qty: DhanScalper::Support::Money.dec(position[:buy_qty] || 0).to_s,
+          buy_avg: DhanScalper::Support::Money.dec(position[:buy_avg] || 0).to_s,
+          sell_qty: DhanScalper::Support::Money.dec(position[:sell_qty] || 0).to_s,
+          sell_avg: DhanScalper::Support::Money.dec(position[:sell_avg] || 0).to_s,
+          day_buy_qty: DhanScalper::Support::Money.dec(position[:day_buy_qty] || 0).to_s,
+          day_sell_qty: DhanScalper::Support::Money.dec(position[:day_sell_qty] || 0).to_s,
+          realized_pnl: DhanScalper::Support::Money.dec(position[:realized_pnl] || 0).to_s,
+          unrealized_pnl: DhanScalper::Support::Money.dec(position[:unrealized_pnl] || 0).to_s,
+          current_price: DhanScalper::Support::Money.dec(position[:current_price] || 0).to_s,
+          option_type: position[:option_type] || "",
+          strike_price: position[:strike_price]&.to_s || "",
+          expiry_date: position[:expiry_date] || "",
+          underlying_symbol: position[:underlying_symbol] || "",
+          symbol: position[:symbol] || "",
+          created_at: position[:created_at]&.iso8601 || Time.now.iso8601,
+          last_updated: position[:last_updated]&.iso8601 || Time.now.iso8601,
+        }
+
+        @redis_store.redis.hset(position_key, position_data)
+        @redis_store.redis.expire(position_key, 86_400) # 24 hours TTL
+
+        # Add to positions set
+        positions_key = "dhan_scalper:v1:positions:#{@session_id}"
+        @redis_store.redis.sadd(positions_key, position_id)
+        @redis_store.redis.expire(positions_key, 86_400) # 24 hours TTL
+
+        @logger.debug("Saved position to Redis - key: #{position_key}")
       end
 
       def track_underlying(symbol, instrument_id)
@@ -78,6 +167,23 @@ module DhanScalper
             created_at: existing[:created_at], # Keep original creation time
             last_update: Time.now,
             subscribed: true,
+            # Redis-compatible fields
+            exchange_segment: "NSE_FNO",
+            security_id: instrument_id,
+            side: "BUY",
+            net_qty: total_quantity,
+            buy_qty: total_quantity,
+            buy_avg: weighted_avg_price,
+            sell_qty: 0,
+            sell_avg: 0.0,
+            day_buy_qty: total_quantity,
+            day_sell_qty: 0,
+            realized_pnl: 0.0,
+            unrealized_pnl: 0.0,
+            strike_price: strike.to_i,
+            expiry_date: expiry.to_s,
+            underlying_symbol: symbol,
+            last_updated: Time.now,
           }
 
           @logger.info "[PositionTracker] Position aggregated: #{position_key} (total qty: #{total_quantity})"
@@ -96,12 +202,30 @@ module DhanScalper
             created_at: Time.now,
             last_update: Time.now,
             subscribed: true,
+            # Redis-compatible fields
+            exchange_segment: "NSE_FNO",
+            security_id: instrument_id,
+            side: "BUY",
+            net_qty: quantity,
+            buy_qty: quantity,
+            buy_avg: entry_price,
+            sell_qty: 0,
+            sell_avg: 0.0,
+            day_buy_qty: quantity,
+            day_sell_qty: 0,
+            realized_pnl: 0.0,
+            unrealized_pnl: 0.0,
+            strike_price: strike.to_i,
+            expiry_date: expiry.to_s,
+            underlying_symbol: symbol,
+            last_updated: Time.now,
           }
 
           @logger.info "[PositionTracker] Position created: #{position_key}"
         end
 
-        save_positions
+        # Save to Redis
+        save_position_to_redis(position_key)
 
         success
       end
@@ -117,7 +241,14 @@ module DhanScalper
 
         # Remove position
         @positions.delete(position_key)
-        save_positions
+
+        # Remove from Redis
+        position_redis_key = "dhan_scalper:v1:position:#{position_key}"
+        @redis_store.redis.del(position_redis_key)
+
+        # Remove from positions set
+        positions_key = "dhan_scalper:v1:positions:#{@session_id}"
+        @redis_store.redis.srem(positions_key, position_key)
 
         @logger.info "[PositionTracker] Position removed: #{position_key}"
         true
@@ -170,6 +301,11 @@ module DhanScalper
         @positions.values
       end
 
+      # Get a single position by key
+      def get_position(position_key)
+        @positions[position_key]
+      end
+
       # Method to manually update position prices for testing/debugging
       def update_position_prices
         @logger.debug "[PositionTracker] update_position_prices called - checking #{@positions.size} positions"
@@ -211,7 +347,11 @@ module DhanScalper
         # Calculate max profit and drawdown
         pnl_values = @positions.values.map { |pos| pos[:pnl] }
         max_profit = pnl_values.empty? ? 0.0 : pnl_values.max
-        max_drawdown = pnl_values.empty? ? 0.0 : pnl_values.map { |pnl| pnl.negative? ? pnl.abs : 0.0 }.max
+        max_drawdown = if pnl_values.empty?
+                         0.0
+                       else
+                         pnl_values.map { |pnl| pnl.negative? ? pnl.abs : 0.0 }.max
+                       end
 
         # Count winning and losing trades
         winning_trades = @positions.values.count { |pos| pos[:pnl].positive? }
@@ -260,8 +400,8 @@ module DhanScalper
 
       # Save all data at end of session (even in memory-only mode)
       def save_session_data
-        save_positions
-        save_underlying_prices
+        # Positions are already saved to Redis in real-time
+        # No need to save again here
         @logger.info "[PositionTracker] Session data saved"
       end
 
@@ -330,15 +470,7 @@ module DhanScalper
         end
       end
 
-      def save_positions
-        FileUtils.mkdir_p(File.dirname(@position_file))
-
-        begin
-          File.write(@position_file, JSON.pretty_generate(@positions))
-        rescue StandardError => e
-          @logger.error "[PositionTracker] Failed to save positions: #{e.message}"
-        end
-      end
+      # File-based save_positions removed - using Redis only
 
       def load_underlying_prices
         return unless File.exist?(@price_file)

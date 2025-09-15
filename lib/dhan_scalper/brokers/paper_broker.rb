@@ -54,6 +54,9 @@ module DhanScalper
         # Debit the balance using principal vs fee split
         @balance_provider&.debit_for_buy(principal_cost: principal_cost, fee: charge_bd)
 
+        # Determine option type and other details from security ID
+        option_info = determine_option_info(security_id)
+
         # Add position to enhanced tracker
         position = @position_tracker.add_position(
           exchange_segment: segment,
@@ -62,6 +65,11 @@ module DhanScalper
           quantity: quantity,
           price: price,
           fee: charge_per_order,
+          option_type: option_info[:option_type],
+          strike_price: option_info[:strike_price],
+          expiry_date: option_info[:expiry_date],
+          underlying_symbol: option_info[:underlying_symbol],
+          symbol: option_info[:symbol],
         )
 
         order = Order.new("P-#{Time.now.to_f}", security_id, "BUY", quantity, price)
@@ -303,6 +311,42 @@ module DhanScalper
       end
 
       private
+
+      def determine_option_info(security_id)
+        # Try to get option information from CSV master
+        begin
+          csv_master = DhanScalper::CsvMaster.new
+          exchange_info = csv_master.get_exchange_info(security_id)
+
+          if exchange_info
+            {
+              option_type: exchange_info[:option_type],
+              strike_price: exchange_info[:strike_price],
+              expiry_date: exchange_info[:expiry_date],
+              underlying_symbol: exchange_info[:underlying_symbol],
+              symbol: exchange_info[:underlying_symbol]
+            }
+          else
+            # Fallback: try to determine from security ID patterns
+            determine_option_type_from_id(security_id)
+          end
+        rescue => e
+          @logger.warn("[PAPER] Could not determine option info for #{security_id}: #{e.message}")
+          determine_option_type_from_id(security_id)
+        end
+      end
+
+      def determine_option_type_from_id(_security_id)
+        # Simple fallback logic - this could be enhanced
+        # For now, return unknown type
+        {
+          option_type: nil,
+          strike_price: nil,
+          expiry_date: nil,
+          underlying_symbol: nil,
+          symbol: nil
+        }
+      end
 
       # Determine the correct segment based on symbol and security_id
       def determine_segment(symbol, security_id)

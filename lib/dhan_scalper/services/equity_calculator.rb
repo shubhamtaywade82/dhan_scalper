@@ -38,18 +38,25 @@ module DhanScalper
 
         return { success: false, error: "Position not found" } unless position
 
-        # Calculate unrealized PnL: (current_ltp - buy_avg) * net_qty
+        # Calculate unrealized PnL based on option type
         current_ltp_bd = DhanScalper::Support::Money.bd(current_ltp)
         buy_avg_bd = position[:buy_avg]
         net_qty_bd = position[:net_qty]
+        option_type = position[:option_type]
 
-        unrealized_pnl = DhanScalper::Support::Money.multiply(
-          DhanScalper::Support::Money.subtract(current_ltp_bd, buy_avg_bd),
-          net_qty_bd,
-        )
+        # Use correct formula based on option type
+        if option_type == "PE" || option_type == "PUT"
+          # Put options: PnL = (Entry - Current) * Quantity
+          price_diff = DhanScalper::Support::Money.subtract(buy_avg_bd, current_ltp_bd)
+        else
+          # Call options (CE/CALL) or default: PnL = (Current - Entry) * Quantity
+          price_diff = DhanScalper::Support::Money.subtract(current_ltp_bd, buy_avg_bd)
+        end
+
+        unrealized_pnl = DhanScalper::Support::Money.multiply(price_diff, net_qty_bd)
 
         # Update position with new unrealized PnL
-        @position_tracker.update_unrealized_pnl(
+        @position_tracker.update_position_unrealized_pnl(
           exchange_segment: exchange_segment,
           security_id: security_id,
           side: "LONG",
@@ -141,11 +148,18 @@ module DhanScalper
           current_price = position[:current_price] || position[:buy_avg]
           buy_avg = position[:buy_avg]
           net_qty = position[:net_qty]
+          option_type = position[:option_type]
 
-          unrealized = DhanScalper::Support::Money.multiply(
-            DhanScalper::Support::Money.subtract(current_price, buy_avg),
-            net_qty,
-          )
+          # Use correct formula based on option type
+          if option_type == "PE" || option_type == "PUT"
+            # Put options: PnL = (Entry - Current) * Quantity
+            price_diff = DhanScalper::Support::Money.subtract(buy_avg, current_price)
+          else
+            # Call options (CE/CALL) or default: PnL = (Current - Entry) * Quantity
+            price_diff = DhanScalper::Support::Money.subtract(current_price, buy_avg)
+          end
+
+          unrealized = DhanScalper::Support::Money.multiply(price_diff, net_qty)
 
           total_unrealized = DhanScalper::Support::Money.add(total_unrealized, unrealized)
         end

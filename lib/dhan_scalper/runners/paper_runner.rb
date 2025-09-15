@@ -21,19 +21,6 @@ module DhanScalper
         # Initialize virtual data manager
         initialize_virtual_data_manager
 
-        # Initialize WebSocket manager
-        @websocket_manager = Services::WebSocketManager.new(logger: @logger)
-
-        # Initialize position tracker
-        @position_tracker = Services::PaperPositionTracker.new(
-          websocket_manager: @websocket_manager,
-          logger: @logger,
-          memory_only: true,
-        )
-
-        # Update balance provider with position tracker for accurate used balance calculation
-        @balance_provider.instance_variable_set(:@position_tracker, @position_tracker)
-
         # Initialize logger
         @logger = Logger.new($stdout)
         @logger.level = quiet ? Logger::WARN : Logger::INFO
@@ -41,8 +28,12 @@ module DhanScalper
         # Initialize CSV master for exchange segment mapping
         @csv_master = CsvMaster.new
 
+        # Initialize Redis store
+        @redis_store = DhanScalper::Stores::RedisStore.new
+        @redis_store.connect
+
         # Initialize session reporter with config
-        @session_reporter = Services::SessionReporter.new(config: @config, logger: @logger)
+        @session_reporter = Services::SessionReporter.new(config: @config, logger: @logger, redis_store: @redis_store)
 
         # Session tracking variables
         @session_data = {
@@ -74,6 +65,27 @@ module DhanScalper
         @session_data = @session_reporter.load_or_create_session(
           mode: "PAPER",
           starting_balance: @balance_provider.available_balance,
+        )
+
+        # Initialize WebSocket manager
+        @websocket_manager = Services::WebSocketManager.new(logger: @logger)
+
+        # Initialize position tracker with Redis
+        @position_tracker = Services::PaperPositionTracker.new(
+          websocket_manager: @websocket_manager,
+          logger: @logger,
+          memory_only: true,
+          session_id: @session_data[:session_id],
+          redis_store: @redis_store,
+        )
+
+        # Update balance provider with position tracker for accurate used balance calculation
+        @balance_provider.instance_variable_set(:@position_tracker, @position_tracker)
+
+        # Initialize equity calculator for risk management
+        @equity_calculator = Services::EquityCalculator.new(
+          position_tracker: @position_tracker,
+          balance_provider: @balance_provider,
         )
 
         # If resuming an existing session, update the balance provider to reflect the correct state
@@ -176,6 +188,9 @@ module DhanScalper
           end
 
           DhanScalper::TickCache.put(tick_data)
+
+          # Update positions with live data for risk management
+          refresh_positions_with_live_data
         end
       end
 
@@ -808,6 +823,30 @@ module DhanScalper
         )
 
         total_used.to_f
+      end
+
+      def refresh_positions_with_live_data
+        return unless @equity_calculator
+
+        # Create LTP provider that gets data from TickCache
+        ltp_provider = lambda do |exchange_segment, security_id|
+          DhanScalper::TickCache.ltp(exchange_segment, security_id)
+        end
+
+        # Refresh all positions with live data
+        result = @equity_calculator.refresh_all_unrealized!(ltp_provider: ltp_provider)
+
+        if result[:success]
+          DhanScalper::Support::Logger.debug(
+            "Updated positions with live data - Total unrealized PnL: ₹#{result[:total_unrealized]}",
+            component: "PaperRunner",
+          )
+        else
+          DhanScalper::Support::Logger.warn(
+            "Failed to refresh positions with live data: #{result[:error]}",
+            component: "PaperRunner",
+          )
+        end
       end
 
       def update_session_data_with_current_state

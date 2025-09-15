@@ -6,17 +6,22 @@ require "fileutils"
 require "time"
 require_relative "../support/money"
 require_relative "trading_day_service"
+require_relative "../stores/redis_store"
 
 module DhanScalper
   module Services
     class SessionReporter
-      def initialize(config: nil, logger: nil)
+      def initialize(config: nil, logger: nil, redis_store: nil)
         @data_dir = "data"
         @reports_dir = File.join(@data_dir, "reports")
         @logger = logger || Logger.new($stdout)
         @trading_day_service = TradingDayService.new(config: config || {}, logger: @logger)
+        @redis_store = redis_store || DhanScalper::Stores::RedisStore.new
 
-        # Ensure the reports directory exists
+        # Connect to Redis if not already connected
+        @redis_store.connect unless @redis_store.redis
+
+        # Ensure the reports directory exists (for fallback)
         begin
           FileUtils.mkdir_p(@reports_dir)
           puts "[REPORTS] Reports directory created: #{@reports_dir}" if ENV["DHAN_LOG_LEVEL"] == "DEBUG"
@@ -57,52 +62,23 @@ module DhanScalper
           performance_summary: session_data[:performance_summary] || {},
         }
 
-        # Ensure reports directory exists before writing
-        ensure_reports_directory
-
-        # Save JSON report (single file per session)
-        json_file = File.join(@reports_dir, "#{session_id}.json")
-        begin
-          File.write(json_file, JSON.pretty_generate(report_data))
-        rescue StandardError => e
-          puts "[REPORTS] Error writing JSON report: #{e.message}"
-          # Fallback to current directory
-          json_file = "#{session_id}.json"
-          File.write(json_file, JSON.pretty_generate(report_data))
-        end
-
-        # Save CSV report (single file per session)
-        csv_file = File.join(@reports_dir, "#{session_id}.csv")
-        begin
-          save_csv_report(csv_file, report_data)
-        rescue StandardError => e
-          puts "[REPORTS] Error writing CSV report: #{e.message}"
-          # Fallback to current directory
-          csv_file = "#{session_id}.csv"
-          save_csv_report(csv_file, report_data)
-        end
+        # Save to Redis
+        save_session_to_redis(session_id, report_data)
 
         # Generate console summary
         generate_console_summary(report_data)
 
         {
           session_id: session_id,
-          json_file: json_file,
-          csv_file: csv_file,
+          redis_stored: true,
           report_data: report_data,
         }
       end
 
       # Generate report for a specific session
       def generate_report_for_session(session_id)
-        json_file = File.join(@reports_dir, "#{session_id}.json")
-
-        unless File.exist?(json_file)
-          puts "No report found for session ID: #{session_id}"
-          return nil
-        end
-
-        report_data = JSON.parse(File.read(json_file), symbolize_names: true)
+        report_data = load_session_from_redis(session_id)
+        return nil unless report_data
 
         generate_console_summary(report_data)
         report_data
@@ -174,80 +150,7 @@ module DhanScalper
         @trading_day_service.current_session_id(mode: mode)
       end
 
-      def save_csv_report(csv_file, report_data)
-        CSV.open(csv_file, "w") do |csv|
-          # Header
-          csv << ["Session Report", report_data[:session_id]]
-          csv << ["Generated", Time.now.strftime("%Y-%m-%d %H:%M:%S")]
-          csv << []
-
-          # Session Summary
-          csv << ["SESSION SUMMARY"]
-          csv << ["Session ID", report_data[:session_id]]
-          csv << ["Mode", report_data[:mode]]
-          csv << ["Start Time", report_data[:start_time]]
-          csv << ["End Time", report_data[:end_time]]
-          csv << ["Duration (minutes)", report_data[:duration_minutes]]
-          csv << ["Symbols Traded", report_data[:symbols_traded].is_a?(Array) ? report_data[:symbols_traded].join(", ") : report_data[:symbols_traded].to_s]
-          csv << []
-
-          # Trading Summary
-          csv << ["TRADING SUMMARY"]
-          csv << ["Total Trades", report_data[:total_trades]]
-          csv << ["Successful Trades", report_data[:successful_trades]]
-          csv << ["Failed Trades", report_data[:failed_trades]]
-          csv << ["Win Rate (%)", "#{report_data[:win_rate].round(2)}%"]
-          csv << []
-
-          # Financial Summary
-          csv << ["FINANCIAL SUMMARY"]
-          csv << ["Starting Balance", DhanScalper::Support::Money.format(report_data[:starting_balance] || 0)]
-          csv << ["Available Balance", DhanScalper::Support::Money.format(report_data[:ending_balance] || 0)]
-          csv << ["Used Balance", DhanScalper::Support::Money.format(report_data[:used_balance] || 0)]
-          csv << ["Total Balance", DhanScalper::Support::Money.format(report_data[:total_balance] || 0)]
-          csv << ["Total P&L", DhanScalper::Support::Money.format(report_data[:total_pnl] || 0)]
-          csv << ["Max Profit", DhanScalper::Support::Money.format(report_data[:max_profit] || 0)]
-          csv << ["Max Drawdown", DhanScalper::Support::Money.format(report_data[:max_drawdown] || 0)]
-          csv << ["Average Trade P&L", DhanScalper::Support::Money.format(report_data[:average_trade_pnl] || 0)]
-          csv << []
-
-          # Positions
-          if report_data[:positions].any?
-            csv << ["POSITIONS"]
-            csv << ["Symbol", "Option Type", "Strike", "Quantity", "Entry Price", "Current Price", "P&L", "Created At"]
-            report_data[:positions].each do |pos|
-              csv << [
-                pos[:symbol],
-                pos[:option_type],
-                pos[:strike],
-                pos[:quantity],
-                pos[:entry_price],
-                pos[:current_price],
-                pos[:pnl],
-                pos[:created_at],
-              ]
-            end
-            csv << []
-          end
-
-          # Trades
-          if report_data[:trades].any?
-            csv << ["TRADES"]
-            csv << ["Time", "Symbol", "Side", "Quantity", "Price", "Order ID", "Status"]
-            report_data[:trades].each do |trade|
-              csv << [
-                trade[:timestamp],
-                trade[:symbol],
-                trade[:side],
-                trade[:quantity],
-                trade[:price],
-                trade[:order_id],
-                trade[:status],
-              ]
-            end
-          end
-        end
-      end
+      # CSV report generation removed - using Redis only
 
       def generate_console_summary(report_data)
         puts "\n#{"=" * 80}"
@@ -318,6 +221,95 @@ module DhanScalper
         puts "=" * 80
         puts "📁 Reports saved to: #{@reports_dir}"
         puts "=" * 80
+      end
+
+      private
+
+      def save_session_to_redis(session_id, report_data)
+        key = "dhan_scalper:v1:session:#{session_id}"
+
+        # Convert report data to Redis-compatible format
+        redis_data = prepare_report_data_for_redis(report_data)
+
+        # Store as JSON in Redis
+        @redis_store.redis.set(key, JSON.pretty_generate(redis_data))
+        @redis_store.redis.expire(key, 86_400) # 24 hours TTL
+
+        # Store session metadata
+        store_session_metadata(session_id, report_data)
+
+        @logger.info("[REPORTS] Saved session #{session_id} to Redis", component: "SessionReporter")
+      rescue StandardError => e
+        @logger.error("[REPORTS] Failed to save session #{session_id} to Redis: #{e.message}")
+      end
+
+      def load_session_from_redis(session_id)
+        key = "dhan_scalper:v1:session:#{session_id}"
+        data = @redis_store.redis.get(key)
+
+        return nil unless data
+
+        session_data = JSON.parse(data, symbolize_names: true)
+
+        # Convert symbols_traded back to Set if it's an Array
+        if session_data[:symbols_traded].is_a?(Array)
+          session_data[:symbols_traded] = Set.new(session_data[:symbols_traded])
+        end
+
+        @logger.info("[REPORTS] Loaded session #{session_id} from Redis", component: "SessionReporter")
+
+        session_data
+      rescue StandardError => e
+        @logger.error("[REPORTS] Failed to load session #{session_id} from Redis: #{e.message}", component: "SessionReporter")
+        nil
+      end
+
+      def prepare_report_data_for_redis(report_data)
+        # Convert Set to Array for JSON serialization
+        prepared_data = report_data.dup
+
+        if prepared_data[:symbols_traded].is_a?(Set)
+          prepared_data[:symbols_traded] = prepared_data[:symbols_traded].to_a
+        end
+
+        # Ensure all values are JSON-serializable
+        prepared_data.transform_values do |value|
+          case value
+          when Time
+            value.iso8601
+          when BigDecimal
+            value.to_f
+          when Set
+            value.to_a
+          else
+            value
+          end
+        end
+      end
+
+      def store_session_metadata(session_id, report_data)
+        metadata_key = "dhan_scalper:v1:session_meta:#{session_id}"
+
+        # Handle start_time and end_time - they might be Time objects or strings
+        start_time = report_data[:start_time]
+        start_time = start_time.is_a?(Time) ? start_time.iso8601 : (start_time || Time.now.iso8601)
+
+        end_time = report_data[:end_time]
+        end_time = end_time.is_a?(Time) ? end_time.iso8601 : (end_time || Time.now.iso8601)
+
+        metadata = {
+          session_id: session_id,
+          mode: report_data[:mode],
+          start_time: start_time,
+          end_time: end_time,
+          total_pnl: report_data[:total_pnl] || 0.0,
+          total_trades: report_data[:total_trades] || 0,
+          status: report_data[:status] || "completed",
+          created_at: Time.now.iso8601,
+        }
+
+        @redis_store.redis.hset(metadata_key, metadata.transform_keys(&:to_s))
+        @redis_store.redis.expire(metadata_key, 86_400) # 24 hours TTL
       end
     end
   end

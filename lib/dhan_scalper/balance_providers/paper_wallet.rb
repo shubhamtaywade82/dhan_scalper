@@ -5,11 +5,12 @@ require_relative "base"
 require_relative "../support/money"
 require_relative "../support/logger"
 require_relative "../support/validations"
+require_relative "../stores/redis_store"
 
 module DhanScalper
   module BalanceProviders
     class PaperWallet < Base
-      def initialize(starting_balance: 200_000.0, position_tracker: nil)
+      def initialize(starting_balance: 200_000.0, position_tracker: nil, session_id: nil, redis_store: nil)
         super()
         @starting_balance = DhanScalper::Support::Money.bd(starting_balance)
         @available = @starting_balance
@@ -17,6 +18,14 @@ module DhanScalper
         @total = @starting_balance
         @realized_pnl = DhanScalper::Support::Money.bd(0)
         @position_tracker = position_tracker
+        @session_id = session_id || generate_session_id
+        @redis_store = redis_store || DhanScalper::Stores::RedisStore.new
+
+        # Connect to Redis if not already connected
+        @redis_store.connect unless @redis_store.redis
+
+        # Load existing balance from Redis or initialize
+        load_balance_from_redis
       end
 
       def available_balance
@@ -124,6 +133,9 @@ module DhanScalper
         # Total balance should remain constant (starting balance + realized PnL)
         @total = DhanScalper::Support::Money.add(@starting_balance, @realized_pnl)
 
+        # Save to Redis
+        save_balance_to_redis
+
         DhanScalper::Support::Logger.debug(
           "Balance updated - available after: #{DhanScalper::Support::Money.dec(@available)}, " \
           "used after: #{DhanScalper::Support::Money.dec(@used)}, " \
@@ -153,6 +165,9 @@ module DhanScalper
         @available = DhanScalper::Support::Money.subtract(@available, total_cost)
         @used = DhanScalper::Support::Money.add(@used, total_cost)
         @total = DhanScalper::Support::Money.add(@available, @used)
+
+        # Save to Redis
+        save_balance_to_redis
 
         DhanScalper::Support::Logger.debug(
           "Buy debit completed - available: #{DhanScalper::Support::Money.dec(@available)}, " \
@@ -184,6 +199,9 @@ module DhanScalper
         # Total balance is available + used (no double counting)
         @total = DhanScalper::Support::Money.add(@available, @used)
 
+        # Save to Redis
+        save_balance_to_redis
+
         DhanScalper::Support::Logger.debug(
           "Sell credit completed - available: #{DhanScalper::Support::Money.dec(@available)}, " \
           "used: #{DhanScalper::Support::Money.dec(@used)}, " \
@@ -199,6 +217,10 @@ module DhanScalper
         @used = DhanScalper::Support::Money.bd(0)
         @total = @starting_balance
         @realized_pnl = DhanScalper::Support::Money.bd(0)
+
+        # Save to Redis
+        save_balance_to_redis
+
         @total
       end
 
@@ -215,6 +237,10 @@ module DhanScalper
       def add_realized_pnl(pnl)
         pnl_bd = DhanScalper::Support::Money.bd(pnl)
         @realized_pnl = DhanScalper::Support::Money.add(@realized_pnl, pnl_bd)
+
+        # Save to Redis
+        save_balance_to_redis
+
         # NOTE: Realized PnL is tracked separately for reporting only
         # Cash flow is already reflected in available/used balance
         DhanScalper::Support::Logger.debug(
@@ -251,6 +277,62 @@ module DhanScalper
       end
 
       private
+
+        def generate_session_id
+          "PAPER_#{Time.now.strftime("%Y%m%d")}"
+        end
+
+      def load_balance_from_redis
+        key = "dhan_scalper:v1:balance:#{@session_id}"
+
+        balance_data = @redis_store.redis.hgetall(key)
+
+        if balance_data.empty?
+          # Initialize with starting balance
+          @available = @starting_balance
+          @used = DhanScalper::Support::Money.bd(0)
+          @total = @starting_balance
+          @realized_pnl = DhanScalper::Support::Money.bd(0)
+
+          # Save initial state
+          save_balance_to_redis
+        else
+          # Load from Redis
+          @available = DhanScalper::Support::Money.bd(balance_data["available"] || @starting_balance)
+          @used = DhanScalper::Support::Money.bd(balance_data["used"] || 0)
+          @total = DhanScalper::Support::Money.bd(balance_data["total"] || @starting_balance)
+          @realized_pnl = DhanScalper::Support::Money.bd(balance_data["realized_pnl"] || 0)
+        end
+
+        DhanScalper::Support::Logger.debug(
+          "Loaded balance from Redis - available: #{DhanScalper::Support::Money.dec(@available)}, " \
+          "used: #{DhanScalper::Support::Money.dec(@used)}, " \
+          "total: #{DhanScalper::Support::Money.dec(@total)}, " \
+          "realized_pnl: #{DhanScalper::Support::Money.dec(@realized_pnl)}",
+          component: "PaperWallet",
+        )
+      end
+
+      def save_balance_to_redis
+        key = "dhan_scalper:v1:balance:#{@session_id}"
+
+        balance_data = {
+          available: DhanScalper::Support::Money.dec(@available).to_s,
+          used: DhanScalper::Support::Money.dec(@used).to_s,
+          total: DhanScalper::Support::Money.dec(@total).to_s,
+          realized_pnl: DhanScalper::Support::Money.dec(@realized_pnl).to_s,
+          starting_balance: DhanScalper::Support::Money.dec(@starting_balance).to_s,
+          last_updated: Time.now.iso8601,
+        }
+
+        @redis_store.redis.hset(key, balance_data)
+        @redis_store.redis.expire(key, 86_400) # 24 hours TTL
+
+        DhanScalper::Support::Logger.debug(
+          "Saved balance to Redis - key: #{key}",
+          component: "PaperWallet",
+        )
+      end
 
       def calculate_used_balance_from_positions
         # Try to get positions from session report first

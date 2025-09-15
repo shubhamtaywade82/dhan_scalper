@@ -1,19 +1,28 @@
 # frozen_string_literal: true
 
 require_relative "../support/money"
+require_relative "../stores/redis_store"
 
 module DhanScalper
   module Services
     # Enhanced position tracker that supports weighted averages and partial exits
     class EnhancedPositionTracker
-      def initialize(balance_provider: nil)
+      def initialize(balance_provider: nil, session_id: nil, redis_store: nil)
         @positions = {} # Key: "#{exchange_segment}_#{security_id}_#{side}"
         @realized_pnl = DhanScalper::Support::Money.bd(0)
         @balance_provider = balance_provider
+        @session_id = session_id || generate_session_id
+        @redis_store = redis_store || DhanScalper::Stores::RedisStore.new
+
+        # Connect to Redis if not already connected
+        @redis_store.connect unless @redis_store.redis
+
+        # Load existing positions from Redis
+        load_positions_from_redis
       end
 
       # Add or update a position with weighted averaging
-      def add_position(exchange_segment:, security_id:, side:, quantity:, price:, fee: nil)
+      def add_position(exchange_segment:, security_id:, side:, quantity:, price:, fee: nil, option_type: nil, strike_price: nil, expiry_date: nil, underlying_symbol: nil, symbol: nil)
         key = position_key(exchange_segment, security_id, side)
         price_bd = DhanScalper::Support::Money.bd(price)
         quantity_bd = DhanScalper::Support::Money.bd(quantity)
@@ -24,8 +33,11 @@ module DhanScalper
           update_existing_position(key, quantity_bd, price_bd, fee_bd)
         else
           # Create new position
-          create_new_position(key, exchange_segment, security_id, side, quantity_bd, price_bd, fee_bd)
+          create_new_position(key, exchange_segment, security_id, side, quantity_bd, price_bd, fee_bd, option_type, strike_price, expiry_date, underlying_symbol, symbol)
         end
+
+        # Save to Redis
+        save_position_to_redis(key)
 
         @positions[key]
       end
@@ -86,6 +98,9 @@ module DhanScalper
 
         # Update timestamps
         position[:last_updated] = Time.now
+
+        # Save to Redis
+        save_position_to_redis(key)
 
         # Keep closed positions (net_qty can be zero) for reporting consistency
 
@@ -158,13 +173,18 @@ module DhanScalper
         @positions.delete(key)
       end
 
-      # Update unrealized PnL for a position
-      def update_unrealized_pnl(exchange_segment:, security_id:, side:, unrealized_pnl:)
+      # Update unrealized PnL for a specific position
+      def update_position_unrealized_pnl(exchange_segment:, security_id:, side:, unrealized_pnl:)
         key = position_key(exchange_segment, security_id, side)
         position = @positions[key]
         return false unless position
 
         position[:unrealized_pnl] = DhanScalper::Support::Money.bd(unrealized_pnl)
+        position[:last_updated] = Time.now
+
+        # Save updated position to Redis
+        save_position_to_redis(key)
+
         true
       end
 
@@ -193,7 +213,7 @@ module DhanScalper
         end
       end
 
-      def create_new_position(key, exchange_segment, security_id, side, quantity_bd, price_bd, fee_bd)
+      def create_new_position(key, exchange_segment, security_id, side, quantity_bd, price_bd, fee_bd, option_type = nil, strike_price = nil, expiry_date = nil, underlying_symbol = nil, symbol = nil)
         @positions[key] = {
           exchange_segment: exchange_segment,
           security_id: security_id,
@@ -211,11 +231,11 @@ module DhanScalper
           entry_fee: fee_bd, # Store the entry fee
           multiplier: 1,
           lot_size: 75,
-          option_type: nil,
-          strike_price: nil,
-          expiry_date: nil,
-          underlying_symbol: nil,
-          symbol: nil,
+          option_type: option_type,
+          strike_price: strike_price,
+          expiry_date: expiry_date,
+          underlying_symbol: underlying_symbol,
+          symbol: symbol,
           created_at: Time.now,
           last_updated: Time.now,
         }
@@ -327,6 +347,98 @@ module DhanScalper
       def save_session_data
         # This method can be implemented to save position data to a file
         # For now, it's a no-op
+      end
+
+      def generate_session_id
+        "PAPER_#{Time.now.strftime("%Y%m%d")}"
+      end
+
+      def load_positions_from_redis
+        positions_key = "dhan_scalper:v1:positions:#{@session_id}"
+        position_ids = @redis_store.redis.smembers(positions_key)
+
+        position_ids.each do |position_id|
+          position_key = "dhan_scalper:v1:position:#{position_id}"
+          position_data = @redis_store.redis.hgetall(position_key)
+
+          next if position_data.empty?
+
+          # Convert string values back to appropriate types
+          position = {
+            exchange_segment: position_data["exchange_segment"],
+            security_id: position_data["security_id"],
+            side: position_data["side"],
+            net_qty: DhanScalper::Support::Money.bd(position_data["net_qty"] || 0),
+            buy_qty: DhanScalper::Support::Money.bd(position_data["buy_qty"] || 0),
+            buy_avg: DhanScalper::Support::Money.bd(position_data["buy_avg"] || 0),
+            sell_qty: DhanScalper::Support::Money.bd(position_data["sell_qty"] || 0),
+            sell_avg: DhanScalper::Support::Money.bd(position_data["sell_avg"] || 0),
+            day_buy_qty: DhanScalper::Support::Money.bd(position_data["day_buy_qty"] || 0),
+            day_sell_qty: DhanScalper::Support::Money.bd(position_data["day_sell_qty"] || 0),
+            realized_pnl: DhanScalper::Support::Money.bd(position_data["realized_pnl"] || 0),
+            unrealized_pnl: DhanScalper::Support::Money.bd(position_data["unrealized_pnl"] || 0),
+            current_price: DhanScalper::Support::Money.bd(position_data["current_price"] || 0),
+            option_type: position_data["option_type"],
+            strike_price: position_data["strike_price"]&.to_i,
+            expiry_date: position_data["expiry_date"],
+            underlying_symbol: position_data["underlying_symbol"],
+            symbol: position_data["symbol"],
+            created_at: position_data["created_at"] ? Time.parse(position_data["created_at"]) : Time.now,
+            last_updated: position_data["last_updated"] ? Time.parse(position_data["last_updated"]) : Time.now,
+          }
+
+          @positions[position_id] = position
+        end
+
+        DhanScalper::Support::Logger.debug(
+          "Loaded #{@positions.size} positions from Redis",
+          component: "EnhancedPositionTracker",
+        )
+      end
+
+      def save_position_to_redis(key)
+        position = @positions[key]
+        return unless position
+
+        position_id = key
+        position_key = "dhan_scalper:v1:position:#{position_id}"
+
+        # Convert position to Redis-compatible format
+        position_data = {
+          exchange_segment: position[:exchange_segment],
+          security_id: position[:security_id],
+          side: position[:side],
+          net_qty: DhanScalper::Support::Money.dec(position[:net_qty]).to_s,
+          buy_qty: DhanScalper::Support::Money.dec(position[:buy_qty]).to_s,
+          buy_avg: DhanScalper::Support::Money.dec(position[:buy_avg]).to_s,
+          sell_qty: DhanScalper::Support::Money.dec(position[:sell_qty]).to_s,
+          sell_avg: DhanScalper::Support::Money.dec(position[:sell_avg]).to_s,
+          day_buy_qty: DhanScalper::Support::Money.dec(position[:day_buy_qty]).to_s,
+          day_sell_qty: DhanScalper::Support::Money.dec(position[:day_sell_qty]).to_s,
+          realized_pnl: DhanScalper::Support::Money.dec(position[:realized_pnl]).to_s,
+          unrealized_pnl: DhanScalper::Support::Money.dec(position[:unrealized_pnl]).to_s,
+          current_price: DhanScalper::Support::Money.dec(position[:current_price]).to_s,
+          option_type: position[:option_type] || "",
+          strike_price: position[:strike_price]&.to_s || "",
+          expiry_date: position[:expiry_date] || "",
+          underlying_symbol: position[:underlying_symbol] || "",
+          symbol: position[:symbol] || "",
+          created_at: position[:created_at]&.iso8601 || Time.now.iso8601,
+          last_updated: position[:last_updated]&.iso8601 || Time.now.iso8601,
+        }
+
+        @redis_store.redis.hset(position_key, position_data)
+        @redis_store.redis.expire(position_key, 86_400) # 24 hours TTL
+
+        # Add to positions set
+        positions_key = "dhan_scalper:v1:positions:#{@session_id}"
+        @redis_store.redis.sadd(positions_key, position_id)
+        @redis_store.redis.expire(positions_key, 86_400) # 24 hours TTL
+
+        DhanScalper::Support::Logger.debug(
+          "Saved position to Redis - key: #{position_key}",
+          component: "EnhancedPositionTracker",
+        )
       end
     end
   end

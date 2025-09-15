@@ -1,17 +1,17 @@
 # frozen_string_literal: true
 
-require "csv"
-require "json"
-require "fileutils"
+require 'csv'
+require 'json'
+require 'fileutils'
 
 module DhanScalper
   class VirtualDataManager
-    def initialize(data_dir: "data", memory_only: false)
+    def initialize(data_dir: 'data', memory_only: false)
       @data_dir = data_dir
       @memory_only = memory_only
-      @orders_file = File.join(@data_dir, "orders.csv")
-      @positions_file = File.join(@data_dir, "positions.csv")
-      @balance_file = File.join(@data_dir, "balance.json")
+      @orders_file = File.join(@data_dir, 'orders.csv')
+      @positions_file = File.join(@data_dir, 'positions.csv')
+      @balance_file = File.join(@data_dir, 'balance.json')
 
       # In-memory cache
       @orders_cache = []
@@ -33,7 +33,7 @@ module DhanScalper
         quantity: order.qty,
         avg_price: order.avg_price,
         timestamp: Time.now.iso8601,
-        status: "COMPLETED",
+        status: 'COMPLETED'
       }
 
       @orders_cache << order_data
@@ -59,7 +59,7 @@ module DhanScalper
         quantity: position.quantity,
         current_price: position.current_price,
         pnl: position.pnl,
-        timestamp: Time.now.iso8601,
+        timestamp: Time.now.iso8601
       }
 
       # Remove existing position for same security_id if exists
@@ -143,7 +143,7 @@ module DhanScalper
     def save_orders_to_csv
       return if @orders_cache.empty?
 
-      CSV.open(@orders_file, "w") do |csv|
+      CSV.open(@orders_file, 'w') do |csv|
         csv << @orders_cache.first.keys
         @orders_cache.each { |order| csv << order.values }
       end
@@ -164,7 +164,7 @@ module DhanScalper
     def save_positions_to_csv
       return if @positions_cache.empty?
 
-      CSV.open(@positions_file, "w") do |csv|
+      CSV.open(@positions_file, 'w') do |csv|
         csv << @positions_cache.first.keys
         @positions_cache.each { |position| csv << position.values }
       end
@@ -188,9 +188,9 @@ module DhanScalper
 
     # Load starting balance from config
     def load_config_balance
-      require_relative "config"
+      require_relative 'config'
       cfg = DhanScalper::Config.load
-      cfg.dig("paper", "starting_balance") || 200_000.0
+      cfg.dig('paper', 'starting_balance') || 200_000.0
     rescue StandardError
       200_000.0 # fallback to default
     end

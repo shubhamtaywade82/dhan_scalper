@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "../tick_cache"
+require_relative '../tick_cache'
 
 module DhanScalper
   module Services
@@ -22,8 +22,8 @@ module DhanScalper
         cfg = yield_config(symbol)
         return :none unless cfg
 
-        seg_idx = cfg["seg_idx"]
-        idx_sid = cfg["idx_sid"]
+        seg_idx = cfg['seg_idx']
+        idx_sid = cfg['idx_sid']
 
         # Prefer CandleSeries (more robust); otherwise use tick-only heuristic
         signal = if @series_loader
@@ -53,13 +53,13 @@ module DhanScalper
         # Expecting caller to pass a block resolving config for symbol
         # Example: trend_filter.get_signal(symbol, spot) { |s| config["SYMBOLS"][s] }
         # This indirection keeps service DRY/decoupled from config layout.
-        @config.dig("SYMBOLS", symbol)
+        @config.dig('SYMBOLS', symbol)
       end
 
       def decide_with_series(seg_idx, idx_sid)
         # Load 1m and 5m series; prefer Supertrend agreement
-        c1 = @series_loader.call(seg: seg_idx, sid: idx_sid, interval: "1")
-        c5 = @series_loader.call(seg: seg_idx, sid: idx_sid, interval: "5")
+        c1 = @series_loader.call(seg: seg_idx, sid: idx_sid, interval: '1')
+        c5 = @series_loader.call(seg: seg_idx, sid: idx_sid, interval: '5')
         return :none if c1.nil? || c5.nil?
         return :none if c1.candles.size < 50 || c5.candles.size < 50
 
@@ -102,7 +102,7 @@ module DhanScalper
 
         if %i[long short].include?(signal)
           # If streak not already on, set start.
-          @cache.set(key_on, "1", ttl: @streak_window_seconds)
+          @cache.set(key_on, '1', ttl: @streak_window_seconds)
           if @cache.exists?(key_on)
           # Refresh TTL while trend remains ON
           else

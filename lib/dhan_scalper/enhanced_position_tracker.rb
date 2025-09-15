@@ -1,15 +1,15 @@
 # frozen_string_literal: true
 
-require "concurrent"
-require "csv"
-require "json"
-require "fileutils"
-require_relative "position"
-require_relative "tick_cache"
+require 'concurrent'
+require 'csv'
+require 'json'
+require 'fileutils'
+require_relative 'position'
+require_relative 'tick_cache'
 
 module DhanScalper
   class EnhancedPositionTracker
-    def initialize(mode: :paper, data_dir: "data", logger: nil)
+    def initialize(mode: :paper, data_dir: 'data', logger: nil)
       @mode = mode
       @data_dir = data_dir
       @logger = logger || Logger.new($stdout)
@@ -22,7 +22,7 @@ module DhanScalper
         total_pnl: 0.0,
         max_drawdown: 0.0,
         max_profit: 0.0,
-        session_start: Time.now,
+        session_start: Time.now
       }
 
       ensure_data_directory
@@ -34,7 +34,7 @@ module DhanScalper
 
       position = Position.new(
         security_id: security_id,
-        side: "BUY",
+        side: 'BUY',
         entry_price: entry_price,
         quantity: quantity,
         symbol: symbol,
@@ -42,7 +42,7 @@ module DhanScalper
         option_type: option_type,
         strike: strike,
         expiry: expiry,
-        timestamp: Time.now,
+        timestamp: Time.now
       )
 
       @positions[position_key] = position
@@ -138,16 +138,16 @@ module DhanScalper
         open: {
           count: open_positions.size,
           total_pnl: open_positions.sum { |p| p[:pnl] },
-          positions: open_positions,
+          positions: open_positions
         },
         closed: {
           count: closed_positions.size,
           total_pnl: closed_positions.sum { |p| p[:pnl] },
           winning: closed_positions.count { |p| p[:pnl].positive? },
           losing: closed_positions.count { |p| p[:pnl].negative? },
-          positions: closed_positions,
+          positions: closed_positions
         },
-        session: get_session_stats,
+        session: get_session_stats
       }
     end
 
@@ -166,7 +166,7 @@ module DhanScalper
     end
 
     def get_current_price(security_id)
-      TickCache.ltp("NSE_FNO", security_id)
+      TickCache.ltp('NSE_FNO', security_id)
     end
 
     def update_session_stats(position)
@@ -194,8 +194,8 @@ module DhanScalper
     def save_positions_to_csv
       return if @positions.empty?
 
-      csv_file = File.join(@data_dir, "positions.csv")
-      CSV.open(csv_file, "w") do |csv|
+      csv_file = File.join(@data_dir, 'positions.csv')
+      CSV.open(csv_file, 'w') do |csv|
         csv << %w[symbol security_id side entry_price quantity current_price pnl pnl_percentage
                   option_type strike expiry timestamp]
 
@@ -212,7 +212,7 @@ module DhanScalper
             position.option_type,
             position.strike,
             position.expiry,
-            position.timestamp,
+            position.timestamp
           ]
         end
       end
@@ -221,8 +221,8 @@ module DhanScalper
     def save_closed_positions_to_csv
       return if @closed_positions.empty?
 
-      csv_file = File.join(@data_dir, "closed_positions.csv")
-      CSV.open(csv_file, "w") do |csv|
+      csv_file = File.join(@data_dir, 'closed_positions.csv')
+      CSV.open(csv_file, 'w') do |csv|
         csv << %w[symbol security_id side entry_price quantity exit_price pnl pnl_percentage
                   option_type strike expiry entry_timestamp exit_timestamp exit_reason]
 
@@ -241,29 +241,29 @@ module DhanScalper
             position.expiry,
             position.timestamp,
             position.exit_timestamp,
-            position.exit_reason,
+            position.exit_reason
           ]
         end
       end
     end
 
     def load_positions_from_csv
-      csv_file = File.join(@data_dir, "positions.csv")
+      csv_file = File.join(@data_dir, 'positions.csv')
       return unless File.exist?(csv_file)
 
       CSV.foreach(csv_file, headers: true) do |row|
         position = Position.new(
-          security_id: row["security_id"],
-          side: row["side"],
-          entry_price: row["entry_price"].to_f,
-          quantity: row["quantity"].to_i,
-          symbol: row["symbol"],
-          current_price: row["current_price"].to_f,
-          pnl: row["pnl"].to_f,
-          option_type: row["option_type"],
-          strike: row["strike"]&.to_f,
-          expiry: row["expiry"],
-          timestamp: Time.parse(row["timestamp"]),
+          security_id: row['security_id'],
+          side: row['side'],
+          entry_price: row['entry_price'].to_f,
+          quantity: row['quantity'].to_i,
+          symbol: row['symbol'],
+          current_price: row['current_price'].to_f,
+          pnl: row['pnl'].to_f,
+          option_type: row['option_type'],
+          strike: row['strike']&.to_f,
+          expiry: row['expiry'],
+          timestamp: Time.parse(row['timestamp'])
         )
 
         position_key = generate_position_key(
@@ -276,27 +276,27 @@ module DhanScalper
     end
 
     def load_closed_positions_from_csv
-      csv_file = File.join(@data_dir, "closed_positions.csv")
+      csv_file = File.join(@data_dir, 'closed_positions.csv')
       return unless File.exist?(csv_file)
 
       CSV.foreach(csv_file, headers: true) do |row|
         position = Position.new(
-          security_id: row["security_id"],
-          side: row["side"],
-          entry_price: row["entry_price"].to_f,
-          quantity: row["quantity"].to_i,
-          symbol: row["symbol"],
-          current_price: row["exit_price"].to_f,
-          pnl: row["pnl"].to_f,
-          option_type: row["option_type"],
-          strike: row["strike"]&.to_f,
-          expiry: row["expiry"],
-          timestamp: Time.parse(row["entry_timestamp"]),
+          security_id: row['security_id'],
+          side: row['side'],
+          entry_price: row['entry_price'].to_f,
+          quantity: row['quantity'].to_i,
+          symbol: row['symbol'],
+          current_price: row['exit_price'].to_f,
+          pnl: row['pnl'].to_f,
+          option_type: row['option_type'],
+          strike: row['strike']&.to_f,
+          expiry: row['expiry'],
+          timestamp: Time.parse(row['entry_timestamp'])
         )
 
-        position.exit_price = row["exit_price"].to_f
-        position.exit_reason = row["exit_reason"]
-        position.exit_timestamp = Time.parse(row["exit_timestamp"])
+        position.exit_price = row['exit_price'].to_f
+        position.exit_reason = row['exit_reason']
+        position.exit_timestamp = Time.parse(row['exit_timestamp'])
 
         @closed_positions << position
       end

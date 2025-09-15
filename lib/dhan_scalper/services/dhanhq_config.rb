@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require "dotenv/load"
-require "DhanHQ"
+require 'dotenv/load'
+require 'DhanHQ'
 
 module DhanScalper
   module Services
@@ -11,18 +11,18 @@ module DhanScalper
         # Configure DhanHQ with environment variables
         def configure
           DhanHQ.configure do |config|
-            config.client_id = ENV.fetch("CLIENT_ID", nil)
-            config.access_token = ENV.fetch("ACCESS_TOKEN", nil)
-            config.base_url = ENV["BASE_URL"] || "https://api.dhan.co/v2"
+            config.client_id = ENV.fetch('CLIENT_ID', nil)
+            config.access_token = ENV.fetch('ACCESS_TOKEN', nil)
+            config.base_url = ENV['BASE_URL'] || 'https://api.dhan.co/v2'
           end
 
           # Set logging level
-          log_level = ENV["LOG_LEVEL"]&.upcase || "INFO"
+          log_level = ENV['LOG_LEVEL']&.upcase || 'INFO'
           DhanHQ.logger.level = case log_level
-                                when "DEBUG" then Logger::DEBUG
-                                when "INFO" then Logger::INFO
-                                when "WARN" then Logger::WARN
-                                when "ERROR" then Logger::ERROR
+                                when 'DEBUG' then Logger::DEBUG
+                                when 'INFO' then Logger::INFO
+                                when 'WARN' then Logger::WARN
+                                when 'ERROR' then Logger::ERROR
                                 else Logger::INFO
                                 end
         end
@@ -30,18 +30,18 @@ module DhanScalper
         # Check if configuration is valid
         # @return [Boolean] True if configuration is complete
         def configured?
-          ENV.fetch("CLIENT_ID", nil) && ENV.fetch("ACCESS_TOKEN", nil)
+          ENV.fetch('CLIENT_ID', nil) && ENV.fetch('ACCESS_TOKEN', nil)
         end
 
         # Get configuration status
         # @return [Hash] Configuration status
         def status
           {
-            client_id_present: !ENV["CLIENT_ID"].nil?,
-            access_token_present: !ENV["ACCESS_TOKEN"].nil?,
-            base_url: ENV["BASE_URL"] || "https://api.dhan.co/v2",
-            log_level: ENV["LOG_LEVEL"] || "INFO",
-            configured: configured?,
+            client_id_present: !ENV['CLIENT_ID'].nil?,
+            access_token_present: !ENV['ACCESS_TOKEN'].nil?,
+            base_url: ENV['BASE_URL'] || 'https://api.dhan.co/v2',
+            log_level: ENV['LOG_LEVEL'] || 'INFO',
+            configured: configured?
           }
         end
 
@@ -51,10 +51,10 @@ module DhanScalper
           return if configured?
 
           missing = []
-          missing << "CLIENT_ID" unless ENV["CLIENT_ID"]
-          missing << "ACCESS_TOKEN" unless ENV["ACCESS_TOKEN"]
+          missing << 'CLIENT_ID' unless ENV['CLIENT_ID']
+          missing << 'ACCESS_TOKEN' unless ENV['ACCESS_TOKEN']
 
-          raise StandardError, "Missing required environment variables: #{missing.join(", ")}"
+          raise StandardError, "Missing required environment variables: #{missing.join(', ')}"
         end
 
         # Get sample .env content

@@ -4,20 +4,20 @@
 # Development testing script for dhan_scalper
 # Run with: ./bin/dev_test
 
-require "bundler/setup"
-require "dhan_scalper"
+require 'bundler/setup'
+require 'dhan_scalper'
 
-puts "🚀 DhanScalper Development Testing"
-puts "=" * 50
+puts '🚀 DhanScalper Development Testing'
+puts '=' * 50
 
 # Test 1: Basic Configuration
 puts "\n1. Testing Configuration..."
 begin
-  config = DhanScalper::Config.load(path: "config/development.yml")
-  puts "✓ Configuration loaded successfully"
-  puts "  Symbols: #{config["symbols"]}"
-  puts "  Log Level: #{config.dig("global", "log_level")}"
-  puts "  Paper Balance: ₹#{config.dig("paper", "starting_balance")}"
+  config = DhanScalper::Config.load(path: 'config/development.yml')
+  puts '✓ Configuration loaded successfully'
+  puts "  Symbols: #{config['symbols']}"
+  puts "  Log Level: #{config.dig('global', 'log_level')}"
+  puts "  Paper Balance: ₹#{config.dig('paper', 'starting_balance')}"
 rescue StandardError => e
   puts "✗ Configuration failed: #{e.message}"
 end
@@ -26,7 +26,7 @@ end
 puts "\n2. Testing Paper Balance Provider..."
 begin
   balance_provider = DhanScalper::BalanceProviders::PaperWallet.new(100_000)
-  puts "✓ Paper balance provider created"
+  puts '✓ Paper balance provider created'
   puts "  Available: ₹#{balance_provider.available_balance}"
   puts "  Total: ₹#{balance_provider.total_balance}"
 
@@ -41,7 +41,7 @@ end
 puts "\n3. Testing Virtual Data Manager..."
 begin
   vdm = DhanScalper::VirtualDataManager.new
-  puts "✓ Virtual data manager created"
+  puts '✓ Virtual data manager created'
 
   # Test balance retrieval
   balance = vdm.get_balance
@@ -57,7 +57,7 @@ begin
     virtual_data_manager: DhanScalper::VirtualDataManager.new,
     balance_provider: DhanScalper::BalanceProviders::PaperWallet.new(100_000)
   )
-  puts "✓ Paper broker created"
+  puts '✓ Paper broker created'
 rescue StandardError => e
   puts "✗ Paper broker failed: #{e.message}"
 end
@@ -67,15 +67,15 @@ puts "\n5. Testing Tick Cache..."
 begin
   # Simulate some tick data
   DhanScalper::TickCache.put({
-                               segment: "IDX_I",
-                               security_id: "13",
+                               segment: 'IDX_I',
+                               security_id: '13',
                                ltp: 19_500.0,
                                ts: Time.now.to_i,
-                               symbol: "NIFTY"
+                               symbol: 'NIFTY'
                              })
 
-  ltp = DhanScalper::TickCache.ltp("IDX_I", "13")
-  puts "✓ Tick cache working"
+  ltp = DhanScalper::TickCache.ltp('IDX_I', '13')
+  puts '✓ Tick cache working'
   puts "  NIFTY LTP: #{ltp}"
 rescue StandardError => e
   puts "✗ Tick cache failed: #{e.message}"
@@ -85,13 +85,13 @@ end
 puts "\n6. Testing Candle Series..."
 begin
   # This will only work if DhanHQ is properly configured
-  if ENV["CLIENT_ID"] && ENV["CLIENT_SECRET"]
-    puts "  DhanHQ credentials found, testing historical data..."
+  if ENV['CLIENT_ID'] && ENV['CLIENT_SECRET']
+    puts '  DhanHQ credentials found, testing historical data...'
     # NOTE: This is a dry test, won't actually fetch data
-    puts "  ✓ Candle series ready for testing"
+    puts '  ✓ Candle series ready for testing'
   else
-    puts "  ⚠ DhanHQ credentials not found, skipping live API test"
-    puts "  Set environment variables to test live API:"
+    puts '  ⚠ DhanHQ credentials not found, skipping live API test'
+    puts '  Set environment variables to test live API:'
     puts "    export CLIENT_ID='your_client_id'"
     puts "    export CLIENT_SECRET='your_client_secret'"
     puts "    export USER_ID='your_user_id'"
@@ -108,15 +108,15 @@ puts "\n7. Testing CLI Commands..."
 begin
   # Test basic CLI functionality
   DhanScalper::CLI.new
-  puts "✓ CLI created successfully"
+  puts '✓ CLI created successfully'
 rescue StandardError => e
   puts "✗ CLI test failed: #{e.message}"
 end
 
-puts "\n#{"=" * 50}"
-puts "🎯 Development Testing Completed!"
+puts "\n#{'=' * 50}"
+puts '🎯 Development Testing Completed!'
 puts "\nNext steps:"
 puts "1. Run './bin/console' for interactive testing"
-puts "2. Test paper trading: ./exe/dhan_scalper paper -c config/development.yml"
-puts "3. Test dry run: ./exe/dhan_scalper dryrun -c config/development.yml"
-puts "4. View virtual data: ./exe/dhan_scalper dashboard"
+puts '2. Test paper trading: ./exe/dhan_scalper paper -c config/development.yml'
+puts '3. Test dry run: ./exe/dhan_scalper dryrun -c config/development.yml'
+puts '4. View virtual data: ./exe/dhan_scalper dashboard'

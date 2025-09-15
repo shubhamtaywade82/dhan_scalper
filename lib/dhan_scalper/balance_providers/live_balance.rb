@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "base"
+require_relative 'base'
 
 module DhanScalper
   module BalanceProviders
@@ -72,7 +72,7 @@ module DhanScalper
             average_price: holding.average_price.to_f,
             current_price: holding.current_price.to_f,
             pnl: holding.pnl.to_f,
-            pnl_percentage: holding.pnl_percentage.to_f,
+            pnl_percentage: holding.pnl_percentage.to_f
           }
         end
       rescue StandardError => e
@@ -108,7 +108,7 @@ module DhanScalper
             quantity: trade.quantity.to_i,
             price: trade.price.to_f,
             trade_date: trade.trade_date,
-            timestamp: trade.timestamp,
+            timestamp: trade.timestamp
           }
         end
       rescue StandardError => e
@@ -132,7 +132,7 @@ module DhanScalper
             price: order.price.to_f,
             status: order.order_status,
             order_type: order.order_type,
-            created_at: order.created_at,
+            created_at: order.created_at
           }
         end
       rescue StandardError => e
@@ -150,11 +150,11 @@ module DhanScalper
 
       def refresh_cache
         # Use the DhanHQ Funds API and compute balances sanely
-        @logger.debug "[LIVE_BALANCE] Attempting to fetch funds from DhanHQ API..."
+        @logger.debug '[LIVE_BALANCE] Attempting to fetch funds from DhanHQ API...'
         funds = DhanHQ::Models::Funds.fetch
         @logger.debug "[LIVE_BALANCE] Funds object: #{funds.inspect}"
 
-        if funds && funds.respond_to?(:available_balance)
+        if funds.respond_to?(:available_balance)
           available = funds.available_balance.to_f
           used = funds.respond_to?(:utilized_amount) ? funds.utilized_amount.to_f : 0.0
           total = available + used
@@ -191,7 +191,7 @@ module DhanScalper
               current_price: pos.current_price.to_f,
               pnl: pos.pnl.to_f,
               pnl_percentage: pos.pnl_percentage.to_f,
-              last_updated: Time.now,
+              last_updated: Time.now
             }
           end
 

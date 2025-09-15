@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "../services/dhanhq_config"
+require_relative '../services/dhanhq_config'
 
 module DhanScalper
   module Services
@@ -57,7 +57,7 @@ module DhanScalper
               cache_key = "#{segment}:#{security_id}"
               @cache[cache_key] = {
                 data: tick_data,
-                timestamp: Time.now,
+                timestamp: Time.now
               }
             end
           rescue StandardError => e
@@ -91,7 +91,7 @@ module DhanScalper
       # Clear cache
       def clear_cache
         @cache.clear
-        @logger.debug "[LTP_FALLBACK] Cache cleared"
+        @logger.debug '[LTP_FALLBACK] Cache cleared'
       end
 
       # Get cache statistics
@@ -99,7 +99,7 @@ module DhanScalper
         {
           size: @cache.size,
           keys: @cache.keys,
-          ttl: @cache_ttl,
+          ttl: @cache_ttl
         }
       end
 
@@ -119,27 +119,27 @@ module DhanScalper
           # Call DhanHQ MarketFeed API
           response = DhanHQ::Models::MarketFeed.ltp(params)
 
-          if response && response["status"] == "success" && response["data"]
-            segment_data = response["data"][segment]
+          if response && response['status'] == 'success' && response['data']
+            segment_data = response['data'][segment]
             if segment_data && segment_data[security_id.to_s]
               instrument_data = segment_data[security_id.to_s]
 
               tick_data = {
-                ltp: instrument_data["last_price"]&.to_f,
+                ltp: instrument_data['last_price']&.to_f,
                 ts: Time.now.to_i,
                 day_high: nil, # MarketFeed LTP API doesn't provide day_high
                 day_low: nil,  # MarketFeed LTP API doesn't provide day_low
                 atp: nil,      # MarketFeed LTP API doesn't provide average_price
                 vol: nil,      # MarketFeed LTP API doesn't provide volume
                 segment: segment,
-                security_id: security_id,
+                security_id: security_id
               }
 
               # Cache the result
               cache_key = "#{segment}:#{security_id}"
               @cache[cache_key] = {
                 data: tick_data,
-                timestamp: Time.now,
+                timestamp: Time.now
               }
 
               @logger.debug "[LTP_FALLBACK] Successfully fetched LTP: #{tick_data[:ltp]}"
@@ -157,7 +157,7 @@ module DhanScalper
 
       # Fetch LTP for multiple instruments in a segment
       def fetch_segment_ltp(segment, security_ids)
-        @logger.debug "[LTP_FALLBACK] Fetching LTP for #{segment}: #{security_ids.join(", ")}"
+        @logger.debug "[LTP_FALLBACK] Fetching LTP for #{segment}: #{security_ids.join(', ')}"
 
         begin
           # Ensure DhanHQ is configured
@@ -169,8 +169,8 @@ module DhanScalper
           # Call DhanHQ MarketFeed API
           response = DhanHQ::Models::MarketFeed.ltp(params)
 
-          if response && response["status"] == "success" && response["data"]
-            segment_data = response["data"][segment]
+          if response && response['status'] == 'success' && response['data']
+            segment_data = response['data'][segment]
             results = {}
 
             security_ids.each do |security_id|
@@ -178,14 +178,14 @@ module DhanScalper
                 instrument_data = segment_data[security_id.to_s]
 
                 tick_data = {
-                  ltp: instrument_data["last_price"]&.to_f,
+                  ltp: instrument_data['last_price']&.to_f,
                   ts: Time.now.to_i,
                   day_high: nil, # MarketFeed LTP API doesn't provide day_high
                   day_low: nil,  # MarketFeed LTP API doesn't provide day_low
                   atp: nil,      # MarketFeed LTP API doesn't provide average_price
                   vol: nil,      # MarketFeed LTP API doesn't provide volume
                   segment: segment,
-                  security_id: security_id,
+                  security_id: security_id
                 }
 
                 results[security_id] = tick_data
@@ -194,7 +194,7 @@ module DhanScalper
                 cache_key = "#{segment}:#{security_id}"
                 @cache[cache_key] = {
                   data: tick_data,
-                  timestamp: Time.now,
+                  timestamp: Time.now
                 }
               else
                 results[security_id] = nil

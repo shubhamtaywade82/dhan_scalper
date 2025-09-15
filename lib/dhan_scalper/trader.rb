@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "concurrent"
+require 'concurrent'
 
 module DhanScalper
   module PnL
@@ -25,14 +25,14 @@ module DhanScalper
       c1_series = CandleSeries.load_from_dhan_intraday(
         seg: @seg_idx,
         sid: @sid_idx,
-        interval: "1",
-        symbol: "INDEX",
+        interval: '1',
+        symbol: 'INDEX'
       )
       c5_series = CandleSeries.load_from_dhan_intraday(
         seg: @seg_idx,
         sid: @sid_idx,
-        interval: "5",
-        symbol: "INDEX",
+        interval: '5',
+        symbol: 'INDEX'
       )
       return :none if c1_series.nil? || c5_series.nil?
       return :none if c1_series.candles.size < 50 || c5_series.candles.size < 50
@@ -100,12 +100,12 @@ module DhanScalper
     end
 
     def subscribe_index
-      @ws.subscribe_one(segment: @cfg["seg_idx"], security_id: @cfg["idx_sid"])
+      @ws.subscribe_one(segment: @cfg['seg_idx'], security_id: @cfg['idx_sid'])
     end
 
     def subscribe_options(ce_map, pe_map)
       (ce_map.values + pe_map.values).compact.uniq.each do |sid|
-        @ws.subscribe_one(segment: @cfg["seg_opt"], security_id: sid)
+        @ws.subscribe_one(segment: @cfg['seg_opt'], security_id: sid)
       end
     end
 
@@ -114,10 +114,10 @@ module DhanScalper
     def maybe_enter(direction, ce_map, pe_map)
       return unless can_trade?
 
-      spot = TickCache.ltp(@cfg["seg_idx"], @cfg["idx_sid"])&.to_f
+      spot = TickCache.ltp(@cfg['seg_idx'], @cfg['idx_sid'])&.to_f
       return unless spot
 
-      atm = @picker.nearest_strike(spot, @cfg["strike_step"])
+      atm = @picker.nearest_strike(spot, @cfg['strike_step'])
       sid = (if direction == :long_ce
                ce_map[atm]
              else
@@ -125,11 +125,11 @@ module DhanScalper
              end)
       return unless sid
 
-      ltp = TickCache.ltp(@cfg["seg_opt"], sid)&.to_f
+      ltp = TickCache.ltp(@cfg['seg_opt'], sid)&.to_f
       return unless ltp&.positive?
 
       # Check minimum premium price
-      min_premium = @gl.instance_variable_get(:@cfg)&.dig("global", "min_premium_price") || 1.0
+      min_premium = @gl.instance_variable_get(:@cfg)&.dig('global', 'min_premium_price') || 1.0
       if ltp < min_premium
         puts "[#{@symbol}] SKIP: Premium too low (#{ltp.round(2)} < #{min_premium})"
         return
@@ -142,29 +142,29 @@ module DhanScalper
 
       else
         # Fallback to old fixed sizing
-        qty_lots = @cfg["qty_multiplier"]
+        qty_lots = @cfg['qty_multiplier']
       end
-      qty = @cfg["lot_size"] * qty_lots
+      qty = @cfg['lot_size'] * qty_lots
 
       # Get broker from global context
       broker = @gl.instance_variable_get(:@broker)
       return unless broker
 
       # Get charge per order from global config
-      charge_per_order = @gl.instance_variable_get(:@cfg)&.dig("global", "charge_per_order") || 20
+      charge_per_order = @gl.instance_variable_get(:@cfg)&.dig('global', 'charge_per_order') || 20
 
       # Place order through broker
       order = broker.buy_market(
-        segment: @cfg["seg_opt"],
+        segment: @cfg['seg_opt'],
         security_id: sid,
         quantity: qty,
-        charge_per_order: charge_per_order,
+        charge_per_order: charge_per_order
       )
 
       return puts("[#{@symbol}] ORDER FAIL: Could not place order") unless order
 
-      entry = TickCache.ltp(@cfg["seg_opt"], sid)&.to_f || ltp
-      side  = (direction == :long_ce ? "BUY_CE" : "BUY_PE")
+      entry = TickCache.ltp(@cfg['seg_opt'], sid)&.to_f || ltp
+      side  = (direction == :long_ce ? 'BUY_CE' : 'BUY_PE')
       @open = Position.new(side, sid, entry, qty_lots, order.id, 0.0, entry)
       puts "[#{@symbol}] ENTRY #{side} sid=#{sid} entry≈#{entry.round(2)} lots=#{qty_lots}"
       publish_open_snapshot!
@@ -173,10 +173,10 @@ module DhanScalper
     def manage_open(tp_pct:, sl_pct:, trail_pct:, charge_per_order:)
       return unless @open
 
-      ltp = TickCache.ltp(@cfg["seg_opt"], @open.sid)&.to_f
+      ltp = TickCache.ltp(@cfg['seg_opt'], @open.sid)&.to_f
       return unless ltp&.positive?
 
-      net = PnL.net(entry: @open.entry, ltp: ltp, lot_size: @cfg["lot_size"], qty_lots: @open.qty_lots,
+      net = PnL.net(entry: @open.entry, ltp: ltp, lot_size: @cfg['lot_size'], qty_lots: @open.qty_lots,
                     charge_per_order: charge_per_order)
       @open.best = [@open.best, net].max
 
@@ -184,11 +184,11 @@ module DhanScalper
       @open.trail_anchor = [@open.trail_anchor, ltp * (1.0 - (trail_pct / 2))].compact.max if ltp >= trail_trig
 
       if ltp >= @open.entry * (1.0 + tp_pct) || (@gl.session_pnl_preview(self, net) >= @gl.session_target)
-        return close!("TP", ltp, charge_per_order)
+        return close!('TP', ltp, charge_per_order)
       end
-      return close!("SL", ltp, charge_per_order) if ltp <= @open.entry * (1.0 - sl_pct)
-      return close!("TRAIL", ltp, charge_per_order) if @open.trail_anchor && ltp <= @open.trail_anchor
-      return close!("TECH_INVALID", ltp, charge_per_order) if opposite_signal?
+      return close!('SL', ltp, charge_per_order) if ltp <= @open.entry * (1.0 - sl_pct)
+      return close!('TRAIL', ltp, charge_per_order) if @open.trail_anchor && ltp <= @open.trail_anchor
+      return close!('TECH_INVALID', ltp, charge_per_order) if opposite_signal?
 
       # Rate-limit open position prints to once per minute to avoid noisy output
       @last_open_print_at ||= Time.at(0)
@@ -200,7 +200,7 @@ module DhanScalper
     end
 
     def close!(reason, ltp, charge_per_order)
-      qty = @cfg["lot_size"] * @open.qty_lots
+      qty = @cfg['lot_size'] * @open.qty_lots
 
       # Get broker from global context
       broker = @gl.instance_variable_get(:@broker)
@@ -208,15 +208,15 @@ module DhanScalper
 
       # Place sell order through broker
       sell_order = broker.sell_market(
-        segment: @cfg["seg_opt"],
+        segment: @cfg['seg_opt'],
         security_id: @open.sid,
         quantity: qty,
-        charge_per_order: charge_per_order,
+        charge_per_order: charge_per_order
       )
 
       return puts("[#{@symbol}] EXIT FAIL: Could not place sell order") unless sell_order
 
-      net = PnL.net(entry: @open.entry, ltp: ltp, lot_size: @cfg["lot_size"], qty_lots: @open.qty_lots,
+      net = PnL.net(entry: @open.entry, ltp: ltp, lot_size: @cfg['lot_size'], qty_lots: @open.qty_lots,
                     charge_per_order: charge_per_order)
       @session_pnl += net
 
@@ -237,14 +237,14 @@ module DhanScalper
 
       arr = []
       if @open
-        ltp = DhanScalper::TickCache.ltp(@cfg["seg_opt"], @open.sid)&.to_f
+        ltp = DhanScalper::TickCache.ltp(@cfg['seg_opt'], @open.sid)&.to_f
         charge_per_order = begin
-          @gl.instance_variable_get(:@cfg).dig("global", "charge_per_order").to_f
+          @gl.instance_variable_get(:@cfg).dig('global', 'charge_per_order').to_f
         rescue StandardError
           20.0
         end
         net = DhanScalper::PnL.net(entry: @open.entry, ltp: ltp || @open.entry,
-                                   lot_size: @cfg["lot_size"], qty_lots: @open.qty_lots,
+                                   lot_size: @cfg['lot_size'], qty_lots: @open.qty_lots,
                                    charge_per_order: charge_per_order)
         arr << {
           symbol: @symbol, sid: @open.sid, side: @open.side,
@@ -267,8 +267,8 @@ module DhanScalper
 
     def opposite_signal?
       trend_class = @enhanced ? DhanScalper::TrendEnhanced : DhanScalper::Trend
-      dir = trend_class.new(seg_idx: @cfg["seg_idx"], sid_idx: @cfg["idx_sid"]).decide
-      (@open.side == "BUY_CE" && dir == :long_pe) || (@open.side == "BUY_PE" && dir == :long_ce)
+      dir = trend_class.new(seg_idx: @cfg['seg_idx'], sid_idx: @cfg['idx_sid']).decide
+      (@open.side == 'BUY_CE' && dir == :long_pe) || (@open.side == 'BUY_PE' && dir == :long_ce)
     rescue StandardError; false
     end
   end

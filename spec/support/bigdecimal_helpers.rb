@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
-require "bigdecimal"
-require "dhan_scalper/support/money"
+require 'bigdecimal'
+require 'dhan_scalper/support/money'
 
 # RSpec helpers for BigDecimal testing
 module BigDecimalHelpers
   # Custom matcher for BigDecimal equality with precision
   def be_bigdecimal_equal(expected, precision: 2)
-    be_within(BigDecimal("0.1")**precision).of(expected)
+    be_within(BigDecimal('0.1')**precision).of(expected)
   end
 
   # Custom matcher for monetary values
@@ -28,7 +28,7 @@ module BigDecimalHelpers
       negative: bd(base_amount - (variations[:negative] || 100)),
       zero: bd(0),
       large: bd(base_amount * (variations[:large_multiplier] || 10)),
-      small: bd(base_amount / (variations[:small_divisor] || 10)),
+      small: bd(base_amount / (variations[:small_divisor] || 10))
     }
   end
 
@@ -41,7 +41,7 @@ module BigDecimalHelpers
   # Helper to test monetary precision
   def expect_monetary_precision(value, expected_precision)
     bd_value = DhanScalper::Support::Money.bd(value)
-    decimal_places = bd_value.to_s("F").split(".").last&.length || 0
+    decimal_places = bd_value.to_s('F').split('.').last&.length || 0
     expect(decimal_places).to be <= expected_precision
   end
 
@@ -78,11 +78,11 @@ module BigDecimalHelpers
   # Helper to create test data for monetary calculations
   def create_monetary_test_data
     {
-      small_amounts: [bd("0.01"), bd("0.1"), bd("1.0"), bd("10.0")],
-      medium_amounts: [bd("100.0"), bd("1000.0"), bd("10000.0")],
-      large_amounts: [bd("100000.0"), bd("1000000.0"), bd("10000000.0")],
-      edge_cases: [bd("0"), bd("-0.01"), bd("-100.0"), bd("999999999.99")],
-      precision_cases: [bd("0.001"), bd("0.0001"), bd("0.00001")],
+      small_amounts: [bd('0.01'), bd('0.1'), bd('1.0'), bd('10.0')],
+      medium_amounts: [bd('100.0'), bd('1000.0'), bd('10000.0')],
+      large_amounts: [bd('100000.0'), bd('1000000.0'), bd('10000000.0')],
+      edge_cases: [bd('0'), bd('-0.01'), bd('-100.0'), bd('999999999.99')],
+      precision_cases: [bd('0.001'), bd('0.0001'), bd('0.00001')]
     }
   end
 
@@ -116,20 +116,20 @@ module BigDecimalHelpers
   def create_trading_scenario
     {
       # NIFTY options trading scenario
-      nifty_spot: bd("19500.0"),
-      call_premium: bd("150.0"),
-      put_premium: bd("120.0"),
+      nifty_spot: bd('19500.0'),
+      call_premium: bd('150.0'),
+      put_premium: bd('120.0'),
       lot_size: 75,
       quantity: 1,
-      charges: bd("20.0"),
+      charges: bd('20.0'),
 
       # Price movements
-      price_up: bd("160.0"),
-      price_down: bd("100.0"),
+      price_up: bd('160.0'),
+      price_down: bd('100.0'),
 
       # P&L calculations
-      profit_target: bd("1000.0"),
-      stop_loss: bd("500.0"),
+      profit_target: bd('1000.0'),
+      stop_loss: bd('500.0')
     }
   end
 

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require_relative "../support/money"
-require_relative "../stores/redis_store"
+require_relative '../support/money'
+require_relative '../stores/redis_store'
 
 module DhanScalper
   module Services
@@ -22,7 +22,8 @@ module DhanScalper
       end
 
       # Add or update a position with weighted averaging
-      def add_position(exchange_segment:, security_id:, side:, quantity:, price:, fee: nil, option_type: nil, strike_price: nil, expiry_date: nil, underlying_symbol: nil, symbol: nil)
+      def add_position(exchange_segment:, security_id:, side:, quantity:, price:, fee: nil, option_type: nil,
+                       strike_price: nil, expiry_date: nil, underlying_symbol: nil, symbol: nil)
         key = position_key(exchange_segment, security_id, side)
         price_bd = DhanScalper::Support::Money.bd(price)
         quantity_bd = DhanScalper::Support::Money.bd(quantity)
@@ -33,7 +34,8 @@ module DhanScalper
           update_existing_position(key, quantity_bd, price_bd, fee_bd)
         else
           # Create new position
-          create_new_position(key, exchange_segment, security_id, side, quantity_bd, price_bd, fee_bd, option_type, strike_price, expiry_date, underlying_symbol, symbol)
+          create_new_position(key, exchange_segment, security_id, side, quantity_bd, price_bd, fee_bd, option_type,
+                              strike_price, expiry_date, underlying_symbol, symbol)
         end
 
         # Save to Redis
@@ -62,7 +64,7 @@ module DhanScalper
         # Calculate realized PnL for this partial exit
         realized_pnl = DhanScalper::Support::Money.multiply(
           DhanScalper::Support::Money.subtract(price_bd, position[:buy_avg]),
-          sellable_quantity,
+          sellable_quantity
         )
 
         # Update realized PnL
@@ -81,11 +83,11 @@ module DhanScalper
           old_sell_qty = DhanScalper::Support::Money.subtract(position[:sell_qty], sellable_quantity)
           total_sell_value = DhanScalper::Support::Money.add(
             DhanScalper::Support::Money.multiply(position[:sell_avg], old_sell_qty),
-            DhanScalper::Support::Money.multiply(price_bd, sellable_quantity),
+            DhanScalper::Support::Money.multiply(price_bd, sellable_quantity)
           )
           position[:sell_avg] = DhanScalper::Support::Money.divide(
             total_sell_value,
-            position[:sell_qty],
+            position[:sell_qty]
           )
         end
 
@@ -108,7 +110,7 @@ module DhanScalper
           position: position,
           realized_pnl: realized_pnl,
           net_proceeds: net_proceeds,
-          sold_quantity: sellable_quantity,
+          sold_quantity: sellable_quantity
         }
       end
 
@@ -147,7 +149,7 @@ module DhanScalper
           if DhanScalper::Support::Money.positive?(position[:net_qty])
             unrealized = DhanScalper::Support::Money.multiply(
               DhanScalper::Support::Money.subtract(price_bd, position[:buy_avg]),
-              position[:net_qty],
+              position[:net_qty]
             )
             position[:unrealized_pnl] = unrealized
             total_unrealized = DhanScalper::Support::Money.add(total_unrealized, unrealized)
@@ -213,7 +215,8 @@ module DhanScalper
         end
       end
 
-      def create_new_position(key, exchange_segment, security_id, side, quantity_bd, price_bd, fee_bd, option_type = nil, strike_price = nil, expiry_date = nil, underlying_symbol = nil, symbol = nil)
+      def create_new_position(key, exchange_segment, security_id, side, quantity_bd, price_bd, fee_bd,
+                              option_type = nil, strike_price = nil, expiry_date = nil, underlying_symbol = nil, symbol = nil)
         @positions[key] = {
           exchange_segment: exchange_segment,
           security_id: security_id,
@@ -237,7 +240,7 @@ module DhanScalper
           underlying_symbol: underlying_symbol,
           symbol: symbol,
           created_at: Time.now,
-          last_updated: Time.now,
+          last_updated: Time.now
         }
       end
 
@@ -248,7 +251,7 @@ module DhanScalper
         total_buy_qty = DhanScalper::Support::Money.add(position[:buy_qty], quantity_bd)
         total_buy_value = DhanScalper::Support::Money.add(
           DhanScalper::Support::Money.multiply(position[:buy_avg], position[:buy_qty]),
-          DhanScalper::Support::Money.multiply(price_bd, quantity_bd),
+          DhanScalper::Support::Money.multiply(price_bd, quantity_bd)
         )
 
         # Update quantities
@@ -308,14 +311,14 @@ module DhanScalper
         # Format positions for reporting
         @positions.values.map do |pos|
           {
-            symbol: pos[:symbol] || pos[:underlying_symbol] || "UNKNOWN",
-            option_type: pos[:option_type] || "UNKNOWN",
+            symbol: pos[:symbol] || pos[:underlying_symbol] || 'UNKNOWN',
+            option_type: pos[:option_type] || 'UNKNOWN',
             strike: pos[:strike_price] || 0,
             quantity: DhanScalper::Support::Money.dec(pos[:net_qty] || DhanScalper::Support::Money.bd(0)),
             entry_price: DhanScalper::Support::Money.dec(pos[:buy_avg] || DhanScalper::Support::Money.bd(0)),
             current_price: DhanScalper::Support::Money.dec(pos[:current_price] || pos[:buy_avg] || DhanScalper::Support::Money.bd(0)),
             pnl: DhanScalper::Support::Money.dec(pos[:unrealized_pnl] || DhanScalper::Support::Money.bd(0)),
-            created_at: pos[:created_at]&.strftime("%Y-%m-%d %H:%M:%S %z") || Time.now.strftime("%Y-%m-%d %H:%M:%S %z"),
+            created_at: pos[:created_at]&.strftime('%Y-%m-%d %H:%M:%S %z') || Time.now.strftime('%Y-%m-%d %H:%M:%S %z')
           }
         end
 
@@ -330,16 +333,16 @@ module DhanScalper
           losing_trades: losing_trades,
           positions: @positions.transform_values do |pos|
             {
-              symbol: pos[:symbol] || pos[:underlying_symbol] || "UNKNOWN",
-              option_type: pos[:option_type] || "UNKNOWN",
+              symbol: pos[:symbol] || pos[:underlying_symbol] || 'UNKNOWN',
+              option_type: pos[:option_type] || 'UNKNOWN',
               strike: pos[:strike_price] || 0,
               quantity: DhanScalper::Support::Money.dec(pos[:net_qty] || DhanScalper::Support::Money.bd(0)),
               entry_price: DhanScalper::Support::Money.dec(pos[:buy_avg] || DhanScalper::Support::Money.bd(0)),
               current_price: DhanScalper::Support::Money.dec(pos[:current_price] || pos[:buy_avg] || DhanScalper::Support::Money.bd(0)),
               pnl: DhanScalper::Support::Money.dec(pos[:unrealized_pnl] || DhanScalper::Support::Money.bd(0)),
-              created_at: pos[:created_at]&.strftime("%Y-%m-%d %H:%M:%S %z") || Time.now.strftime("%Y-%m-%d %H:%M:%S %z"),
+              created_at: pos[:created_at]&.strftime('%Y-%m-%d %H:%M:%S %z') || Time.now.strftime('%Y-%m-%d %H:%M:%S %z')
             }
-          end,
+          end
         }
       end
 
@@ -350,7 +353,7 @@ module DhanScalper
       end
 
       def generate_session_id
-        "PAPER_#{Time.now.strftime("%Y%m%d")}"
+        "PAPER_#{Time.now.strftime('%Y%m%d')}"
       end
 
       def load_positions_from_redis
@@ -365,26 +368,26 @@ module DhanScalper
 
           # Convert string values back to appropriate types
           position = {
-            exchange_segment: position_data["exchange_segment"],
-            security_id: position_data["security_id"],
-            side: position_data["side"],
-            net_qty: DhanScalper::Support::Money.bd(position_data["net_qty"] || 0),
-            buy_qty: DhanScalper::Support::Money.bd(position_data["buy_qty"] || 0),
-            buy_avg: DhanScalper::Support::Money.bd(position_data["buy_avg"] || 0),
-            sell_qty: DhanScalper::Support::Money.bd(position_data["sell_qty"] || 0),
-            sell_avg: DhanScalper::Support::Money.bd(position_data["sell_avg"] || 0),
-            day_buy_qty: DhanScalper::Support::Money.bd(position_data["day_buy_qty"] || 0),
-            day_sell_qty: DhanScalper::Support::Money.bd(position_data["day_sell_qty"] || 0),
-            realized_pnl: DhanScalper::Support::Money.bd(position_data["realized_pnl"] || 0),
-            unrealized_pnl: DhanScalper::Support::Money.bd(position_data["unrealized_pnl"] || 0),
-            current_price: DhanScalper::Support::Money.bd(position_data["current_price"] || 0),
-            option_type: position_data["option_type"],
-            strike_price: position_data["strike_price"]&.to_i,
-            expiry_date: position_data["expiry_date"],
-            underlying_symbol: position_data["underlying_symbol"],
-            symbol: position_data["symbol"],
-            created_at: position_data["created_at"] ? Time.parse(position_data["created_at"]) : Time.now,
-            last_updated: position_data["last_updated"] ? Time.parse(position_data["last_updated"]) : Time.now,
+            exchange_segment: position_data['exchange_segment'],
+            security_id: position_data['security_id'],
+            side: position_data['side'],
+            net_qty: DhanScalper::Support::Money.bd(position_data['net_qty'] || 0),
+            buy_qty: DhanScalper::Support::Money.bd(position_data['buy_qty'] || 0),
+            buy_avg: DhanScalper::Support::Money.bd(position_data['buy_avg'] || 0),
+            sell_qty: DhanScalper::Support::Money.bd(position_data['sell_qty'] || 0),
+            sell_avg: DhanScalper::Support::Money.bd(position_data['sell_avg'] || 0),
+            day_buy_qty: DhanScalper::Support::Money.bd(position_data['day_buy_qty'] || 0),
+            day_sell_qty: DhanScalper::Support::Money.bd(position_data['day_sell_qty'] || 0),
+            realized_pnl: DhanScalper::Support::Money.bd(position_data['realized_pnl'] || 0),
+            unrealized_pnl: DhanScalper::Support::Money.bd(position_data['unrealized_pnl'] || 0),
+            current_price: DhanScalper::Support::Money.bd(position_data['current_price'] || 0),
+            option_type: position_data['option_type'],
+            strike_price: position_data['strike_price']&.to_i,
+            expiry_date: position_data['expiry_date'],
+            underlying_symbol: position_data['underlying_symbol'],
+            symbol: position_data['symbol'],
+            created_at: position_data['created_at'] ? Time.parse(position_data['created_at']) : Time.now,
+            last_updated: position_data['last_updated'] ? Time.parse(position_data['last_updated']) : Time.now
           }
 
           @positions[position_id] = position
@@ -392,7 +395,7 @@ module DhanScalper
 
         DhanScalper::Support::Logger.debug(
           "Loaded #{@positions.size} positions from Redis",
-          component: "EnhancedPositionTracker",
+          component: 'EnhancedPositionTracker'
         )
       end
 
@@ -418,13 +421,13 @@ module DhanScalper
           realized_pnl: DhanScalper::Support::Money.dec(position[:realized_pnl]).to_s,
           unrealized_pnl: DhanScalper::Support::Money.dec(position[:unrealized_pnl]).to_s,
           current_price: DhanScalper::Support::Money.dec(position[:current_price]).to_s,
-          option_type: position[:option_type] || "",
-          strike_price: position[:strike_price]&.to_s || "",
-          expiry_date: position[:expiry_date] || "",
-          underlying_symbol: position[:underlying_symbol] || "",
-          symbol: position[:symbol] || "",
+          option_type: position[:option_type] || '',
+          strike_price: position[:strike_price].to_s,
+          expiry_date: position[:expiry_date] || '',
+          underlying_symbol: position[:underlying_symbol] || '',
+          symbol: position[:symbol] || '',
           created_at: position[:created_at]&.iso8601 || Time.now.iso8601,
-          last_updated: position[:last_updated]&.iso8601 || Time.now.iso8601,
+          last_updated: position[:last_updated]&.iso8601 || Time.now.iso8601
         }
 
         @redis_store.redis.hset(position_key, position_data)
@@ -437,7 +440,7 @@ module DhanScalper
 
         DhanScalper::Support::Logger.debug(
           "Saved position to Redis - key: #{position_key}",
-          component: "EnhancedPositionTracker",
+          component: 'EnhancedPositionTracker'
         )
       end
     end

@@ -1,18 +1,18 @@
 # frozen_string_literal: true
 
-require "logger"
-require_relative "state"
-require_relative "brokers/base"
-require_relative "brokers/paper_broker"
-require_relative "balance_providers/paper_wallet"
-require_relative "quantity_sizer"
-require_relative "trend_enhanced"
-require_relative "option_picker"
-require_relative "services/websocket_manager"
-require_relative "services/paper_position_tracker"
-require_relative "exchange_segment_mapper"
-require_relative "csv_master"
-require_relative "services/session_reporter"
+require 'logger'
+require_relative 'state'
+require_relative 'brokers/base'
+require_relative 'brokers/paper_broker'
+require_relative 'balance_providers/paper_wallet'
+require_relative 'quantity_sizer'
+require_relative 'trend_enhanced'
+require_relative 'option_picker'
+require_relative 'services/websocket_manager'
+require_relative 'services/paper_position_tracker'
+require_relative 'exchange_segment_mapper'
+require_relative 'csv_master'
+require_relative 'services/session_reporter'
 
 module DhanScalper
   class PaperApp
@@ -23,17 +23,17 @@ module DhanScalper
       @timeout_minutes = timeout_minutes
       @stop = false
       @start_time = Time.now
-      Signal.trap("INT") { @stop = true }
-      Signal.trap("TERM") { @stop = true }
+      Signal.trap('INT') { @stop = true }
+      Signal.trap('TERM') { @stop = true }
 
       @state = State.new(
-        symbols: cfg["SYMBOLS"]&.keys || [],
-        session_target: cfg.dig("global", "min_profit_target").to_f,
-        max_day_loss: cfg.dig("global", "max_day_loss").to_f,
+        symbols: cfg['SYMBOLS']&.keys || [],
+        session_target: cfg.dig('global', 'min_profit_target').to_f,
+        max_day_loss: cfg.dig('global', 'max_day_loss').to_f
       )
 
       # Initialize balance provider
-      starting_balance = cfg.dig("paper", "starting_balance") || 200_000.0
+      starting_balance = cfg.dig('paper', 'starting_balance') || 200_000.0
       @balance_provider = BalanceProviders::PaperWallet.new(starting_balance: starting_balance)
 
       # Initialize quantity sizer
@@ -42,7 +42,7 @@ module DhanScalper
       # Initialize broker
       @broker = Brokers::PaperBroker.new(
         virtual_data_manager: @virtual_data_manager,
-        balance_provider: @balance_provider,
+        balance_provider: @balance_provider
       )
 
       # Make the broker use the same position tracker as the app
@@ -55,7 +55,7 @@ module DhanScalper
       @position_tracker = Services::PaperPositionTracker.new(
         websocket_manager: @websocket_manager,
         logger: @logger,
-        memory_only: true,
+        memory_only: true
       )
 
       # Initialize logger
@@ -85,13 +85,13 @@ module DhanScalper
 
       # Load or create session data for the current trading day
       @session_data = @session_reporter.load_or_create_session(
-        mode: "PAPER",
-        starting_balance: @balance_provider.available_balance,
+        mode: 'PAPER',
+        starting_balance: @balance_provider.available_balance
       )
 
       # If resuming an existing session, update the balance provider to reflect the correct state
       if @session_data[:starting_balance] && @session_data[:starting_balance] != @balance_provider.available_balance
-        puts "[PAPER] Resuming existing session - updating balance provider"
+        puts '[PAPER] Resuming existing session - updating balance provider'
         puts "[PAPER] Session starting balance: ₹#{@session_data[:starting_balance]}"
         puts "[PAPER] Current balance provider: ₹#{@balance_provider.available_balance}"
 
@@ -99,43 +99,44 @@ module DhanScalper
         @balance_provider.reset_balance(@session_data[:starting_balance])
 
         # Update the balance provider with the correct used balance from positions
-        if @session_data[:positions] && @session_data[:positions].any?
+        if @session_data[:positions]&.any?
           used_balance = calculate_used_balance_from_positions(@session_data[:positions])
           @balance_provider.instance_variable_set(:@used, DhanScalper::Support::Money.bd(used_balance))
-          @balance_provider.instance_variable_set(:@available, DhanScalper::Support::Money.bd(@session_data[:starting_balance] - used_balance))
+          @balance_provider.instance_variable_set(:@available,
+                                                  DhanScalper::Support::Money.bd(@session_data[:starting_balance] - used_balance))
           @balance_provider.instance_variable_set(:@total, DhanScalper::Support::Money.bd(@session_data[:starting_balance]))
 
           puts "[PAPER] Updated balance - Available: ₹#{@balance_provider.available_balance}, Used: ₹#{@balance_provider.used_balance}"
         end
       end
 
-      puts "[PAPER] Starting paper trading mode"
+      puts '[PAPER] Starting paper trading mode'
       puts "[PAPER] Session ID: #{@session_data[:session_id]}"
-      puts "[PAPER] WebSocket connection will be established"
-      puts "[PAPER] Positions will be tracked in real-time"
-      puts "[PAPER] No real money will be used"
+      puts '[PAPER] WebSocket connection will be established'
+      puts '[PAPER] Positions will be tracked in real-time'
+      puts '[PAPER] No real money will be used'
       puts "[TIMEOUT] Auto-exit after #{@timeout_minutes} minutes" if @timeout_minutes
 
       # Simple logging for quiet mode
       @logger = Logger.new($stdout) if @quiet
 
-      puts "[READY] Symbols: #{@cfg["SYMBOLS"]&.keys&.join(", ") || "None"}"
+      puts "[READY] Symbols: #{@cfg['SYMBOLS']&.keys&.join(', ') || 'None'}"
       puts "[MODE] PAPER with balance: ₹#{@balance_provider.available_balance.round(0)}"
-      puts "[QUIET] Running in quiet mode - minimal output" if @quiet
-      puts "[CONTROLS] Press Ctrl+C to stop"
+      puts '[QUIET] Running in quiet mode - minimal output' if @quiet
+      puts '[CONTROLS] Press Ctrl+C to stop'
 
       begin
         # Configure baseline indices and active instrument provider
-        baseline = Array(@cfg["SYMBOLS"]).flat_map do |_sym, s|
-          sid = s&.dig("idx_sid")
-          sid.to_s.empty? ? [] : [[sid.to_s, "INDEX"]]
+        baseline = Array(@cfg['SYMBOLS']).flat_map do |_sym, s|
+          sid = s&.dig('idx_sid')
+          sid.to_s.empty? ? [] : [[sid.to_s, 'INDEX']]
         end
         @websocket_manager.set_baseline_instruments(baseline)
         @websocket_manager.set_active_instruments_provider do
           # Any instruments with quantity > 0 in paper tracker
           @position_tracker.positions.values.select do |p|
             (p[:quantity] || 0).to_f.positive?
-          end.map { |p| [p[:instrument_id].to_s, "OPTION"] }
+          end.map { |p| [p[:instrument_id].to_s, 'OPTION'] }
         end
 
         # Connect to WebSocket
@@ -146,10 +147,12 @@ module DhanScalper
 
         # Setup tick handler to store data in TickCache
         @websocket_manager.on_price_update do |price_data|
-          puts "[DEBUG] Received price update: #{price_data[:instrument_id]} = #{price_data[:last_price]}" if @cfg.dig("global", "log_level") == "DEBUG"
+          puts "[DEBUG] Received price update: #{price_data[:instrument_id]} = #{price_data[:last_price]}" if @cfg.dig(
+            'global', 'log_level'
+          ) == 'DEBUG'
 
           # Use the segment provided by WebSocket manager (it already has the correct segment)
-          exchange_segment = price_data[:segment] || "NSE_FNO"
+          exchange_segment = price_data[:segment] || 'NSE_FNO'
 
           # Convert price_data to tick format for TickCache
           tick_data = {
@@ -161,11 +164,11 @@ module DhanScalper
             low: price_data[:low],
             close: price_data[:close],
             volume: price_data[:volume],
-            ts: price_data[:timestamp],
+            ts: price_data[:timestamp]
           }
 
           # Debug: Log the tick data being stored
-          if ENV["DHAN_LOG_LEVEL"] == "DEBUG"
+          if ENV['DHAN_LOG_LEVEL'] == 'DEBUG'
             puts "[DEBUG] Storing tick data: #{tick_data[:segment]}:#{tick_data[:security_id]} LTP=#{tick_data[:ltp]}"
           end
 
@@ -187,7 +190,7 @@ module DhanScalper
         last_decision = Time.at(0)
         last_status_update = Time.at(0)
         last_ltp_update = Time.at(0)
-        decision_interval = @cfg.dig("global", "decision_interval").to_i
+        decision_interval = @cfg.dig('global', 'decision_interval').to_i
         status_interval = 30
 
         until @stop
@@ -234,9 +237,7 @@ module DhanScalper
             end
 
             # Update position prices every 10 seconds
-            if Time.now - last_ltp_update >= 10 # Every 10 seconds
-              @position_tracker.update_position_prices
-            end
+            @position_tracker.update_position_prices if Time.now - last_ltp_update >= 10 # Every 10 seconds
 
             # Show LTPs every 30 seconds
             if Time.now - last_ltp_update >= 30 # Every 30 seconds
@@ -245,7 +246,7 @@ module DhanScalper
             end
           rescue StandardError => e
             puts "\n[ERR] #{e.class}: #{e.message}"
-            puts e.backtrace.first(5).join("\n") if @cfg.dig("global", "log_level") == "DEBUG"
+            puts e.backtrace.first(5).join("\n") if @cfg.dig('global', 'log_level') == 'DEBUG'
           ensure
             sleep 0.5
           end
@@ -256,7 +257,7 @@ module DhanScalper
         puts "\n[PAPER] Trading stopped"
 
         # Finalize session data
-        @session_data[:end_time] = Time.now.strftime("%Y-%m-%d %H:%M:%S")
+        @session_data[:end_time] = Time.now.strftime('%Y-%m-%d %H:%M:%S')
         @session_data[:duration_minutes] = (Time.now - @start_time) / 60.0
 
         # Update position prices one final time before generating report
@@ -314,29 +315,29 @@ module DhanScalper
 
       # Fallback: determine based on underlying symbol
       case symbol.to_s.upcase
-      when "SENSEX"
-        "BSE_FNO"
-      when "NIFTY", "BANKNIFTY"
-        "NSE_FNO"
+      when 'SENSEX'
+        'BSE_FNO'
+      when 'NIFTY', 'BANKNIFTY'
+        'NSE_FNO'
       else
-        "NSE_FNO" # Default to NSE
+        'NSE_FNO' # Default to NSE
       end
     end
 
     def start_tracking_underlyings
-      @cfg["SYMBOLS"]&.each_key do |sym|
+      @cfg['SYMBOLS']&.each_key do |sym|
         next unless sym
 
         s = sym_cfg(sym)
-        next if s["idx_sid"].to_s.empty?
+        next if s['idx_sid'].to_s.empty?
 
         puts "[PAPER] Starting to track underlying: #{sym}"
 
         # Track the underlying index
-        success = @position_tracker.track_underlying(sym, s["idx_sid"])
+        success = @position_tracker.track_underlying(sym, s['idx_sid'])
 
         if success
-          puts "[PAPER] Now tracking #{sym} (#{s["idx_sid"]})"
+          puts "[PAPER] Now tracking #{sym} (#{s['idx_sid']})"
         else
           puts "[PAPER] Failed to track #{sym}"
         end
@@ -357,7 +358,7 @@ module DhanScalper
         strike = position_data[:strike]
         quantity = position_data[:quantity]
         entry_price = position_data[:entry_price]
-        created_at = position_data[:created_at]
+        position_data[:created_at]
 
         # Skip if position is closed (quantity is 0 or negative)
         next if quantity.to_i <= 0
@@ -374,25 +375,24 @@ module DhanScalper
         next unless spot_price&.positive?
 
         # Calculate ATM strike
-        strike_step = symbol_config["strike_step"] || 50
-        atm_strike = picker.nearest_strike(spot_price, strike_step)
+        strike_step = symbol_config['strike_step'] || 50
+        picker.nearest_strike(spot_price, strike_step)
 
         # Find the security ID for this strike and option type
         pick = picker.pick(current_spot: spot_price)
         security_id = case option_type
-                      when "CE"
+                      when 'CE'
                         pick[:ce_sid][strike]
-                      when "PE"
+                      when 'PE'
                         pick[:pe_sid][strike]
                       end
 
         next unless security_id
 
         # Subscribe to the option instrument
-        @websocket_manager.subscribe_to_instrument(security_id, "OPTION")
+        @websocket_manager.subscribe_to_instrument(security_id, 'OPTION')
 
         # Add position to tracker
-        position_key = "#{symbol}_#{option_type}_#{strike}_#{Date.today}"
         @position_tracker.add_position(
           symbol, option_type, strike, Date.today,
           security_id, quantity, entry_price
@@ -402,24 +402,24 @@ module DhanScalper
         @security_to_strike[security_id] = {
           strike: strike,
           type: option_type,
-          symbol: symbol,
+          symbol: symbol
         }
 
         puts "  ✅ Loaded position: #{symbol} #{option_type} #{strike} (#{quantity} lots @ ₹#{entry_price}) [#{security_id}]"
       rescue StandardError => e
         puts "  ❌ Failed to load position #{position_data[:symbol]}: #{e.message}"
-        puts "    Error details: #{e.backtrace.first(2).join("\n")}" if @cfg.dig("global", "log_level") == "DEBUG"
+        puts "    Error details: #{e.backtrace.first(2).join("\n")}" if @cfg.dig('global', 'log_level') == 'DEBUG'
       end
 
-      puts "[POSITION LOADER] Position loading complete"
+      puts '[POSITION LOADER] Position loading complete'
     end
 
     def analyze_and_trade
-      @cfg["SYMBOLS"]&.each_key do |sym|
+      @cfg['SYMBOLS']&.each_key do |sym|
         next unless sym
 
         s = sym_cfg(sym)
-        next if s["idx_sid"].to_s.empty?
+        next if s['idx_sid'].to_s.empty?
 
         begin
           # Get current spot price from WebSocket
@@ -442,7 +442,7 @@ module DhanScalper
           execute_trade(sym, direction, spot_price, s) if direction != :none
         rescue StandardError => e
           puts "[#{sym}] Error in analysis: #{e.message}"
-          puts e.backtrace.first(3).join("\n") if @cfg.dig("global", "log_level") == "DEBUG"
+          puts e.backtrace.first(3).join("\n") if @cfg.dig('global', 'log_level') == 'DEBUG'
         end
       end
     end
@@ -457,7 +457,7 @@ module DhanScalper
       return unless pick[:ce_sid] && pick[:pe_sid]
 
       # Calculate the actual strike price (ATM)
-      strike_step = symbol_config["strike_step"] || 50
+      strike_step = symbol_config['strike_step'] || 50
       actual_strike = picker.nearest_strike(spot_price, strike_step)
 
       # Subscribe to ATM and ATM+/- options for LTP monitoring
@@ -477,13 +477,13 @@ module DhanScalper
 
       option_type = case direction
                     when :bullish, :long_ce
-                      "CE"
+                      'CE'
                     when :bearish, :long_pe
-                      "PE"
+                      'PE'
                     end
 
       # Subscribe to option instrument first
-      @websocket_manager.subscribe_to_instrument(option_sid, "OPTION")
+      @websocket_manager.subscribe_to_instrument(option_sid, 'OPTION')
 
       # Wait a moment for subscription to establish
       sleep(0.1)
@@ -503,7 +503,7 @@ module DhanScalper
       end
 
       # Calculate position size
-      quantity = @quantity_sizer.calculate_quantity(symbol, option_price, side: "BUY")
+      quantity = @quantity_sizer.calculate_quantity(symbol, option_price, side: 'BUY')
 
       puts "[#{symbol}] Executing #{direction} trade: #{option_type} #{quantity} lots at ₹#{option_price} (Strike: #{actual_strike})"
 
@@ -511,10 +511,10 @@ module DhanScalper
       order_result = @broker.place_order(
         symbol: symbol,
         instrument_id: option_sid,
-        side: "BUY",
+        side: 'BUY',
         quantity: quantity,
         price: option_price,
-        order_type: "MARKET",
+        order_type: 'MARKET'
       )
 
       if order_result[:success]
@@ -532,15 +532,15 @@ module DhanScalper
         @session_data[:successful_trades] += 1
         @session_data[:symbols_traded].add(symbol)
         @session_data[:trades] << {
-          timestamp: Time.now.strftime("%H:%M:%S"),
+          timestamp: Time.now.strftime('%H:%M:%S'),
           symbol: symbol,
-          side: "BUY",
+          side: 'BUY',
           quantity: quantity,
           price: option_price,
           order_id: order_result[:order_id],
-          status: "SUCCESS",
+          status: 'SUCCESS',
           option_type: option_type,
-          strike: actual_strike,
+          strike: actual_strike
         }
 
         puts "[#{symbol}] Position added to tracker: #{position_key}"
@@ -551,16 +551,16 @@ module DhanScalper
         @session_data[:total_trades] += 1
         @session_data[:failed_trades] += 1
         @session_data[:trades] << {
-          timestamp: Time.now.strftime("%H:%M:%S"),
+          timestamp: Time.now.strftime('%H:%M:%S'),
           symbol: symbol,
-          side: "BUY",
+          side: 'BUY',
           quantity: quantity,
           price: option_price,
           order_id: nil,
-          status: "FAILED",
+          status: 'FAILED',
           error: order_result[:error],
           option_type: option_type,
-          strike: actual_strike,
+          strike: actual_strike
         }
       end
     end
@@ -578,20 +578,20 @@ module DhanScalper
     def check_risk_limits
       # Check daily loss limit
       total_pnl = @position_tracker.get_total_pnl
-      max_loss = @cfg.dig("global", "max_day_loss").to_f
+      max_loss = @cfg.dig('global', 'max_day_loss').to_f
 
       if total_pnl < -max_loss
         puts "[RISK] Daily loss limit exceeded: ₹#{total_pnl} (limit: ₹#{max_loss})"
-        puts "[RISK] Stopping trading for today"
+        puts '[RISK] Stopping trading for today'
         @stop = true
       end
 
       # Check position limits
-      max_positions = @cfg.dig("global", "max_positions").to_i
+      max_positions = @cfg.dig('global', 'max_positions').to_i
       return unless max_positions.positive? && @position_tracker.positions.size >= max_positions
 
       puts "[RISK] Maximum positions reached: #{@position_tracker.positions.size}"
-      puts "[RISK] No new positions will be opened"
+      puts '[RISK] No new positions will be opened'
     end
 
     def show_position_summary
@@ -603,8 +603,8 @@ module DhanScalper
       @session_data[:max_pnl] = [@session_data[:max_pnl] || 0.0, current_pnl].max
       @session_data[:min_pnl] = [@session_data[:min_pnl] || 0.0, current_pnl].min
 
-      puts "\n#{"=" * 60}"
-      puts "[POSITION SUMMARY]"
+      puts "\n#{'=' * 60}"
+      puts '[POSITION SUMMARY]'
       puts "Total Positions: #{summary[:total_positions]}"
       puts "Total P&L: ₹#{summary[:total_pnl].round(2)}"
       puts "Available Balance: ₹#{@balance_provider.available_balance.round(0)}"
@@ -614,7 +614,7 @@ module DhanScalper
       if underlying_summary.any?
         puts "\n[UNDERLYING PRICES]"
         underlying_summary.each do |symbol, data|
-          price = data[:last_price] ? "₹#{data[:last_price]}" : "N/A"
+          price = data[:last_price] ? "₹#{data[:last_price]}" : 'N/A'
           puts "#{symbol}: #{price} (#{data[:instrument_id]})"
         end
       end
@@ -626,28 +626,28 @@ module DhanScalper
         end
       end
 
-      puts "=" * 60
+      puts '=' * 60
     end
 
     def show_final_summary
       summary = @position_tracker.get_positions_summary
 
-      puts "\n#{"=" * 60}"
-      puts "[FINAL SUMMARY]"
+      puts "\n#{'=' * 60}"
+      puts '[FINAL SUMMARY]'
       puts "Session P&L: ₹#{summary[:total_pnl].round(2)}"
       puts "Final Balance: ₹#{@balance_provider.available_balance.round(0)}"
       puts "Positions Closed: #{summary[:total_positions]}"
-      puts "=" * 60
+      puts '=' * 60
     end
 
     def subscribe_to_atm_options_for_monitoring
       puts "\n[ATM MONITOR] Setting up ATM options subscription for monitoring..."
 
-      @cfg["SYMBOLS"]&.each_key do |symbol|
+      @cfg['SYMBOLS']&.each_key do |symbol|
         next unless symbol
 
         symbol_config = sym_cfg(symbol)
-        next if symbol_config["idx_sid"].to_s.empty?
+        next if symbol_config['idx_sid'].to_s.empty?
 
         # Try to get spot price with retries
         spot_price = nil
@@ -659,8 +659,8 @@ module DhanScalper
           end
 
           # Use IDX_I segment for underlying indices
-          underlying_segment = "IDX_I"
-          spot_price = DhanScalper::TickCache.ltp(underlying_segment, symbol_config["idx_sid"])&.to_f
+          underlying_segment = 'IDX_I'
+          spot_price = DhanScalper::TickCache.ltp(underlying_segment, symbol_config['idx_sid'])&.to_f
           puts "[ATM MONITOR] #{symbol} spot price attempt #{attempt + 1}: #{spot_price}"
           break if spot_price&.positive?
 
@@ -675,7 +675,7 @@ module DhanScalper
         next unless pick[:ce_sid] && pick[:pe_sid]
 
         # Calculate ATM strike
-        strike_step = symbol_config["strike_step"] || 50
+        strike_step = symbol_config['strike_step'] || 50
         atm_strike = picker.nearest_strike(spot_price, strike_step)
 
         # Subscribe to ATM options
@@ -688,7 +688,7 @@ module DhanScalper
       strikes_to_subscribe = [
         atm_strike - strike_step,  # ATM-1
         atm_strike,                # ATM
-        atm_strike + strike_step, # ATM+1
+        atm_strike + strike_step # ATM+1
       ]
 
       puts "\n[#{symbol}] Subscribing to ATM options around #{atm_strike}:"
@@ -697,8 +697,8 @@ module DhanScalper
         # Subscribe to CE
         if pick[:ce_sid][strike]
           security_id = pick[:ce_sid][strike]
-          @websocket_manager.subscribe_to_instrument(security_id, "OPTION")
-          @security_to_strike[security_id] = { strike: strike, type: "CE", symbol: symbol }
+          @websocket_manager.subscribe_to_instrument(security_id, 'OPTION')
+          @security_to_strike[security_id] = { strike: strike, type: 'CE', symbol: symbol }
           puts "  ✅ Subscribed to #{strike} CE (#{security_id})"
         end
 
@@ -706,8 +706,8 @@ module DhanScalper
         next unless pick[:pe_sid][strike]
 
         security_id = pick[:pe_sid][strike]
-        @websocket_manager.subscribe_to_instrument(security_id, "OPTION")
-        @security_to_strike[security_id] = { strike: strike, type: "PE", symbol: symbol }
+        @websocket_manager.subscribe_to_instrument(security_id, 'OPTION')
+        @security_to_strike[security_id] = { strike: strike, type: 'PE', symbol: symbol }
         puts "  ✅ Subscribed to #{strike} PE (#{security_id})"
       end
 
@@ -715,9 +715,9 @@ module DhanScalper
     end
 
     def print_subscribed_ltps
-      puts "\n#{"=" * 60}"
-      puts "[LTP MONITOR] - #{Time.now.strftime("%H:%M:%S")}"
-      puts "=" * 60
+      puts "\n#{'=' * 60}"
+      puts "[LTP MONITOR] - #{Time.now.strftime('%H:%M:%S')}"
+      puts '=' * 60
 
       cache_data = DhanScalper::TickCache.all
 
@@ -730,7 +730,7 @@ module DhanScalper
         option_instruments = {}
 
         cache_data.each do |key, tick|
-          if key.include?("IDX_I")
+          if key.include?('IDX_I')
             index_instruments[key] = tick
           else
             option_instruments[key] = tick
@@ -743,9 +743,9 @@ module DhanScalper
           index_instruments.each do |key, tick|
             ltp = tick[:ltp]
             timestamp = tick[:timestamp]
-            age = timestamp ? (Time.now - timestamp).round(1) : "N/A"
-            display_key = key.gsub(":", " - ")
-            puts "    #{display_key}: LTP=₹#{ltp || "N/A"} (#{age}s ago)"
+            age = timestamp ? (Time.now - timestamp).round(1) : 'N/A'
+            display_key = key.gsub(':', ' - ')
+            puts "    #{display_key}: LTP=₹#{ltp || 'N/A'} (#{age}s ago)"
           end
         end
 
@@ -757,7 +757,7 @@ module DhanScalper
           options_by_strike = {}
           option_instruments.each do |key, tick|
             # Extract security ID from key (format: "NSE_FNO:40583")
-            security_id = key.split(":").last
+            security_id = key.split(':').last
             strike_info = @security_to_strike[security_id]
 
             if strike_info
@@ -767,8 +767,8 @@ module DhanScalper
               options_by_strike[strike][type] = { tick: tick, security_id: security_id }
             else
               # Fallback for unknown security IDs
-              options_by_strike["Unknown"] ||= {}
-              options_by_strike["Unknown"][key] = { tick: tick, security_id: security_id }
+              options_by_strike['Unknown'] ||= {}
+              options_by_strike['Unknown'][key] = { tick: tick, security_id: security_id }
             end
           end
 
@@ -780,16 +780,16 @@ module DhanScalper
               security_id = data[:security_id]
               ltp = tick[:ltp]
               timestamp = tick[:timestamp]
-              age = timestamp ? (Time.now - timestamp).round(1) : "N/A"
-              puts "      #{type}: LTP=₹#{ltp || "N/A"} (#{age}s ago) [#{security_id}]"
+              age = timestamp ? (Time.now - timestamp).round(1) : 'N/A'
+              puts "      #{type}: LTP=₹#{ltp || 'N/A'} (#{age}s ago) [#{security_id}]"
             end
           end
         end
       else
-        puts "❌ No instruments subscribed or no data available"
+        puts '❌ No instruments subscribed or no data available'
       end
 
-      puts "=" * 60
+      puts '=' * 60
     end
 
     def get_cached_trend(symbol, symbol_config)
@@ -797,18 +797,18 @@ module DhanScalper
 
       unless @cached_trends[trend_key]
         if @enhanced
-          use_multi_timeframe = @cfg.dig("global", "use_multi_timeframe") != false
-          secondary_timeframe = @cfg.dig("global", "secondary_timeframe") || 5
+          use_multi_timeframe = @cfg.dig('global', 'use_multi_timeframe') != false
+          secondary_timeframe = @cfg.dig('global', 'secondary_timeframe') || 5
           @cached_trends[trend_key] = TrendEnhanced.new(
-            seg_idx: symbol_config["seg_idx"],
-            sid_idx: symbol_config["idx_sid"],
+            seg_idx: symbol_config['seg_idx'],
+            sid_idx: symbol_config['idx_sid'],
             use_multi_timeframe: use_multi_timeframe,
-            secondary_timeframe: secondary_timeframe,
+            secondary_timeframe: secondary_timeframe
           )
         else
           @cached_trends[trend_key] = Trend.new(
-            seg_idx: symbol_config["seg_idx"],
-            sid_idx: symbol_config["idx_sid"],
+            seg_idx: symbol_config['seg_idx'],
+            sid_idx: symbol_config['idx_sid']
           )
         end
       end
@@ -828,7 +828,7 @@ module DhanScalper
     end
 
     def sym_cfg(sym)
-      @cfg["SYMBOLS"][sym] || {}
+      @cfg['SYMBOLS'][sym] || {}
     end
 
     def generate_session_report
@@ -845,7 +845,7 @@ module DhanScalper
                              (@session_data[:max_pnl] / @session_data[:min_pnl].abs).round(2)
                            else
                              0.0
-                           end,
+                           end
       }
 
       # Generate the report
@@ -866,20 +866,20 @@ module DhanScalper
 
       # Calculate position values
       position_values = positions.sum do |position|
-        quantity = position[:quantity] || position["quantity"] || 0
-        entry_price = position[:entry_price] || position["entry_price"] || 0
+        quantity = position[:quantity] || position['quantity'] || 0
+        entry_price = position[:entry_price] || position['entry_price'] || 0
         quantity * entry_price
       end
 
       # Calculate total fees (₹20 per order)
-      fee_per_order = @cfg.dig("global", "charge_per_order") || 20.0
+      fee_per_order = @cfg.dig('global', 'charge_per_order') || 20.0
       total_fees = positions.length * fee_per_order
 
       total_used = position_values + total_fees
 
       DhanScalper::Support::Logger.debug(
         "Calculated used balance from positions - positions: #{position_values}, fees: #{total_fees}, total: #{total_used}",
-        component: "PaperApp",
+        component: 'PaperApp'
       )
 
       total_used.to_f

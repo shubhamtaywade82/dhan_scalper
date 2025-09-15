@@ -17,7 +17,7 @@ module DhanScalper
           low: series.lows,
           close: series.closes,
           volume: series.volumes,
-          timestamp: series.candles.map(&:timestamp),
+          timestamp: series.candles.map(&:timestamp)
         }
       end
 

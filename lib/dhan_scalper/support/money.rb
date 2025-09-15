@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "bigdecimal"
+require 'bigdecimal'
 
 module DhanScalper
   module Support
@@ -30,7 +30,7 @@ module DhanScalper
       # @param value [BigDecimal, Numeric] The value to convert
       # @return [String] Canonical string representation
       def dec(value)
-        bd(value).to_s("F")
+        bd(value).to_s('F')
       end
 
       # Round BigDecimal to 2 decimal places for presentation
@@ -147,7 +147,7 @@ module DhanScalper
       # @return [String] Formatted string
       def format(value, precision: 2)
         rounded = bd(value).round(precision)
-        "₹#{rounded.to_s("F")}"
+        "₹#{rounded.to_s('F')}"
       end
 
       # Calculate percentage of a monetary value

@@ -14,10 +14,10 @@ module DhanScalper
       end
 
       # Unified place_order for compatibility with services/order_manager
-      def place_order(symbol:, instrument_id:, side:, quantity:, price:, order_type: "MARKET")
-        segment = "NSE_FO" # default to options segment; adjust if instrument metadata available
+      def place_order(symbol:, instrument_id:, side:, quantity:, price:, order_type: 'MARKET')
+        segment = 'NSE_FO' # default to options segment; adjust if instrument metadata available
         order = case side.to_s.upcase
-                when "BUY"
+                when 'BUY'
                   buy_market(segment: segment, security_id: instrument_id, quantity: quantity)
                 else
                   sell_market(segment: segment, security_id: instrument_id, quantity: quantity)
@@ -27,7 +27,7 @@ module DhanScalper
           success: !order.nil?,
           order_id: order&.id,
           order: order,
-          position: nil,
+          position: nil
         }
       rescue StandardError => e
         { success: false, error: e.message }
@@ -35,13 +35,13 @@ module DhanScalper
 
       def buy_market(segment:, security_id:, quantity:, charge_per_order: nil)
         order_params = {
-          transaction_type: "BUY",
+          transaction_type: 'BUY',
           exchange_segment: segment,
-          product_type: "MARGIN",
-          order_type: "MARKET",
-          validity: "DAY",
+          product_type: 'MARGIN',
+          order_type: 'MARKET',
+          validity: 'DAY',
           security_id: security_id,
-          quantity: quantity,
+          quantity: quantity
         }
 
         order = create_order(order_params)
@@ -50,7 +50,7 @@ module DhanScalper
         # try best-effort trade price
         price = fetch_trade_price(order[:order_id]) || 0.0
 
-        order_obj = Order.new(order[:order_id], security_id, "BUY", quantity, price)
+        order_obj = Order.new(order[:order_id], security_id, 'BUY', quantity, price)
 
         # Log the order and create a virtual position
         log_order(order_obj)
@@ -58,10 +58,10 @@ module DhanScalper
         # Create and log position
         position = DhanScalper::Position.new(
           security_id: security_id,
-          side: "BUY",
+          side: 'BUY',
           entry_price: price,
           quantity: quantity,
-          current_price: price,
+          current_price: price
         )
         log_position(position)
 
@@ -70,13 +70,13 @@ module DhanScalper
 
       def sell_market(segment:, security_id:, quantity:, charge_per_order: nil)
         order_params = {
-          transaction_type: "SELL",
+          transaction_type: 'SELL',
           exchange_segment: segment,
-          product_type: "MARGIN",
-          order_type: "MARKET",
-          validity: "DAY",
+          product_type: 'MARGIN',
+          order_type: 'MARKET',
+          validity: 'DAY',
           security_id: security_id,
-          quantity: quantity,
+          quantity: quantity
         }
 
         order = create_order(order_params)
@@ -84,19 +84,19 @@ module DhanScalper
 
         price = fetch_trade_price(order[:order_id]) || 0.0
 
-        order_obj = Order.new(order[:order_id], security_id, "SELL", quantity, price)
+        order_obj = Order.new(order[:order_id], security_id, 'SELL', quantity, price)
 
         # Log the order and create a virtual position
         log_order(order_obj)
 
         # Create and log position
-        require_relative "../position"
+        require_relative '../position'
         position = DhanScalper::Position.new(
           security_id: security_id,
-          side: "SELL",
+          side: 'SELL',
           entry_price: price,
           quantity: quantity,
-          current_price: price,
+          current_price: price
         )
         log_position(position)
 
@@ -119,12 +119,12 @@ module DhanScalper
 
       def cancel_order(order_id)
         result = DhanHQ::Order.cancel_order(order_id)
-        if result && result["success"]
+        if result && result['success']
           @logger.info "[DHAN_BROKER] Order #{order_id} cancelled successfully"
           @order_cache.delete(order_id)
           true
         else
-          @logger.error "[DHAN_BROKER] Failed to cancel order #{order_id}: #{result&.dig("message")}"
+          @logger.error "[DHAN_BROKER] Failed to cancel order #{order_id}: #{result&.dig('message')}"
           false
         end
       rescue StandardError => e
@@ -140,7 +140,7 @@ module DhanScalper
           available_balance: funds.available_balance.to_f,
           utilized_amount: funds.utilized_amount.to_f,
           total_balance: (funds.available_balance.to_f + funds.utilized_amount.to_f),
-          timestamp: Time.now,
+          timestamp: Time.now
         }
       rescue StandardError => e
         @logger.error "[DHAN_BROKER] Error fetching funds: #{e.message}"
@@ -159,7 +159,7 @@ module DhanScalper
             average_price: holding.average_price.to_f,
             current_price: holding.current_price.to_f,
             pnl: holding.pnl.to_f,
-            pnl_percentage: holding.pnl_percentage.to_f,
+            pnl_percentage: holding.pnl_percentage.to_f
           }
         end
       rescue StandardError => e
@@ -195,7 +195,7 @@ module DhanScalper
             quantity: trade.quantity.to_i,
             price: trade.price.to_f,
             trade_date: trade.trade_date,
-            timestamp: trade.timestamp,
+            timestamp: trade.timestamp
           }
         end
       rescue StandardError => e
@@ -209,15 +209,15 @@ module DhanScalper
         begin
           # Get order details from DhanHQ
           order_details = DhanHQ::Order.get_order_details(order_id)
-          return nil unless order_details&.dig("data")
+          return nil unless order_details&.dig('data')
 
-          order_data = order_details["data"]
+          order_data = order_details['data']
           {
-            status: order_data["orderStatus"],
-            fill_price: order_data["averagePrice"],
-            fill_quantity: order_data["filledQuantity"],
-            reason: order_data["rejectionReason"],
-            order_id: order_id,
+            status: order_data['orderStatus'],
+            fill_price: order_data['averagePrice'],
+            fill_quantity: order_data['filledQuantity'],
+            reason: order_data['rejectionReason'],
+            order_id: order_id
           }
         rescue StandardError => e
           @logger&.error "[DHAN_BROKER] Error fetching order status for #{order_id}: #{e.message}"
@@ -232,7 +232,7 @@ module DhanScalper
         methods_to_try = [
           -> { create_order_via_models(params) },
           -> { create_order_via_direct(params) },
-          -> { create_order_via_orders(params) },
+          -> { create_order_via_orders(params) }
         ]
 
         methods_to_try.each do |method|
@@ -242,20 +242,20 @@ module DhanScalper
           next
         end
 
-        { error: "Failed to create order via all available methods" }
+        { error: 'Failed to create order via all available methods' }
       end
 
       def create_order_via_models(params)
         # Try DhanHQ::Models::Order.new
 
-        @logger.debug "[DHAN] Attempting create via DhanHQ::Models::Order.new"
+        @logger.debug '[DHAN] Attempting create via DhanHQ::Models::Order.new'
         order = DhanHQ::Models::Order.new(params)
         @logger.debug "[DHAN] Order object: #{order.inspect}"
         order.save
         @logger.debug "[DHAN] Save: persisted=#{order.persisted?} errors=#{order.errors.full_messages}"
         return { order_id: order.order_id, error: nil } if order.persisted?
 
-        { error: order.errors.full_messages.join(", ") }
+        { error: order.errors.full_messages.join(', ') }
       rescue StandardError => e
         @logger.debug "[DHAN] create_order_via_models error: #{e.message}"
         { error: e.message }
@@ -264,14 +264,14 @@ module DhanScalper
       def create_order_via_direct(params)
         # Try DhanHQ::Order.new
 
-        @logger.debug "[DHAN] Attempting create via DhanHQ::Order.new"
+        @logger.debug '[DHAN] Attempting create via DhanHQ::Order.new'
         order = DhanHQ::Order.new(params)
         @logger.debug "[DHAN] Order object: #{order.inspect}"
         order.save
         @logger.debug "[DHAN] Save: persisted=#{order.persisted?} errors=#{order.errors.full_messages}"
         return { order_id: order.order_id, error: nil } if order.persisted?
 
-        { error: order.errors.full_messages.join(", ") }
+        { error: order.errors.full_messages.join(', ') }
       rescue StandardError => e
         @logger.debug "[DHAN] create_order_via_direct error: #{e.message}"
         { error: e.message }
@@ -280,12 +280,12 @@ module DhanScalper
       def create_order_via_orders(params)
         # Try DhanHQ::Orders.create
 
-        @logger.debug "[DHAN] Attempting create via DhanHQ::Orders.create"
+        @logger.debug '[DHAN] Attempting create via DhanHQ::Orders.create'
         order = DhanHQ::Orders.create(params)
         @logger.debug "[DHAN] Order response: #{order.inspect}"
         return { order_id: order.order_id || order.id, error: nil } if order
 
-        { error: "Failed to create order" }
+        { error: 'Failed to create order' }
       rescue StandardError => e
         @logger.debug "[DHAN] create_order_via_orders error: #{e.message}"
         { error: e.message }
@@ -300,7 +300,7 @@ module DhanScalper
           -> { DhanHQ::Models::Trade.find_by(order_id: order_id)&.avg_price },
           -> { DhanHQ::Trade.find_by(order_id: order_id)&.avg_price },
           -> { DhanHQ::Models::Trades.find_by_order_id(order_id)&.avg_price },
-          -> { DhanHQ::Trades.find_by_order_id(order_id)&.avg_price },
+          -> { DhanHQ::Trades.find_by_order_id(order_id)&.avg_price }
         ]
 
         methods_to_try.each_with_index do |method, index|
@@ -313,7 +313,7 @@ module DhanScalper
           next
         end
 
-        @logger.debug "[DHAN] All price methods failed"
+        @logger.debug '[DHAN] All price methods failed'
         nil
       end
 
@@ -334,7 +334,7 @@ module DhanScalper
               current_price: pos.current_price.to_f,
               pnl: pos.pnl.to_f,
               pnl_percentage: pos.pnl_percentage.to_f,
-              last_updated: Time.now,
+              last_updated: Time.now
             }
           end
 
@@ -364,7 +364,7 @@ module DhanScalper
               status: order.order_status,
               order_type: order.order_type,
               created_at: order.created_at,
-              last_updated: Time.now,
+              last_updated: Time.now
             }
           end
 

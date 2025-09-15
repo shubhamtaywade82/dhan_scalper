@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "equity_calculator"
+require_relative 'equity_calculator'
 
 module DhanScalper
   module Services
@@ -19,7 +19,7 @@ module DhanScalper
         position = @equity_calculator.instance_variable_get(:@position_tracker).get_position(
           exchange_segment: exchange_segment,
           security_id: security_id,
-          side: "LONG",
+          side: 'LONG'
         )
 
         return unless position && DhanScalper::Support::Money.positive?(position[:net_qty])
@@ -36,15 +36,15 @@ module DhanScalper
         @equity_calculator.instance_variable_get(:@position_tracker).update_current_price(
           exchange_segment: exchange_segment,
           security_id: security_id,
-          side: "LONG",
-          current_price: ltp,
+          side: 'LONG',
+          current_price: ltp
         )
 
         # Refresh unrealized PnL for this position
         result = @equity_calculator.refresh_unrealized!(
           exchange_segment: exchange_segment,
           security_id: security_id,
-          current_ltp: ltp,
+          current_ltp: ltp
         )
 
         return unless result[:success]
@@ -78,7 +78,7 @@ module DhanScalper
       # Clear refresh history (useful for testing)
       def clear_refresh_history
         @last_refresh.clear
-        @logger.debug("[MTM] Refresh history cleared")
+        @logger.debug('[MTM] Refresh history cleared')
       end
     end
   end

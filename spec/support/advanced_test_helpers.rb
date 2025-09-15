@@ -1,17 +1,17 @@
 # frozen_string_literal: true
 
-require "concurrent"
-require "timeout"
+require 'concurrent'
+require 'timeout'
 
 module AdvancedTestHelpers
   # Advanced mock factories for complex scenarios
   class MockFactory
-    def self.create_realistic_market_data(symbols: ["NIFTY"], periods: 200)
+    def self.create_realistic_market_data(symbols: ['NIFTY'], periods: 200)
       symbols.each_with_object({}) do |symbol, data|
         base_price = case symbol
-                     when "NIFTY" then 25_000
-                     when "BANKNIFTY" then 50_000
-                     when "FINNIFTY" then 20_000
+                     when 'NIFTY' then 25_000
+                     when 'BANKNIFTY' then 50_000
+                     when 'FINNIFTY' then 20_000
                      else 25_000
                      end
 
@@ -20,12 +20,12 @@ module AdvancedTestHelpers
           price_history: generate_price_history(base_price, periods),
           trend: %i[bullish bearish neutral].sample,
           volatility: rand(0.1..0.3),
-          volume: rand(10_000..100_000),
+          volume: rand(10_000..100_000)
         }
       end
     end
 
-    def self.create_realistic_positions(count: 10, symbols: ["NIFTY"])
+    def self.create_realistic_positions(count: 10, symbols: ['NIFTY'])
       (1..count).map do |i|
         symbol = symbols.sample
         {
@@ -35,9 +35,9 @@ module AdvancedTestHelpers
           status: %w[open closed].sample,
           side: %w[BUY SELL].sample,
           quantity: case symbol
-                    when "NIFTY" then 75
-                    when "BANKNIFTY" then 25
-                    when "FINNIFTY" then 50
+                    when 'NIFTY' then 75
+                    when 'BANKNIFTY' then 25
+                    when 'FINNIFTY' then 50
                     else 75
                     end,
           entry_price: rand(50..200),
@@ -45,7 +45,7 @@ module AdvancedTestHelpers
           pnl: rand(-2_000..2_000),
           entry_time: Time.now - rand(0..3_600),
           exit_time: rand < 0.5 ? Time.now - rand(0..1_800) : nil,
-          exit_reason: %w[profit_target stop_loss timeout].sample,
+          exit_reason: %w[profit_target stop_loss timeout].sample
         }
       end
     end
@@ -62,7 +62,7 @@ module AdvancedTestHelpers
           status: %w[PENDING FILLED CANCELLED REJECTED].sample,
           timestamp: Time.now - rand(0..3_600),
           avg_price: rand(50..200),
-          filled_quantity: rand(0..100),
+          filled_quantity: rand(0..100)
         }
       end
     end
@@ -80,7 +80,7 @@ module AdvancedTestHelpers
         max_drawdown: rand(-5_000..-1_000),
         current_drawdown: rand(-2_000..0),
         avg_trade_duration: rand(300..1_800),
-        max_concurrent_positions: rand(1..10),
+        max_concurrent_positions: rand(1..10)
       }
     end
 
@@ -182,7 +182,7 @@ module AdvancedTestHelpers
               thread_id: i,
               operation_id: j,
               result: result,
-              duration: duration,
+              duration: duration
             }
           end
 
@@ -207,7 +207,7 @@ module AdvancedTestHelpers
 
   # Market simulation utilities
   class MarketSimulator
-    def initialize(symbols: ["NIFTY"], volatility: 0.15)
+    def initialize(symbols: ['NIFTY'], volatility: 0.15)
       @symbols = symbols
       @volatility = volatility
       @prices = {}
@@ -270,9 +270,9 @@ module AdvancedTestHelpers
     def initialize_market_data
       @symbols.each do |symbol|
         base_price = case symbol
-                     when "NIFTY" then 25_000
-                     when "BANKNIFTY" then 50_000
-                     when "FINNIFTY" then 20_000
+                     when 'NIFTY' then 25_000
+                     when 'BANKNIFTY' then 50_000
+                     when 'FINNIFTY' then 20_000
                      else 25_000
                      end
 
@@ -286,29 +286,29 @@ module AdvancedTestHelpers
   # Error simulation utilities
   class ErrorSimulator
     def self.simulate_network_failures(probability: 0.1)
-      -> { rand < probability ? raise(StandardError, "Network timeout") : nil }
+      -> { rand < probability ? raise(StandardError, 'Network timeout') : nil }
     end
 
     def self.simulate_api_failures(probability: 0.05)
-      -> { rand < probability ? raise(StandardError, "API rate limit exceeded") : nil }
+      -> { rand < probability ? raise(StandardError, 'API rate limit exceeded') : nil }
     end
 
     def self.simulate_data_corruption(probability: 0.02)
-      -> { rand < probability ? nil : "valid_data" }
+      -> { rand < probability ? nil : 'valid_data' }
     end
 
     def self.simulate_memory_pressure
-      -> { "x" * 1_000_000 } # Allocate 1MB
+      -> { 'x' * 1_000_000 } # Allocate 1MB
     end
   end
 
   # Test data generators
   class TestDataGenerator
-    def self.generate_candle_series(symbol: "NIFTY", count: 200, trend: :neutral)
+    def self.generate_candle_series(symbol: 'NIFTY', count: 200, trend: :neutral)
       base_price = case symbol
-                   when "NIFTY" then 25_000
-                   when "BANKNIFTY" then 50_000
-                   when "FINNIFTY" then 20_000
+                   when 'NIFTY' then 25_000
+                   when 'BANKNIFTY' then 50_000
+                   when 'FINNIFTY' then 20_000
                    else 25_000
                    end
 
@@ -335,7 +335,7 @@ module AdvancedTestHelpers
           high: high,
           low: low,
           close: close,
-          volume: volume,
+          volume: volume
         )
 
         current_price = close * trend_multiplier
@@ -344,28 +344,28 @@ module AdvancedTestHelpers
       candles
     end
 
-    def self.generate_tick_data(symbol: "NIFTY", count: 1_000)
+    def self.generate_tick_data(symbol: 'NIFTY', count: 1_000)
       base_price = case symbol
-                   when "NIFTY" then 25_000
-                   when "BANKNIFTY" then 50_000
-                   when "FINNIFTY" then 20_000
+                   when 'NIFTY' then 25_000
+                   when 'BANKNIFTY' then 50_000
+                   when 'FINNIFTY' then 20_000
                    else 25_000
                    end
 
       (1..count).map do |i|
         {
           security_id: case symbol
-                       when "NIFTY" then "13"
-                       when "BANKNIFTY" then "25"
-                       when "FINNIFTY" then "26"
-                       else "13"
+                       when 'NIFTY' then '13'
+                       when 'BANKNIFTY' then '25'
+                       when 'FINNIFTY' then '26'
+                       else '13'
                        end,
           last_price: base_price + rand(-100..100),
           timestamp: Time.now - (count - i),
           volume: rand(1_000..10_000),
           high: base_price + rand(0..100),
           low: base_price - rand(0..100),
-          open: base_price + rand(-50..50),
+          open: base_price + rand(-50..50)
         }
       end
     end
@@ -411,7 +411,7 @@ module AdvancedTestHelpers
         min: durations.min,
         max: durations.max,
         avg: durations.sum / durations.length,
-        total: durations.sum,
+        total: durations.sum
       }
     end
 

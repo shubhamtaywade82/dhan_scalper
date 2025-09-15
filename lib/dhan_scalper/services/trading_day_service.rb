@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "../support/application_service"
+require_relative '../support/application_service'
 
 module DhanScalper
   module Services
@@ -25,18 +25,18 @@ module DhanScalper
 
         # If it's weekend, use the last trading day (Friday)
         if today.saturday?
-          (today - 1).strftime("%Y%m%d")
+          (today - 1).strftime('%Y%m%d')
         elsif today.sunday?
-          (today - 2).strftime("%Y%m%d")
+          (today - 2).strftime('%Y%m%d')
         else
-          today.strftime("%Y%m%d")
+          today.strftime('%Y%m%d')
         end
       end
 
       # Get the current trading day with mode prefix
       # @param mode [String] Trading mode (paper, live, etc.)
       # @return [String] Session ID in format MODE_YYYYMMDD
-      def current_session_id(mode: "PAPER")
+      def current_session_id(mode: 'PAPER')
         "#{mode.upcase}_#{current_trading_day}"
       end
 
@@ -56,7 +56,7 @@ module DhanScalper
         next_day = today + 1
         next_day += 1 while next_day.saturday? || next_day.sunday?
 
-        next_day.strftime("%Y%m%d")
+        next_day.strftime('%Y%m%d')
       end
 
       # Get the previous trading day
@@ -68,14 +68,14 @@ module DhanScalper
         prev_day = today - 1
         prev_day -= 1 while prev_day.saturday? || prev_day.sunday?
 
-        prev_day.strftime("%Y%m%d")
+        prev_day.strftime('%Y%m%d')
       end
 
       # Check if a session exists for the current trading day
       # @param mode [String] Trading mode
       # @param reports_dir [String] Reports directory path
       # @return [Boolean] true if session exists
-      def session_exists?(mode: "PAPER", reports_dir: "data/reports")
+      def session_exists?(mode: 'PAPER', reports_dir: 'data/reports')
         session_id = current_session_id(mode: mode)
         json_file = File.join(reports_dir, "#{session_id}.json")
         File.exist?(json_file)
@@ -85,7 +85,7 @@ module DhanScalper
       # @param mode [String] Trading mode
       # @param reports_dir [String] Reports directory path
       # @return [Hash, nil] Session data or nil if not found
-      def get_existing_session(mode: "PAPER", reports_dir: "data/reports")
+      def get_existing_session(mode: 'PAPER', reports_dir: 'data/reports')
         session_id = current_session_id(mode: mode)
         json_file = File.join(reports_dir, "#{session_id}.json")
 
@@ -108,14 +108,14 @@ module DhanScalper
       # @param mode [String] Trading mode
       # @param starting_balance [Float] Starting balance
       # @return [Hash] Initialized session data
-      def initialize_session_data(mode: "PAPER", starting_balance: 200_000.0)
+      def initialize_session_data(mode: 'PAPER', starting_balance: 200_000.0)
         session_id = current_session_id(mode: mode)
         current_time = Time.now
 
         {
           session_id: session_id,
           trading_day: current_trading_day,
-          start_time: current_time.strftime("%Y-%m-%d %H:%M:%S"),
+          start_time: current_time.strftime('%Y-%m-%d %H:%M:%S'),
           end_time: nil,
           duration_minutes: 0.0,
           mode: mode.downcase,
@@ -138,7 +138,7 @@ module DhanScalper
           positions: [],
           trades: [],
           risk_metrics: {},
-          performance_summary: {},
+          performance_summary: {}
         }
       end
 
@@ -147,7 +147,7 @@ module DhanScalper
       # @param starting_balance [Float] Starting balance
       # @param reports_dir [String] Reports directory path
       # @return [Hash] Session data (existing or new)
-      def load_or_create_session(mode: "PAPER", starting_balance: 200_000.0, reports_dir: "data/reports")
+      def load_or_create_session(mode: 'PAPER', starting_balance: 200_000.0, reports_dir: 'data/reports')
         existing_session = get_existing_session(mode: mode, reports_dir: reports_dir)
 
         if existing_session
@@ -167,8 +167,8 @@ module DhanScalper
         start_time = Time.parse(session_data[:start_time])
 
         session_data.merge(
-          end_time: current_time.strftime("%Y-%m-%d %H:%M:%S"),
-          duration_minutes: (current_time - start_time) / 60.0,
+          end_time: current_time.strftime('%Y-%m-%d %H:%M:%S'),
+          duration_minutes: (current_time - start_time) / 60.0
         )
       end
 
@@ -181,9 +181,7 @@ module DhanScalper
         current_date = start_date
 
         while current_date <= end_date
-          unless current_date.saturday? || current_date.sunday?
-            trading_days << current_date.strftime("%Y%m%d")
-          end
+          trading_days << current_date.strftime('%Y%m%d') unless current_date.saturday? || current_date.sunday?
           current_date += 1
         end
 
@@ -195,7 +193,7 @@ module DhanScalper
       # @param mode [String] Trading mode
       # @param reports_dir [String] Reports directory path
       # @return [Array<String>] Array of session file paths
-      def get_session_files(trading_day, mode: "PAPER", reports_dir: "data/reports")
+      def get_session_files(trading_day, mode: 'PAPER', reports_dir: 'data/reports')
         session_id = "#{mode.upcase}_#{trading_day}"
         json_file = File.join(reports_dir, "#{session_id}.json")
         csv_file = File.join(reports_dir, "#{session_id}.csv")

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "concurrent"
+require 'concurrent'
 
 module DhanScalper
   class TickCache
@@ -10,7 +10,7 @@ module DhanScalper
       # Store a tick in the cache
       # @param tick [Hash] The tick data with keys like :segment, :security_id, :ltp, etc.
       def put(tick)
-        puts "Putting tick: #{tick.inspect}" if ENV["DHAN_LOG_LEVEL"] == "DEBUG"
+        puts "Putting tick: #{tick.inspect}" if ENV['DHAN_LOG_LEVEL'] == 'DEBUG'
         return unless tick.is_a?(Hash) && tick[:segment] && tick[:security_id]
 
         key = "#{tick[:segment]}:#{tick[:security_id]}"
@@ -69,7 +69,7 @@ module DhanScalper
         instruments.each do |instrument|
           segment = instrument[:segment]
           security_id = instrument[:security_id]
-          key = "#{instrument[:name] || "#{segment}:#{security_id}"}"
+          key = (instrument[:name] || "#{segment}:#{security_id}").to_s
           result[key] = get(segment, security_id)
         end
         result
@@ -94,7 +94,7 @@ module DhanScalper
           total_ticks: MAP.size,
           segments: MAP.values.map { |t| t[:segment] }.uniq,
           oldest_tick: MAP.values.filter_map { |t| t[:timestamp] }.min,
-          newest_tick: MAP.values.filter_map { |t| t[:timestamp] }.max,
+          newest_tick: MAP.values.filter_map { |t| t[:timestamp] }.max
         }
       end
 

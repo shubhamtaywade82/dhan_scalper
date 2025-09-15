@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "../support/money"
+require_relative '../support/money'
 
 module DhanScalper
   module Services
@@ -24,7 +24,7 @@ module DhanScalper
         {
           balance: balance,
           unrealized_pnl: unrealized_pnl,
-          total_equity: total_equity,
+          total_equity: total_equity
         }
       end
 
@@ -33,10 +33,10 @@ module DhanScalper
         position = @position_tracker.get_position(
           exchange_segment: exchange_segment,
           security_id: security_id,
-          side: "LONG",
+          side: 'LONG'
         )
 
-        return { success: false, error: "Position not found" } unless position
+        return { success: false, error: 'Position not found' } unless position
 
         # Calculate unrealized PnL based on option type
         current_ltp_bd = DhanScalper::Support::Money.bd(current_ltp)
@@ -45,13 +45,13 @@ module DhanScalper
         option_type = position[:option_type]
 
         # Use correct formula based on option type
-        if option_type == "PE" || option_type == "PUT"
-          # Put options: PnL = (Entry - Current) * Quantity
-          price_diff = DhanScalper::Support::Money.subtract(buy_avg_bd, current_ltp_bd)
-        else
-          # Call options (CE/CALL) or default: PnL = (Current - Entry) * Quantity
-          price_diff = DhanScalper::Support::Money.subtract(current_ltp_bd, buy_avg_bd)
-        end
+        price_diff = if %w[PE PUT].include?(option_type)
+                       # Put options: PnL = (Entry - Current) * Quantity
+                       DhanScalper::Support::Money.subtract(buy_avg_bd, current_ltp_bd)
+                     else
+                       # Call options (CE/CALL) or default: PnL = (Current - Entry) * Quantity
+                       DhanScalper::Support::Money.subtract(current_ltp_bd, buy_avg_bd)
+                     end
 
         unrealized_pnl = DhanScalper::Support::Money.multiply(price_diff, net_qty_bd)
 
@@ -59,8 +59,8 @@ module DhanScalper
         @position_tracker.update_position_unrealized_pnl(
           exchange_segment: exchange_segment,
           security_id: security_id,
-          side: "LONG",
-          unrealized_pnl: unrealized_pnl,
+          side: 'LONG',
+          unrealized_pnl: unrealized_pnl
         )
 
         @logger.info("[MTM] #{security_id} | LTP: ₹#{DhanScalper::Support::Money.dec(current_ltp_bd)} | Unrealized: ₹#{DhanScalper::Support::Money.dec(unrealized_pnl)}")
@@ -70,7 +70,7 @@ module DhanScalper
           unrealized_pnl: unrealized_pnl,
           current_ltp: current_ltp_bd,
           net_qty: net_qty_bd,
-          buy_avg: buy_avg_bd,
+          buy_avg: buy_avg_bd
         }
       end
 
@@ -95,7 +95,7 @@ module DhanScalper
           result = refresh_unrealized!(
             exchange_segment: position[:exchange_segment],
             security_id: position[:security_id],
-            current_ltp: current_ltp,
+            current_ltp: current_ltp
           )
 
           next unless result[:success]
@@ -103,7 +103,7 @@ module DhanScalper
           total_unrealized = DhanScalper::Support::Money.add(total_unrealized, result[:unrealized_pnl])
           updated_positions << {
             security_id: position[:security_id],
-            unrealized_pnl: result[:unrealized_pnl],
+            unrealized_pnl: result[:unrealized_pnl]
           }
         end
 
@@ -112,7 +112,7 @@ module DhanScalper
         {
           success: true,
           total_unrealized: total_unrealized,
-          updated_positions: updated_positions,
+          updated_positions: updated_positions
         }
       end
 
@@ -131,7 +131,7 @@ module DhanScalper
           realized_pnl: realized_pnl,
           unrealized_pnl: unrealized_pnl,
           total_equity: total_equity,
-          positions: get_position_breakdown,
+          positions: get_position_breakdown
         }
       end
 
@@ -151,13 +151,13 @@ module DhanScalper
           option_type = position[:option_type]
 
           # Use correct formula based on option type
-          if option_type == "PE" || option_type == "PUT"
-            # Put options: PnL = (Entry - Current) * Quantity
-            price_diff = DhanScalper::Support::Money.subtract(buy_avg, current_price)
-          else
-            # Call options (CE/CALL) or default: PnL = (Current - Entry) * Quantity
-            price_diff = DhanScalper::Support::Money.subtract(current_price, buy_avg)
-          end
+          price_diff = if %w[PE PUT].include?(option_type)
+                         # Put options: PnL = (Entry - Current) * Quantity
+                         DhanScalper::Support::Money.subtract(buy_avg, current_price)
+                       else
+                         # Call options (CE/CALL) or default: PnL = (Current - Entry) * Quantity
+                         DhanScalper::Support::Money.subtract(current_price, buy_avg)
+                       end
 
           unrealized = DhanScalper::Support::Money.multiply(price_diff, net_qty)
 
@@ -175,7 +175,7 @@ module DhanScalper
           current_price = position[:current_price] || position[:buy_avg]
           unrealized = DhanScalper::Support::Money.multiply(
             DhanScalper::Support::Money.subtract(current_price, position[:buy_avg]),
-            position[:net_qty],
+            position[:net_qty]
           )
 
           {
@@ -186,7 +186,7 @@ module DhanScalper
             buy_avg: position[:buy_avg],
             current_price: current_price,
             unrealized_pnl: unrealized,
-            market_value: DhanScalper::Support::Money.multiply(current_price, position[:net_qty]),
+            market_value: DhanScalper::Support::Money.multiply(current_price, position[:net_qty])
           }
         end
       end

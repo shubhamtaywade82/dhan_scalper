@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require "concurrent"
-require_relative "tick_cache"
-require_relative "position"
+require 'concurrent'
+require_relative 'tick_cache'
+require_relative 'position'
 
 module DhanScalper
   class RiskManager
@@ -15,11 +15,11 @@ module DhanScalper
       @risk_thread = nil
 
       # Risk parameters
-      @tp_pct = config.dig("global", "tp_pct") || 0.35
-      @sl_pct = config.dig("global", "sl_pct") || 0.18
-      @trail_pct = config.dig("global", "trail_pct") || 0.12
-      @charge_per_order = config.dig("global", "charge_per_order") || 20.0
-      @risk_check_interval = config.dig("global", "risk_check_interval") || 1
+      @tp_pct = config.dig('global', 'tp_pct') || 0.35
+      @sl_pct = config.dig('global', 'sl_pct') || 0.18
+      @trail_pct = config.dig('global', 'trail_pct') || 0.12
+      @charge_per_order = config.dig('global', 'charge_per_order') || 20.0
+      @risk_check_interval = config.dig('global', 'risk_check_interval') || 1
 
       # Position tracking for trailing stops
       @position_highs = Concurrent::Map.new
@@ -41,7 +41,7 @@ module DhanScalper
 
       @running = false
       @risk_thread&.join(2)
-      @logger.info "[RISK] Risk management stopped"
+      @logger.info '[RISK] Risk management stopped'
     end
 
     def running?
@@ -103,7 +103,7 @@ module DhanScalper
 
     def get_current_price(security_id)
       # Try to get price from tick cache first
-      price = TickCache.ltp("NSE_FNO", security_id)
+      price = TickCache.ltp('NSE_FNO', security_id)
       return price if price&.positive?
 
       # Fallback: try to get from broker or API
@@ -136,13 +136,13 @@ module DhanScalper
       security_id = position[:security_id]
 
       # Take Profit
-      return "TP" if pnl_pct >= (@tp_pct * 100)
+      return 'TP' if pnl_pct >= (@tp_pct * 100)
 
       # Stop Loss
-      return "SL" if pnl_pct <= -(@sl_pct * 100)
+      return 'SL' if pnl_pct <= -(@sl_pct * 100)
 
       # Trailing Stop
-      return "TRAIL" if should_trail_stop?(position, current_price, security_id)
+      return 'TRAIL' if should_trail_stop?(position, current_price, security_id)
 
       # Session target reached (this would need to be passed from the main app)
       # For now, we'll skip this check as it's handled at a higher level
@@ -176,9 +176,9 @@ module DhanScalper
       begin
         # Place sell order
         order = @broker.sell_market(
-          segment: "NSE_FNO",
+          segment: 'NSE_FNO',
           security_id: security_id,
-          quantity: quantity,
+          quantity: quantity
         )
 
         if order
@@ -190,7 +190,7 @@ module DhanScalper
                                              exit_price: current_price,
                                              exit_reason: reason,
                                              final_pnl: final_pnl,
-                                             exit_timestamp: Time.now,
+                                             exit_timestamp: Time.now
                                            })
 
           @logger.info "[RISK] Position closed: #{position[:symbol]} " \

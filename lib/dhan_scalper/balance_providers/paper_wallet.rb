@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-require "csv"
-require_relative "base"
-require_relative "../support/money"
-require_relative "../support/logger"
-require_relative "../support/validations"
-require_relative "../stores/redis_store"
+require 'csv'
+require_relative 'base'
+require_relative '../support/money'
+require_relative '../support/logger'
+require_relative '../support/validations'
+require_relative '../stores/redis_store'
 
 module DhanScalper
   module BalanceProviders
@@ -35,7 +35,7 @@ module DhanScalper
         available = total - used
         DhanScalper::Support::Logger.debug(
           "Calculated available balance - total: #{total}, used: #{used}, available: #{available}",
-          component: "PaperWallet",
+          component: 'PaperWallet'
         )
         available
       end
@@ -48,7 +48,7 @@ module DhanScalper
           "Total balance calculated - starting: #{DhanScalper::Support::Money.dec(@starting_balance)}, " \
           "realized_pnl: #{DhanScalper::Support::Money.dec(@realized_pnl)}, " \
           "result: #{DhanScalper::Support::Money.dec(result)}",
-          component: "PaperWallet",
+          component: 'PaperWallet'
         )
         DhanScalper::Support::Money.dec(result).to_f
       end
@@ -56,7 +56,7 @@ module DhanScalper
       def used_balance
         # Use internal state if it has been updated (non-zero used balance)
         # Otherwise fall back to session report calculation (for CLI commands with no activity)
-        if @used > 0
+        if @used.positive?
           # Internal state has been updated, use it
           DhanScalper::Support::Money.dec(@used).to_f
         else
@@ -69,21 +69,19 @@ module DhanScalper
         amount_bd = DhanScalper::Support::Money.bd(amount)
 
         # Skip validation for zero or negative amounts in edge cases
-        unless amount == 0 || amount < 0
-          DhanScalper::Support::Validations.validate_price_positive(amount)
-        end
+        DhanScalper::Support::Validations.validate_price_positive(amount) unless amount.zero? || amount.negative?
 
         DhanScalper::Support::Logger.debug(
           "Updating balance - amount: #{DhanScalper::Support::Money.dec(amount_bd)}, " \
           "type: #{type}, available before: #{DhanScalper::Support::Money.dec(@available)}, " \
           "used before: #{DhanScalper::Support::Money.dec(@used)}",
-          component: "PaperWallet",
+          component: 'PaperWallet'
         )
 
         case type
         when :debit
           # For debit, validate sufficient balance but allow going to zero
-          if amount > 0
+          if amount.positive?
             # Check if we have sufficient balance, if not, use all available
             if DhanScalper::Support::Money.less_than?(@available, amount_bd)
               # Not enough balance, use all available
@@ -94,23 +92,23 @@ module DhanScalper
               @available = DhanScalper::Support::Money.subtract(@available, amount_bd)
               @used = DhanScalper::Support::Money.add(@used, amount_bd)
             end
-          elsif amount < 0
+          elsif amount.negative?
             # Handle negative amounts as credits (but only if there's used balance)
-            if @used > 0
+            if @used.positive?
               credit_amount = DhanScalper::Support::Money.min(amount_bd.abs, @used)
               @used = DhanScalper::Support::Money.subtract(@used, credit_amount)
               @available = DhanScalper::Support::Money.add(@available, credit_amount)
             end
           end
         when :credit
-          if amount > 0
+          if amount.positive?
             # For credit, only release used balance, don't add extra money
-            if @used > 0
+            if @used.positive?
               credit_amount = DhanScalper::Support::Money.min(amount_bd, @used)
               @used = DhanScalper::Support::Money.subtract(@used, credit_amount)
               @available = DhanScalper::Support::Money.add(@available, credit_amount)
             end
-          elsif amount < 0
+          elsif amount.negative?
             # Handle negative amounts as debits
             if DhanScalper::Support::Money.less_than?(@available, amount_bd.abs)
               # Not enough balance, use all available
@@ -140,7 +138,7 @@ module DhanScalper
           "Balance updated - available after: #{DhanScalper::Support::Money.dec(@available)}, " \
           "used after: #{DhanScalper::Support::Money.dec(@used)}, " \
           "total: #{DhanScalper::Support::Money.dec(@total)}",
-          component: "PaperWallet",
+          component: 'PaperWallet'
         )
         @total
       end
@@ -156,7 +154,7 @@ module DhanScalper
         DhanScalper::Support::Logger.debug(
           "Debiting for buy - principal: #{DhanScalper::Support::Money.dec(principal_bd)}, " \
           "fee: #{DhanScalper::Support::Money.dec(fee_bd)}",
-          component: "PaperWallet",
+          component: 'PaperWallet'
         )
 
         total_cost = DhanScalper::Support::Money.add(principal_bd, fee_bd)
@@ -173,7 +171,7 @@ module DhanScalper
           "Buy debit completed - available: #{DhanScalper::Support::Money.dec(@available)}, " \
           "used: #{DhanScalper::Support::Money.dec(@used)}, " \
           "total: #{DhanScalper::Support::Money.dec(@total)}",
-          component: "PaperWallet",
+          component: 'PaperWallet'
         )
         @total
       end
@@ -186,7 +184,7 @@ module DhanScalper
         DhanScalper::Support::Logger.debug(
           "Crediting for sell - net_proceeds: #{DhanScalper::Support::Money.dec(net_bd)}, " \
           "released_principal: #{DhanScalper::Support::Money.dec(released_bd)}",
-          component: "PaperWallet",
+          component: 'PaperWallet'
         )
 
         # Credit the actual cash received from the sale
@@ -206,7 +204,7 @@ module DhanScalper
           "Sell credit completed - available: #{DhanScalper::Support::Money.dec(@available)}, " \
           "used: #{DhanScalper::Support::Money.dec(@used)}, " \
           "total: #{DhanScalper::Support::Money.dec(@total)}",
-          component: "PaperWallet",
+          component: 'PaperWallet'
         )
         @total
       end
@@ -229,7 +227,7 @@ module DhanScalper
         unrealized_pnl_bd = DhanScalper::Support::Money.bd(unrealized_pnl)
         @total = DhanScalper::Support::Money.add(
           DhanScalper::Support::Money.add(@starting_balance, @realized_pnl),
-          unrealized_pnl_bd,
+          unrealized_pnl_bd
         )
         @total
       end
@@ -246,7 +244,7 @@ module DhanScalper
         DhanScalper::Support::Logger.debug(
           "Added realized PnL: #{DhanScalper::Support::Money.dec(pnl)}, " \
           "realized_pnl now: #{DhanScalper::Support::Money.dec(@realized_pnl)}",
-          component: "PaperWallet",
+          component: 'PaperWallet'
         )
         @total
       end
@@ -265,7 +263,7 @@ module DhanScalper
         DhanScalper::Support::Logger.debug(
           "Added to used balance - amount: #{DhanScalper::Support::Money.dec(amount_bd)}, " \
           "used after: #{DhanScalper::Support::Money.dec(@used)}",
-          component: "PaperWallet",
+          component: 'PaperWallet'
         )
         @total
       end
@@ -278,9 +276,9 @@ module DhanScalper
 
       private
 
-        def generate_session_id
-          "PAPER_#{Time.now.strftime("%Y%m%d")}"
-        end
+      def generate_session_id
+        "PAPER_#{Time.now.strftime('%Y%m%d')}"
+      end
 
       def load_balance_from_redis
         key = "dhan_scalper:v1:balance:#{@session_id}"
@@ -298,10 +296,10 @@ module DhanScalper
           save_balance_to_redis
         else
           # Load from Redis
-          @available = DhanScalper::Support::Money.bd(balance_data["available"] || @starting_balance)
-          @used = DhanScalper::Support::Money.bd(balance_data["used"] || 0)
-          @total = DhanScalper::Support::Money.bd(balance_data["total"] || @starting_balance)
-          @realized_pnl = DhanScalper::Support::Money.bd(balance_data["realized_pnl"] || 0)
+          @available = DhanScalper::Support::Money.bd(balance_data['available'] || @starting_balance)
+          @used = DhanScalper::Support::Money.bd(balance_data['used'] || 0)
+          @total = DhanScalper::Support::Money.bd(balance_data['total'] || @starting_balance)
+          @realized_pnl = DhanScalper::Support::Money.bd(balance_data['realized_pnl'] || 0)
         end
 
         DhanScalper::Support::Logger.debug(
@@ -309,7 +307,7 @@ module DhanScalper
           "used: #{DhanScalper::Support::Money.dec(@used)}, " \
           "total: #{DhanScalper::Support::Money.dec(@total)}, " \
           "realized_pnl: #{DhanScalper::Support::Money.dec(@realized_pnl)}",
-          component: "PaperWallet",
+          component: 'PaperWallet'
         )
       end
 
@@ -322,7 +320,7 @@ module DhanScalper
           total: DhanScalper::Support::Money.dec(@total).to_s,
           realized_pnl: DhanScalper::Support::Money.dec(@realized_pnl).to_s,
           starting_balance: DhanScalper::Support::Money.dec(@starting_balance).to_s,
-          last_updated: Time.now.iso8601,
+          last_updated: Time.now.iso8601
         }
 
         @redis_store.redis.hset(key, balance_data)
@@ -330,7 +328,7 @@ module DhanScalper
 
         DhanScalper::Support::Logger.debug(
           "Saved balance to Redis - key: #{key}",
-          component: "PaperWallet",
+          component: 'PaperWallet'
         )
       end
 
@@ -341,8 +339,8 @@ module DhanScalper
 
         # Calculate position values
         position_values = positions.sum do |position|
-          quantity = position[:quantity] || position["quantity"] || 0
-          entry_price = position[:entry_price] || position["entry_price"] || 0
+          quantity = position[:quantity] || position['quantity'] || 0
+          entry_price = position[:entry_price] || position['entry_price'] || 0
           quantity * entry_price
         end
 
@@ -354,7 +352,7 @@ module DhanScalper
 
         DhanScalper::Support::Logger.debug(
           "Calculated used balance - positions: #{position_values}, fees: #{total_fees}, total: #{total_used}",
-          component: "PaperWallet",
+          component: 'PaperWallet'
         )
 
         total_used.to_f
@@ -362,7 +360,7 @@ module DhanScalper
 
       def get_positions_from_session_report
         # Find the latest session CSV file directly
-        csv_files = Dir.glob(File.join("data/reports", "*.csv"))
+        csv_files = Dir.glob(File.join('data/reports', '*.csv'))
         return [] if csv_files.empty?
 
         latest_file = csv_files.max_by { |f| File.mtime(f) }
@@ -375,7 +373,7 @@ module DhanScalper
         # Find the positions section
         positions_start = nil
         lines.each_with_index do |line, index|
-          if line.strip == "POSITIONS"
+          if line.strip == 'POSITIONS'
             positions_start = index + 2 # Skip the header line
             break
           end
@@ -386,9 +384,9 @@ module DhanScalper
         # Parse position data
         (positions_start...lines.length).each do |i|
           line = lines[i].strip
-          break if line.empty? || line.start_with?("TRADES")
+          break if line.empty? || line.start_with?('TRADES')
 
-          parts = line.split(",")
+          parts = line.split(',')
           next if parts.length < 8
 
           positions << {
@@ -399,7 +397,7 @@ module DhanScalper
             entry_price: parts[4].to_f,
             current_price: parts[5].to_f,
             pnl: parts[6].to_f,
-            created_at: parts[7],
+            created_at: parts[7]
           }
         end
 
@@ -407,7 +405,7 @@ module DhanScalper
       rescue StandardError => e
         DhanScalper::Support::Logger.debug(
           "Failed to get positions from session report: #{e.message}",
-          component: "PaperWallet",
+          component: 'PaperWallet'
         )
         []
       end

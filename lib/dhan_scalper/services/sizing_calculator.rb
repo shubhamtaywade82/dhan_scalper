@@ -11,14 +11,14 @@ module DhanScalper
       end
 
       # symbol: e.g., "NIFTY"; premium: option premium (Float); side: "BUY"/"SELL"
-      def calculate(symbol:, premium:, side: "BUY")
-        sym_cfg = @config.dig("SYMBOLS", symbol)
+      def calculate(symbol:, premium:, side: 'BUY')
+        sym_cfg = @config.dig('SYMBOLS', symbol)
         return { quantity: 0, lots: 0, reason: :missing_symbol_config } unless sym_cfg
 
-        lot_size = Integer(sym_cfg["lot_size"] || 50)
-        allocation_pct = (@config.dig("global", "allocation_pct") || 0.1).to_f
-        slippage_pct = (@config.dig("global", "slippage_buffer_pct") || 0.02).to_f
-        available_funds = (@config.dig("global", "paper_wallet_rupees") || 200_000).to_f
+        lot_size = Integer(sym_cfg['lot_size'] || 50)
+        allocation_pct = (@config.dig('global', 'allocation_pct') || 0.1).to_f
+        slippage_pct = (@config.dig('global', 'slippage_buffer_pct') || 0.02).to_f
+        available_funds = (@config.dig('global', 'paper_wallet_rupees') || 200_000).to_f
 
         eff_price = premium * (1.0 + slippage_pct)
         per_lot_cost = eff_price * lot_size

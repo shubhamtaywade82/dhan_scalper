@@ -4,7 +4,7 @@ module TestHelpers
   # Helper methods for setting up test environments
   def setup_paper_trading_mocks
     # Mock WebSocket Manager
-    mock_ws_manager = double("WebSocketManager")
+    mock_ws_manager = double('WebSocketManager')
     allow(mock_ws_manager).to receive(:connect)
     allow(mock_ws_manager).to receive(:connected?).and_return(true)
     allow(mock_ws_manager).to receive(:on_price_update)
@@ -15,52 +15,47 @@ module TestHelpers
 
   def setup_csv_master_mocks
     # Mock CSV Master
-    mock_csv_master = double("CsvMaster")
-    allow(mock_csv_master).to receive(:get_expiry_dates).and_return(["2024-12-26"])
-    allow(mock_csv_master).to receive(:get_security_id).and_return("TEST123")
-    allow(mock_csv_master).to receive(:get_lot_size).and_return(75)
-    allow(mock_csv_master).to receive(:get_instruments_with_segments).and_return([])
+    mock_csv_master = double('CsvMaster')
+    allow(mock_csv_master).to receive_messages(get_expiry_dates: ['2024-12-26'], get_security_id: 'TEST123',
+                                               get_lot_size: 75, get_instruments_with_segments: [])
     mock_csv_master
   end
 
   def setup_broker_mocks
     # Mock Paper Broker
-    mock_broker = double("PaperBroker")
+    mock_broker = double('PaperBroker')
     allow(mock_broker).to receive(:place_order).and_return({
                                                              success: true,
-                                                             order_id: "P-1234567890",
-                                                             order: double("Order", quantity: 75, price: 150.0),
-                                                             position: double("Position", security_id: "TEST123"),
+                                                             order_id: 'P-1234567890',
+                                                             order: double('Order', quantity: 75, price: 150.0),
+                                                             position: double('Position', security_id: 'TEST123')
                                                            })
     mock_broker
   end
 
   def setup_position_tracker_mocks
     # Mock Position Tracker
-    mock_position_tracker = double("PaperPositionTracker")
+    mock_position_tracker = double('PaperPositionTracker')
     allow(mock_position_tracker).to receive(:setup_websocket_handlers)
     allow(mock_position_tracker).to receive(:add_position)
     allow(mock_position_tracker).to receive(:remove_position)
-    allow(mock_position_tracker).to receive(:get_total_pnl).and_return(0.0)
-    allow(mock_position_tracker).to receive(:get_positions_summary).and_return({
-                                                                                 total_positions: 0,
-                                                                                 open_positions: 0,
-                                                                                 closed_positions: 0,
-                                                                                 total_pnl: 0.0,
-                                                                                 winning_trades: 0,
-                                                                                 losing_trades: 0,
-                                                                               })
-    allow(mock_position_tracker).to receive(:get_underlying_price).and_return(25_000.0)
+    allow(mock_position_tracker).to receive_messages(get_total_pnl: 0.0, get_positions_summary: {
+                                                       total_positions: 0,
+                                                       open_positions: 0,
+                                                       closed_positions: 0,
+                                                       total_pnl: 0.0,
+                                                       winning_trades: 0,
+                                                       losing_trades: 0
+                                                     }, get_underlying_price: 25_000.0)
     allow(mock_position_tracker).to receive(:handle_price_update)
     mock_position_tracker
   end
 
   def setup_balance_provider_mocks
     # Mock Balance Provider
-    mock_balance_provider = double("PaperWallet")
-    allow(mock_balance_provider).to receive(:available_balance).and_return(200_000.0)
-    allow(mock_balance_provider).to receive(:used_balance).and_return(0.0)
-    allow(mock_balance_provider).to receive(:total_balance).and_return(200_000.0)
+    mock_balance_provider = double('PaperWallet')
+    allow(mock_balance_provider).to receive_messages(available_balance: 200_000.0, used_balance: 0.0,
+                                                     total_balance: 200_000.0)
     allow(mock_balance_provider).to receive(:update_balance)
     allow(mock_balance_provider).to receive(:add_realized_pnl)
     mock_balance_provider
@@ -68,28 +63,25 @@ module TestHelpers
 
   def setup_tick_cache_mocks
     # Mock TickCache
-    allow(DhanScalper::TickCache).to receive(:ltp).and_return(25_000.0)
     allow(DhanScalper::TickCache).to receive(:put)
-    allow(DhanScalper::TickCache).to receive(:get).and_return(TestData::SAMPLE_TICK_DATA)
-    allow(DhanScalper::TickCache).to receive(:fresh?).and_return(true)
+    allow(DhanScalper::TickCache).to receive_messages(ltp: 25_000.0, get: TestData::SAMPLE_TICK_DATA, fresh?: true)
   end
 
   def setup_candle_series_mocks
     # Mock CandleSeries
-    mock_candle_series = double("CandleSeries")
-    allow(mock_candle_series).to receive(:holy_grail).and_return(TestData::SAMPLE_HOLY_GRAIL_SIGNAL)
-    allow(mock_candle_series).to receive(:supertrend_signal).and_return(:bullish)
-    allow(mock_candle_series).to receive(:candles).and_return(TestData::SAMPLE_CANDLES)
-    allow(mock_candle_series).to receive(:to_hash).and_return({
-                                                                timestamps: TestData::SAMPLE_CANDLES.map do |c|
-                                                                  c[:timestamp]
-                                                                end,
-                                                                opens: TestData::SAMPLE_CANDLES.map { |c| c[:open] },
-                                                                highs: TestData::SAMPLE_CANDLES.map { |c| c[:high] },
-                                                                lows: TestData::SAMPLE_CANDLES.map { |c| c[:low] },
-                                                                closes: TestData::SAMPLE_CANDLES.map { |c| c[:close] },
-                                                                volumes: TestData::SAMPLE_CANDLES.map { |c| c[:volume] },
-                                                              })
+    mock_candle_series = double('CandleSeries')
+    allow(mock_candle_series).to receive_messages(holy_grail: TestData::SAMPLE_HOLY_GRAIL_SIGNAL, supertrend_signal: :bullish, candles: TestData::SAMPLE_CANDLES, to_hash: {
+                                                    timestamps: TestData::SAMPLE_CANDLES.map do |c|
+                                                      c[:timestamp]
+                                                    end,
+                                                    opens: TestData::SAMPLE_CANDLES.map { |c| c[:open] },
+                                                    highs: TestData::SAMPLE_CANDLES.map { |c| c[:high] },
+                                                    lows: TestData::SAMPLE_CANDLES.map { |c| c[:low] },
+                                                    closes: TestData::SAMPLE_CANDLES.map { |c| c[:close] },
+                                                    volumes: TestData::SAMPLE_CANDLES.map do |c|
+                                                      c[:volume]
+                                                    end
+                                                  })
     allow(DhanScalper::CandleSeries).to receive(:load_from_dhan_intraday).and_return(mock_candle_series)
   end
 
@@ -97,26 +89,25 @@ module TestHelpers
     # Mock DhanHQ configuration
     allow(DhanScalper::Services::DhanHQConfig).to receive(:validate!)
     allow(DhanScalper::Services::DhanHQConfig).to receive(:configure)
-    allow(DhanScalper::Services::DhanHQConfig).to receive(:configured?).and_return(true)
-    allow(DhanScalper::Services::DhanHQConfig).to receive(:status).and_return({
-                                                                                configured: true,
-                                                                                client_id: "TEST_CLIENT_ID",
-                                                                                access_token: "TEST_ACCESS_TOKEN",
-                                                                              })
+    allow(DhanScalper::Services::DhanHQConfig).to receive_messages(configured?: true, status: {
+                                                                     configured: true,
+                                                                     client_id: 'TEST_CLIENT_ID',
+                                                                     access_token: 'TEST_ACCESS_TOKEN'
+                                                                   })
   end
 
   def setup_redis_mocks
     # Mock Redis
-    mock_redis = double("Redis")
+    mock_redis = double('Redis')
     allow(mock_redis).to receive(:hset)
     allow(mock_redis).to receive(:hget)
     allow(mock_redis).to receive(:expire)
-    allow(mock_redis).to receive(:ping).and_return("PONG")
+    allow(mock_redis).to receive(:ping).and_return('PONG')
     allow(mock_redis).to receive(:close)
     allow(mock_redis).to receive(:disconnect)
 
     # Mock RedisStore
-    mock_redis_store = double("RedisStore")
+    mock_redis_store = double('RedisStore')
     allow(mock_redis_store).to receive(:redis).and_return(mock_redis)
     allow(mock_redis_store).to receive(:store_tick)
     allow(mock_redis_store).to receive(:get_tick)
@@ -132,7 +123,7 @@ module TestHelpers
       holy_grail_signal: :bullish,
       trend_analysis: :bullish,
       option_premium: 150.0,
-      expected_trade: :buy_ce,
+      expected_trade: :buy_ce
     }
   end
 
@@ -142,7 +133,7 @@ module TestHelpers
       holy_grail_signal: :bearish,
       trend_analysis: :bearish,
       option_premium: 120.0,
-      expected_trade: :buy_pe,
+      expected_trade: :buy_pe
     }
   end
 
@@ -152,7 +143,7 @@ module TestHelpers
       holy_grail_signal: :none,
       trend_analysis: :none,
       option_premium: 135.0,
-      expected_trade: :none,
+      expected_trade: :none
     }
   end
 
@@ -162,7 +153,7 @@ module TestHelpers
       current_price: 200.0,
       quantity: 75,
       expected_pnl: 3_750.0,
-      expected_pnl_pct: 33.33,
+      expected_pnl_pct: 33.33
     }
   end
 
@@ -172,7 +163,7 @@ module TestHelpers
       current_price: 100.0,
       quantity: 75,
       expected_pnl: -3_750.0,
-      expected_pnl_pct: -33.33,
+      expected_pnl_pct: -33.33
     }
   end
 
@@ -180,7 +171,7 @@ module TestHelpers
     {
       total_pnl: -6_000.0,
       max_day_loss: 5_000.0,
-      should_trigger: true,
+      should_trigger: true
     }
   end
 
@@ -188,7 +179,7 @@ module TestHelpers
     {
       current_positions: 5,
       max_positions: 5,
-      should_allow_new: false,
+      should_allow_new: false
     }
   end
 
@@ -204,9 +195,9 @@ module TestHelpers
     count.times do |i|
       price_data = {
         instrument_id: "TEST#{i % 10}",
-        segment: "NSE_FNO",
+        segment: 'NSE_FNO',
         ltp: 150.0 + i,
-        timestamp: Time.now.to_i,
+        timestamp: Time.now.to_i
       }
       app.send(:handle_price_update, price_data)
     end
@@ -259,7 +250,7 @@ module TestHelpers
       :total_trades, :successful_trades, :failed_trades, :total_pnl
     )
     expect(session_data[:total_trades]).to eq(
-      session_data[:successful_trades] + session_data[:failed_trades],
+      session_data[:successful_trades] + session_data[:failed_trades]
     )
     expect(session_data[:successful_trades]).to be >= 0
     expect(session_data[:failed_trades]).to be >= 0
@@ -273,14 +264,14 @@ module TestHelpers
 
   def simulate_api_rate_limiting(app)
     allow(app).to receive(:get_holy_grail_signal).and_raise(
-      StandardError, "Rate limit exceeded"
+      StandardError, 'Rate limit exceeded'
     )
   end
 
   def simulate_csv_loading_failure(app)
     mock_csv_master = app.instance_variable_get(:@csv_master)
     allow(mock_csv_master).to receive(:get_expiry_dates).and_raise(
-      StandardError, "CSV loading failed"
+      StandardError, 'CSV loading failed'
     )
   end
 
@@ -291,16 +282,16 @@ module TestHelpers
 
   # Helper methods for cleanup
   def cleanup_test_data
-    FileUtils.rm_rf("test_data") if File.directory?("test_data")
-    FileUtils.rm_rf("data") if File.directory?("data")
+    FileUtils.rm_rf('test_data') if File.directory?('test_data')
+    FileUtils.rm_rf('data') if File.directory?('data')
     GC.start
   end
 
   def reset_environment_variables
-    ENV.delete("SCALPER_CONFIG")
-    ENV.delete("CLIENT_ID")
-    ENV.delete("ACCESS_TOKEN")
-    ENV.delete("TICK_CACHE_BACKEND")
+    ENV.delete('SCALPER_CONFIG')
+    ENV.delete('CLIENT_ID')
+    ENV.delete('ACCESS_TOKEN')
+    ENV.delete('TICK_CACHE_BACKEND')
   end
 
   # Helper methods for assertions
@@ -338,19 +329,19 @@ module TestHelpers
 
   # Helper methods for logging and debugging
   def log_test_progress(message)
-    puts "[TEST] #{message}" if ENV["VERBOSE_TESTS"]
+    puts "[TEST] #{message}" if ENV['VERBOSE_TESTS']
   end
 
   def log_performance_metrics(operation, duration, count = 1)
     avg_duration = duration / count
-    return unless ENV["VERBOSE_TESTS"]
+    return unless ENV['VERBOSE_TESTS']
 
     puts "[PERF] #{operation}: #{duration.round(3)}s total, #{avg_duration.round(3)}s avg (#{count} operations)"
   end
 
   def log_memory_usage
     memory_kb = `ps -o rss= -p #{Process.pid}`.to_i
-    puts "[MEMORY] Current usage: #{memory_kb} KB" if ENV["VERBOSE_TESTS"]
+    puts "[MEMORY] Current usage: #{memory_kb} KB" if ENV['VERBOSE_TESTS']
   end
 end
 

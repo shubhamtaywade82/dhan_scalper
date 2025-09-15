@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require "csv"
-require "date"
-require_relative "../stores/redis_store"
+require 'csv'
+require 'date'
+require_relative '../stores/redis_store'
 
 module DhanScalper
   module Services
@@ -16,8 +16,8 @@ module DhanScalper
         since_date, since_ts = parse_date(date_str)
 
         redis_store = DhanScalper::Stores::RedisStore.new(
-          namespace: "dhan_scalper:v1",
-          logger: @logger,
+          namespace: 'dhan_scalper:v1',
+          logger: @logger
         )
 
         begin
@@ -42,7 +42,7 @@ module DhanScalper
       def parse_date(date_str)
         [Date.parse(date_str), Date.parse(date_str).to_time.to_i]
       rescue ArgumentError
-        raise ArgumentError, "Invalid date format. Use YYYY-MM-DD"
+        raise ArgumentError, 'Invalid date format. Use YYYY-MM-DD'
       end
 
       def filter_ticks(redis_store, keys, since_ts)
@@ -50,39 +50,40 @@ module DhanScalper
           info = redis_store.redis.hgetall(key)
           next if info.empty?
 
-          ts = info["ts"]&.to_i
+          ts = info['ts']&.to_i
           next unless ts && ts >= since_ts
 
-          parts = key.split(":")
+          parts = key.split(':')
           {
-            timestamp: Time.at(ts).strftime("%Y-%m-%d %H:%M:%S"),
+            timestamp: Time.at(ts).strftime('%Y-%m-%d %H:%M:%S'),
             segment: parts[-2],
             security_id: parts[-1],
-            ltp: info["ltp"],
-            day_high: info["day_high"],
-            day_low: info["day_low"],
-            atp: info["atp"],
-            volume: info["vol"],
+            ltp: info['ltp'],
+            day_high: info['day_high'],
+            day_low: info['day_low'],
+            atp: info['atp'],
+            volume: info['vol']
           }
         end
       end
 
       def write_csv(since_date, ticks)
-        filename = "export_#{since_date.strftime("%Y%m%d")}_#{Time.now.strftime("%H%M%S")}.csv"
-        CSV.open(filename, "w") do |csv|
-          csv << ["Timestamp", "Segment", "Security ID", "LTP", "Day High", "Day Low", "ATP", "Volume"]
+        filename = "export_#{since_date.strftime('%Y%m%d')}_#{Time.now.strftime('%H%M%S')}.csv"
+        CSV.open(filename, 'w') do |csv|
+          csv << ['Timestamp', 'Segment', 'Security ID', 'LTP', 'Day High', 'Day Low', 'ATP', 'Volume']
           ticks.each do |t|
-            csv << [t[:timestamp], t[:segment], t[:security_id], t[:ltp], t[:day_high], t[:day_low], t[:atp], t[:volume]]
+            csv << [t[:timestamp], t[:segment], t[:security_id], t[:ltp], t[:day_high], t[:day_low], t[:atp],
+                    t[:volume]]
           end
         end
         filename
       end
 
       def print_summary(file, tick_data, since_date)
-        puts "Export completed:"
+        puts 'Export completed:'
         puts "  File: #{file}"
         puts "  Records: #{tick_data.size}"
-        puts "  Since: #{since_date.strftime("%Y-%m-%d")}"
+        puts "  Since: #{since_date.strftime('%Y-%m-%d')}"
         puts "  Period: #{tick_data.first&.dig(:timestamp)} to #{tick_data.last&.dig(:timestamp)}"
       end
     end

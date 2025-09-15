@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "../support/application_service"
+require_relative '../support/application_service'
 
 module DhanScalper
   module Services
@@ -29,21 +29,21 @@ module DhanScalper
         return false if current_time.saturday? || current_time.sunday?
 
         # Get market hours from config or use defaults
-        session_hours = @config.dig("global", "session_hours") || ["09:15", "15:30"]
+        session_hours = @config.dig('global', 'session_hours') || ['09:15', '15:30']
         start_time_str, end_time_str = session_hours
 
         # Parse market hours
         market_start = Time.new(current_date.year, current_date.month, current_date.day,
-                                start_time_str.split(":")[0].to_i,
-                                start_time_str.split(":")[1].to_i, 0)
+                                start_time_str.split(':')[0].to_i,
+                                start_time_str.split(':')[1].to_i, 0)
         market_end = Time.new(current_date.year, current_date.month, current_date.day,
-                              end_time_str.split(":")[0].to_i,
-                              end_time_str.split(":")[1].to_i, 0)
+                              end_time_str.split(':')[0].to_i,
+                              end_time_str.split(':')[1].to_i, 0)
 
         # Check if current time is within market hours
         is_open = current_time.between?(market_start, market_end)
 
-        @logger.debug "[MARKET_HOURS] Market #{is_open ? "open" : "closed"} (#{current_time.strftime("%H:%M:%S")} between #{start_time_str}-#{end_time_str})" if @logger
+        @logger&.debug "[MARKET_HOURS] Market #{is_open ? 'open' : 'closed'} (#{current_time.strftime('%H:%M:%S')} between #{start_time_str}-#{end_time_str})"
         is_open
       end
 
@@ -51,11 +51,11 @@ module DhanScalper
       # @return [Boolean] true if market hours should be enforced
       def market_hours_enforced?
         # Check environment variable first
-        env_setting = ENV.fetch("ENFORCE_MARKET_HOURS", nil)
-        return env_setting.downcase == "true" if env_setting
+        env_setting = ENV.fetch('ENFORCE_MARKET_HOURS', nil)
+        return env_setting.downcase == 'true' if env_setting
 
         # Check config setting
-        config_setting = @config.dig("global", "enforce_market_hours")
+        config_setting = @config.dig('global', 'enforce_market_hours')
         return config_setting == true unless config_setting.nil?
 
         # Default to true (enforce market hours)
@@ -66,9 +66,9 @@ module DhanScalper
       # @return [String] Human-readable market status
       def market_status
         if market_hours_enforced?
-          market_open? ? "Market is OPEN" : "Market is CLOSED"
+          market_open? ? 'Market is OPEN' : 'Market is CLOSED'
         else
-          "Market hours enforcement DISABLED - trading allowed 24/7"
+          'Market hours enforcement DISABLED - trading allowed 24/7'
         end
       end
 
@@ -88,18 +88,18 @@ module DhanScalper
         end
 
         # Get market start time
-        session_hours = @config.dig("global", "session_hours") || ["09:15", "15:30"]
+        session_hours = @config.dig('global', 'session_hours') || ['09:15', '15:30']
         start_time_str = session_hours[0]
 
         next_market_open = Time.new(next_trading_date.year, next_trading_date.month, next_trading_date.day,
-                                    start_time_str.split(":")[0].to_i,
-                                    start_time_str.split(":")[1].to_i, 0)
+                                    start_time_str.split(':')[0].to_i,
+                                    start_time_str.split(':')[1].to_i, 0)
 
         # If it's the same day and we're before market close, market opens tomorrow
         if current_date == next_trading_date && current_time.hour < 15
           next_market_open = Time.new(current_date.year, current_date.month, current_date.day,
-                                      start_time_str.split(":")[0].to_i,
-                                      start_time_str.split(":")[1].to_i, 0)
+                                      start_time_str.split(':')[0].to_i,
+                                      start_time_str.split(':')[1].to_i, 0)
         end
 
         time_diff = next_market_open - current_time

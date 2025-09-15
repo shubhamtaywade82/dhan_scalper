@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
-require "json"
-require "csv"
-require "terminal-table"
-require_relative "../virtual_data_manager"
-require_relative "session_reporter"
+require 'json'
+require 'csv'
+require 'terminal-table'
+require_relative '../virtual_data_manager'
+require_relative 'session_reporter'
 
 module DhanScalper
   module Services
@@ -26,9 +26,9 @@ module DhanScalper
       end
 
       def format_timestamp(timestamp)
-        return "N/A" unless timestamp
+        return 'N/A' unless timestamp
 
-        Time.at(timestamp).strftime("%Y-%m-%d %H:%M:%S")
+        Time.at(timestamp).strftime('%Y-%m-%d %H:%M:%S')
       end
 
       def create_table(headers, rows, title: nil)
@@ -41,11 +41,11 @@ module DhanScalper
 
     # Service for handling orders display
     class OrdersService < BaseCLIService
-      def display_orders(mode: "paper", limit: 10)
+      def display_orders(mode: 'paper', limit: 10)
         case mode.downcase
-        when "paper"
+        when 'paper'
           display_paper_orders(limit)
-        when "live"
+        when 'live'
           display_live_orders(limit)
         else
           raise ArgumentError, "Invalid mode: #{mode}. Use 'paper' or 'live'"
@@ -64,11 +64,11 @@ module DhanScalper
         end
 
         if orders.empty?
-          puts "No orders"
+          puts 'No orders'
           return
         end
 
-        if @options[:format] == "json"
+        if @options[:format] == 'json'
           display_orders_json(orders)
         else
           display_orders_table(orders)
@@ -78,24 +78,24 @@ module DhanScalper
       def display_live_orders(_limit)
         # For live mode, we would need to implement live order fetching
         # This would require integration with DhanHQ API
-        puts "Live orders not yet implemented"
-        puts "This would require DhanHQ API integration for order history"
+        puts 'Live orders not yet implemented'
+        puts 'This would require DhanHQ API integration for order history'
       rescue StandardError => e
         puts "Error fetching live orders: #{e.message}"
       end
 
       def display_orders_table(orders)
-        headers = ["#", "Order ID", "Symbol", "Action", "Quantity", "Price", "Status", "Timestamp"]
+        headers = ['#', 'Order ID', 'Symbol', 'Action', 'Quantity', 'Price', 'Status', 'Timestamp']
         rows = orders.each_with_index.map do |order, index|
           [
             index + 1,
-            order[:order_id] || order[:id] || "N/A",
-            order[:symbol] || order[:security_id] || order[:sym] || "N/A",
-            order[:action] || order[:side] || "N/A",
-            order[:quantity] || order[:qty] || "N/A",
+            order[:order_id] || order[:id] || 'N/A',
+            order[:symbol] || order[:security_id] || order[:sym] || 'N/A',
+            order[:action] || order[:side] || 'N/A',
+            order[:quantity] || order[:qty] || 'N/A',
             format_currency(order[:price] || order[:avg_price] || order[:ltp] || 0),
-            order[:status] || order[:state] || "N/A",
-            format_timestamp(order[:timestamp] || order[:ts]),
+            order[:status] || order[:state] || 'N/A',
+            format_timestamp(order[:timestamp] || order[:ts])
           ]
         end
 
@@ -112,7 +112,7 @@ module DhanScalper
             quantity: order[:quantity] || order[:qty],
             price: order[:price] || order[:avg_price] || order[:ltp],
             status: order[:status] || order[:state],
-            timestamp: format_timestamp(order[:timestamp] || order[:ts]),
+            timestamp: format_timestamp(order[:timestamp] || order[:ts])
           }
         end
 
@@ -137,8 +137,8 @@ module DhanScalper
             action: t[:side] || t[:action],
             quantity: t[:quantity] || t[:qty],
             price: t[:price] || t[:avg_price],
-            status: t[:status] || "COMPLETED",
-            timestamp: t[:timestamp],
+            status: t[:status] || 'COMPLETED',
+            timestamp: t[:timestamp]
           }
         end
       rescue StandardError
@@ -148,11 +148,11 @@ module DhanScalper
 
     # Service for handling positions display
     class PositionsService < BaseCLIService
-      def display_positions(mode: "paper")
+      def display_positions(mode: 'paper')
         case mode.downcase
-        when "paper"
+        when 'paper'
           display_paper_positions
-        when "live"
+        when 'live'
           display_live_positions
         else
           raise ArgumentError, "Invalid mode: #{mode}. Use 'paper' or 'live'"
@@ -171,14 +171,14 @@ module DhanScalper
         end
 
         if positions.empty?
-          puts "No open positions"
+          puts 'No open positions'
           return
         end
 
         # Display current balance information
         display_current_balance_info
 
-        if @options[:format] == "json"
+        if @options[:format] == 'json'
           display_positions_json(positions)
         else
           display_positions_table(positions)
@@ -188,8 +188,8 @@ module DhanScalper
       def display_live_positions
         # For live mode, we would need to implement live position fetching
         # This would require integration with DhanHQ API
-        puts "Live positions not yet implemented"
-        puts "This would require DhanHQ API integration for position data"
+        puts 'Live positions not yet implemented'
+        puts 'This would require DhanHQ API integration for position data'
       rescue StandardError => e
         puts "Error fetching live positions: #{e.message}"
       end
@@ -202,16 +202,16 @@ module DhanScalper
         realized_pnl = balance_provider.realized_pnl
 
         puts "\nBalance:"
-        puts "========================================"
+        puts '========================================'
         puts "Available: #{format_currency(available)}"
         puts "Used: #{format_currency(used)}"
         puts "Realized PnL: #{format_currency(realized_pnl)}"
         puts "Total: #{format_currency(total)}"
-        puts ""
+        puts ''
       end
 
       def display_positions_table(positions)
-        headers = ["#", "Symbol", "Quantity", "Side", "Entry Price", "Current Price", "PnL", "PnL %"]
+        headers = ['#', 'Symbol', 'Quantity', 'Side', 'Entry Price', 'Current Price', 'PnL', 'PnL %']
         rows = positions.each_with_index.map do |pos, index|
           entry_price = pos[:entry_price] || pos[:entry] || 0
           current_price = pos[:current_price] || pos[:ltp] || 0
@@ -220,17 +220,17 @@ module DhanScalper
 
           [
             index + 1,
-            pos[:symbol] || pos[:security_id] || pos[:sym] || "N/A",
-            pos[:quantity] || pos[:qty] || "N/A",
-            pos[:side] || "N/A",
+            pos[:symbol] || pos[:security_id] || pos[:sym] || 'N/A',
+            pos[:quantity] || pos[:qty] || 'N/A',
+            pos[:side] || 'N/A',
             format_currency(entry_price),
             format_currency(current_price),
             format_currency(pnl),
-            format_percentage(pnl_pct),
+            format_percentage(pnl_pct)
           ]
         end
 
-        table = create_table(headers, rows, title: "PAPER Positions")
+        table = create_table(headers, rows, title: 'PAPER Positions')
         puts table
       end
 
@@ -248,7 +248,7 @@ module DhanScalper
             entry_price: entry_price,
             current_price: current_price,
             pnl: pnl,
-            pnl_percentage: pnl_pct,
+            pnl_percentage: pnl_pct
           }
         end
 
@@ -273,7 +273,7 @@ module DhanScalper
             side: p[:side] || p[:option_type],
             entry_price: p[:entry_price] || 0,
             current_price: p[:current_price] || 0,
-            pnl: p[:pnl] || 0,
+            pnl: p[:pnl] || 0
           }
         end
       rescue StandardError
@@ -283,7 +283,7 @@ module DhanScalper
       def load_report_data(session_id)
         # Load report data without displaying the console summary
         # Find the actual CSV file with the session ID
-        csv_file = File.join("data/reports", "#{session_id}.csv")
+        csv_file = File.join('data/reports', "#{session_id}.csv")
         return nil unless File.exist?(csv_file)
 
         report_data = {}
@@ -292,7 +292,7 @@ module DhanScalper
 
         CSV.foreach(csv_file, headers: true) do |row|
           # Check if we're in the positions section
-          if row[0] == "Symbol" && row[1] == "Option Type"
+          if row[0] == 'Symbol' && row[1] == 'Option Type'
             in_positions_section = true
             next
           end
@@ -313,7 +313,7 @@ module DhanScalper
               entry_price: row[4].to_f,
               current_price: row[5].to_f,
               pnl: row[6].to_f,
-              created_at: row[7],
+              created_at: row[7]
             }
             next
           end
@@ -322,9 +322,7 @@ module DhanScalper
           next if in_positions_section
 
           # Handle regular metric-value pairs
-          if row[0] && row[1]
-            report_data[row[0]] = row[1]
-          end
+          report_data[row[0]] = row[1] if row[0] && row[1]
         end
 
         report_data[:positions] = positions
@@ -349,11 +347,11 @@ module DhanScalper
 
     # Service for handling balance display
     class BalanceService < BaseCLIService
-      def display_balance(mode: "paper")
+      def display_balance(mode: 'paper')
         case mode.downcase
-        when "paper"
+        when 'paper'
           display_paper_balance
-        when "live"
+        when 'live'
           display_live_balance
         else
           raise ArgumentError, "Invalid mode: #{mode}. Use 'paper' or 'live'"
@@ -379,7 +377,7 @@ module DhanScalper
 
         {
           ending_balance: report[:ending_balance] || report[:final_balance] || 0,
-          total_pnl: report[:total_pnl] || report[:realized_pnl] || 0,
+          total_pnl: report[:total_pnl] || report[:realized_pnl] || 0
         }
       rescue StandardError
         nil
@@ -394,7 +392,7 @@ module DhanScalper
         total = balance_data[:total]
         realized_pnl = balance_data[:realized_pnl]
 
-        if @options[:format] == "json"
+        if @options[:format] == 'json'
           display_balance_json(available, used, total, realized_pnl)
         else
           display_balance_table(available, used, total, realized_pnl)
@@ -407,7 +405,7 @@ module DhanScalper
         used = balance_provider.used_balance
         total = balance_provider.total_balance
 
-        if @options[:format] == "json"
+        if @options[:format] == 'json'
           display_balance_json(available, used, total, 0)
         else
           display_balance_table(available, used, total, 0)
@@ -419,7 +417,7 @@ module DhanScalper
 
       def display_balance_table(available, used, total, realized_pnl)
         puts "\nBalance:"
-        puts "=" * 40
+        puts '=' * 40
         puts "Available: #{format_currency(available)}"
         puts "Used: #{format_currency(used)}"
         puts "Realized PnL: #{format_currency(realized_pnl)}"
@@ -431,7 +429,7 @@ module DhanScalper
           available: available,
           used: used,
           realized_pnl: realized_pnl,
-          total: total,
+          total: total
         }
         puts JSON.pretty_generate(balance_data)
       end
@@ -448,7 +446,7 @@ module DhanScalper
       def get_active_session_balance
         # Check if there's an active paper session by looking for session data files
         # that were recently modified (within last 5 minutes)
-        recent_sessions = Dir.glob(File.join("data/reports", "PAPER_*.json"))
+        recent_sessions = Dir.glob(File.join('data/reports', 'PAPER_*.json'))
                              .select { |f| File.mtime(f) > (Time.now - 300) } # 5 minutes ago
                              .sort_by { |f| File.mtime(f) }
                              .reverse
@@ -491,7 +489,7 @@ module DhanScalper
             available: available_balance,
             used: used_balance,
             total: starting_balance,
-            realized_pnl: 0.0,
+            realized_pnl: 0.0
           }
         end
 
@@ -509,7 +507,7 @@ module DhanScalper
           available: balance_provider.available_balance,
           used: balance_provider.used_balance,
           total: balance_provider.total_balance,
-          realized_pnl: balance_provider.realized_pnl,
+          realized_pnl: balance_provider.realized_pnl
         }
       end
     end
@@ -518,15 +516,15 @@ module DhanScalper
     class StatusService < BaseCLIService
       def display_status
         redis_store = DhanScalper::Stores::RedisStore.new(
-          namespace: "dhan_scalper:v1",
-          logger: Logger.new($stdout),
+          namespace: 'dhan_scalper:v1',
+          logger: Logger.new($stdout)
         )
 
         begin
           redis_store.connect
           status_data = gather_status_data(redis_store)
 
-          if @options[:format] == "json"
+          if @options[:format] == 'json'
             display_status_json(status_data)
           else
             display_status_table(status_data)
@@ -551,14 +549,14 @@ module DhanScalper
 
         # Get session PnL
         session_pnl = redis_store.get_session_pnl
-        total_pnl = session_pnl&.dig("total_pnl") || 0.0
+        total_pnl = session_pnl&.dig('total_pnl') || 0.0
 
         # Get heartbeat status
         heartbeat = redis_store.get_heartbeat
-        heartbeat_status = heartbeat ? "Active" : "Inactive"
+        heartbeat_status = heartbeat ? 'Active' : 'Inactive'
 
         # Get Redis connection status
-        redis_status = redis_store.redis.ping == "PONG" ? "Connected" : "Disconnected"
+        redis_status = redis_store.redis.ping == 'PONG' ? 'Connected' : 'Disconnected'
 
         {
           redis_status: redis_status,
@@ -566,13 +564,13 @@ module DhanScalper
           open_positions: positions_count,
           session_pnl: total_pnl,
           heartbeat_status: heartbeat_status,
-          timestamp: Time.now.strftime("%Y-%m-%d %H:%M:%S"),
+          timestamp: Time.now.strftime('%Y-%m-%d %H:%M:%S')
         }
       end
 
       def display_status_table(status_data)
-        puts "DhanScalper Runtime Health:"
-        puts "=========================="
+        puts 'DhanScalper Runtime Health:'
+        puts '=========================='
         puts "Redis Status: #{status_data[:redis_status]}"
         puts "Subscriptions: #{status_data[:subscriptions]} active"
         puts "Open Positions: #{status_data[:open_positions]}"
@@ -591,7 +589,7 @@ module DhanScalper
       def display_config
         status = DhanScalper::Services::DhanHQConfig.status
 
-        if @options[:format] == "json"
+        if @options[:format] == 'json'
           display_config_json(status)
         else
           display_config_table(status)
@@ -606,13 +604,13 @@ module DhanScalper
       private
 
       def display_config_table(status)
-        puts "DhanHQ Configuration Status:"
-        puts "============================"
-        puts "Client ID: #{status[:client_id_present] ? "✓ Set" : "✗ Missing"}"
-        puts "Access Token: #{status[:access_token_present] ? "✓ Set" : "✗ Missing"}"
+        puts 'DhanHQ Configuration Status:'
+        puts '============================'
+        puts "Client ID: #{status[:client_id_present] ? '✓ Set' : '✗ Missing'}"
+        puts "Access Token: #{status[:access_token_present] ? '✓ Set' : '✗ Missing'}"
         puts "Base URL: #{status[:base_url]}"
         puts "Log Level: #{status[:log_level]}"
-        puts "Configured: #{status[:configured] ? "✓ Yes" : "✗ No"}"
+        puts "Configured: #{status[:configured] ? '✓ Yes' : '✗ No'}"
       end
 
       def display_config_json(status)

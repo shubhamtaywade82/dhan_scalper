@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require "concurrent"
-require "DhanHQ"
+require 'concurrent'
+require 'DhanHQ'
 
 module DhanScalper
   module Services
@@ -20,7 +20,7 @@ module DhanScalper
 
         @running = true
         @reconcile_thread = Thread.new { reconcile_loop }
-        @logger.info "[POSITION_RECONCILER] Started position reconciliation"
+        @logger.info '[POSITION_RECONCILER] Started position reconciliation'
       end
 
       def stop
@@ -28,18 +28,18 @@ module DhanScalper
 
         @running = false
         @reconcile_thread&.join
-        @logger.info "[POSITION_RECONCILER] Stopped reconciliation"
+        @logger.info '[POSITION_RECONCILER] Stopped reconciliation'
       end
 
       def reconcile_now
-        @logger.info "[POSITION_RECONCILER] Starting manual reconciliation"
+        @logger.info '[POSITION_RECONCILER] Starting manual reconciliation'
         reconcile_positions
       end
 
       private
 
       def reconcile_loop
-        @logger.info "[POSITION_RECONCILER] Starting reconciliation loop"
+        @logger.info '[POSITION_RECONCILER] Starting reconciliation loop'
 
         while @running
           begin
@@ -72,7 +72,7 @@ module DhanScalper
           @logger.warn "[POSITION_RECONCILER] Found #{discrepancies.size} discrepancies"
           handle_discrepancies(discrepancies)
         else
-          @logger.debug "[POSITION_RECONCILER] All positions are in sync"
+          @logger.debug '[POSITION_RECONCILER] All positions are in sync'
         end
       rescue StandardError => e
         @logger.error "[POSITION_RECONCILER] Error during reconciliation: #{e.message}"
@@ -81,19 +81,19 @@ module DhanScalper
       def get_broker_positions
         # Get positions from DhanHQ
         positions_response = DhanHQ::Position.get_positions
-        return nil unless positions_response&.dig("data")
+        return nil unless positions_response&.dig('data')
 
-        positions_data = positions_response["data"]
+        positions_data = positions_response['data']
         positions_data.map do |pos|
           {
-            security_id: pos["securityId"],
-            symbol: pos["symbol"],
-            quantity: pos["quantity"].to_i,
-            average_price: pos["averagePrice"].to_f,
-            current_price: pos["ltp"].to_f,
-            pnl: pos["pnl"].to_f,
-            product_type: pos["productType"],
-            segment: pos["exchangeSegment"],
+            security_id: pos['securityId'],
+            symbol: pos['symbol'],
+            quantity: pos['quantity'].to_i,
+            average_price: pos['averagePrice'].to_f,
+            current_price: pos['ltp'].to_f,
+            pnl: pos['pnl'].to_f,
+            product_type: pos['productType'],
+            segment: pos['exchangeSegment']
           }
         end
       rescue StandardError => e
@@ -112,13 +112,13 @@ module DhanScalper
             discrepancies << {
               type: :missing_in_tracker,
               broker_position: broker_pos,
-              tracker_position: nil,
+              tracker_position: nil
             }
           elsif tracker_pos[:quantity] != broker_pos[:quantity]
             discrepancies << {
               type: :quantity_mismatch,
               broker_position: broker_pos,
-              tracker_position: tracker_pos,
+              tracker_position: tracker_pos
             }
           end
         end
@@ -132,7 +132,7 @@ module DhanScalper
           discrepancies << {
             type: :missing_in_broker,
             broker_position: nil,
-            tracker_position: tracker_pos,
+            tracker_position: tracker_pos
           }
         end
 
@@ -158,15 +158,15 @@ module DhanScalper
         # Add the position to tracker
         @position_tracker.add_position(
           broker_position[:symbol],
-          "UNKNOWN", # We don't know if it's CE or PE from broker data
+          'UNKNOWN', # We don't know if it's CE or PE from broker data
           broker_position[:average_price], # Using average price as strike for now
-          "UNKNOWN", # We don't know expiry from broker data
+          'UNKNOWN', # We don't know expiry from broker data
           broker_position[:security_id],
           broker_position[:quantity],
-          broker_position[:current_price],
+          broker_position[:current_price]
         )
 
-        @logger.info "[POSITION_RECONCILER] Added missing position to tracker"
+        @logger.info '[POSITION_RECONCILER] Added missing position to tracker'
       end
 
       def handle_missing_in_broker(tracker_position)
@@ -178,12 +178,12 @@ module DhanScalper
           tracker_position[:security_id],
           {
             exit_price: tracker_position[:current_price],
-            exit_reason: "reconciled_missing",
-            exit_timestamp: Time.now,
-          },
+            exit_reason: 'reconciled_missing',
+            exit_timestamp: Time.now
+          }
         )
 
-        @logger.info "[POSITION_RECONCILER] Closed missing position in tracker"
+        @logger.info '[POSITION_RECONCILER] Closed missing position in tracker'
       end
 
       def handle_quantity_mismatch(broker_position, tracker_position)
@@ -193,10 +193,10 @@ module DhanScalper
         # Update tracker with broker quantity
         @position_tracker.update_position(
           tracker_position[:security_id],
-          { quantity: broker_position[:quantity] },
+          { quantity: broker_position[:quantity] }
         )
 
-        @logger.info "[POSITION_RECONCILER] Updated quantity in tracker"
+        @logger.info '[POSITION_RECONCILER] Updated quantity in tracker'
       end
     end
   end

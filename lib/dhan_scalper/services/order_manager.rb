@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "../order"
+require_relative '../order'
 
 module DhanScalper
   module Services
@@ -18,25 +18,25 @@ module DhanScalper
       # data: { symbol:, security_id:, side:, quantity:, price:, order_type:, option_type:, strike: }
       # returns: { success: true, order_id:, order:, position:?, mode: }
       def place_order(data)
-        mode = (@config["mode"] || "paper").to_s
-        dry_run = !@config.fetch("place_order", false)
+        mode = (@config['mode'] || 'paper').to_s
+        dry_run = !@config.fetch('place_order', false)
         dedupe_key = dedupe_key_for(data)
 
         if @cache.set_dedupe_key(dedupe_key, ttl: 10)
           @logger.info("[ORDER] #{mode.upcase} #{if dry_run
-                                                   "(dry-run)"
+                                                   '(dry-run)'
                                                  end} #{data[:side]} #{data[:symbol]} #{data[:option_type]}@#{data[:strike]} qty=#{data[:quantity]}")
         else
           @logger.debug("[ORDER] DEDUPED #{data[:side]} #{data[:symbol]} key=#{dedupe_key}")
           return { success: false, error: :duplicate, mode: mode }
         end
 
-        return simulate_order(data, mode: mode) if mode == "live" && dry_run
+        return simulate_order(data, mode: mode) if mode == 'live' && dry_run
 
         case mode
-        when "paper"
+        when 'paper'
           execute_paper(data)
-        when "live"
+        when 'live'
           execute_live(data)
         else
           { success: false, error: :invalid_mode }
@@ -55,7 +55,7 @@ module DhanScalper
           side: data[:side],
           quantity: data[:quantity],
           price: data[:price],
-          order_type: data[:order_type],
+          order_type: data[:order_type]
         )
         res.merge(mode: :paper)
       end
@@ -69,7 +69,7 @@ module DhanScalper
           side: data[:side],
           quantity: data[:quantity],
           price: data[:price],
-          order_type: data[:order_type],
+          order_type: data[:order_type]
         )
         res.merge(mode: :live)
       end
@@ -83,7 +83,7 @@ module DhanScalper
 
       def dedupe_key_for(data)
         parts = [data[:symbol], data[:security_id], data[:side], data[:quantity], data[:order_type]]
-        "order:#{parts.join(":")}"
+        "order:#{parts.join(':')}"
       end
     end
   end

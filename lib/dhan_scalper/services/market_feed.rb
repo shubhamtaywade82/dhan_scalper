@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require "DhanHQ"
-require_relative "../tick_cache"
-require_relative "dhanhq_config"
-require_relative "../support/tick_normalizer"
+require 'DhanHQ'
+require_relative '../tick_cache'
+require_relative 'dhanhq_config'
+require_relative '../support/tick_normalizer'
 
 module DhanScalper
   module Services
@@ -52,7 +52,7 @@ module DhanScalper
         instruments.each do |instrument|
           @ws_client.subscribe_one(
             segment: instrument[:segment],
-            security_id: instrument[:security_id],
+            security_id: instrument[:security_id]
           )
           @instruments << instrument unless @instruments.include?(instrument)
         end
@@ -64,7 +64,7 @@ module DhanScalper
         instruments.each do |instrument|
           @ws_client.unsubscribe_one(
             segment: instrument[:segment],
-            security_id: instrument[:security_id],
+            security_id: instrument[:security_id]
           )
           @instruments.delete(instrument)
         end
@@ -115,12 +115,12 @@ module DhanScalper
           # Normalize incoming tick to our canonical schema
           normalized = DhanScalper::Support::TickNormalizer.normalize(
             tick,
-            segment: find_correct_segment(tick[:security_id]) || tick[:segment],
+            segment: find_correct_segment(tick[:security_id]) || tick[:segment]
           )
 
           TickCache.put(normalized) if normalized
 
-          if ENV["DHAN_LOG_LEVEL"] == "DEBUG" && normalized
+          if ENV['DHAN_LOG_LEVEL'] == 'DEBUG' && normalized
             puts "[TICK] #{normalized[:segment]}:#{normalized[:security_id]} LTP=#{normalized[:ltp]} H=#{normalized[:day_high]} L=#{normalized[:day_low]} kind=#{normalized[:kind]}"
           end
         end
@@ -133,7 +133,7 @@ module DhanScalper
 
           @ws_client.subscribe_one(
             segment: instrument[:segment],
-            security_id: instrument[:security_id],
+            security_id: instrument[:security_id]
           )
         end
       end

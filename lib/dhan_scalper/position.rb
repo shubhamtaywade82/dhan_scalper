@@ -48,9 +48,9 @@ module DhanScalper
 
     def calculate_pnl
       @pnl = case @side.upcase
-             when "BUY"
+             when 'BUY'
                (@current_price - @entry_price) * @quantity
-             when "SELL"
+             when 'SELL'
                (@entry_price - @current_price) * @quantity
              else
                0.0
@@ -110,14 +110,14 @@ module DhanScalper
         lot_size: @lot_size,
         strike_price: @strike_price,
         expiry_date: @expiry_date,
-        underlying_symbol: @underlying_symbol,
+        underlying_symbol: @underlying_symbol
       }
     end
 
     def to_s
-      option_info = @option_type ? " #{@option_type} #{@strike}" : ""
-      status = closed? ? "CLOSED" : "OPEN"
-      exit_info = closed? ? " (Exit: #{@exit_price}, Reason: #{@exit_reason})" : ""
+      option_info = @option_type ? " #{@option_type} #{@strike}" : ''
+      status = closed? ? 'CLOSED' : 'OPEN'
+      exit_info = closed? ? " (Exit: #{@exit_price}, Reason: #{@exit_reason})" : ''
 
       "#{status}#{option_info}: #{@side} #{@quantity} #{@symbol || @security_id} @ #{@entry_price} " \
         "(Current: #{@current_price}, P&L: #{@pnl.round(2)}, #{pnl_percentage.round(1)}%)#{exit_info}"

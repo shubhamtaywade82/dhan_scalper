@@ -7,16 +7,16 @@ module DhanScalper
       @balance_provider = balance_provider
     end
 
-    def calculate_lots(symbol, premium, side: "BUY")
+    def calculate_lots(symbol, premium, side: 'BUY')
       return 0 unless premium&.positive?
 
       # Get configuration for this symbol
-      symbol_cfg = @cfg.fetch("SYMBOLS").fetch(symbol)
-      lot_size = symbol_cfg["lot_size"]
-      qty_multiplier = symbol_cfg["qty_multiplier"]
-      max_lots = @cfg.dig("global", "max_lots_per_trade") || 10
-      allocation_pct = @cfg.dig("global", "allocation_pct") || 0.30
-      slippage_buffer = @cfg.dig("global", "slippage_buffer_pct") || 0.01
+      symbol_cfg = @cfg.fetch('SYMBOLS').fetch(symbol)
+      lot_size = symbol_cfg['lot_size']
+      qty_multiplier = symbol_cfg['qty_multiplier']
+      max_lots = @cfg.dig('global', 'max_lots_per_trade') || 10
+      allocation_pct = @cfg.dig('global', 'allocation_pct') || 0.30
+      slippage_buffer = @cfg.dig('global', 'slippage_buffer_pct') || 0.01
 
       # Get available balance
       balance = @balance_provider.available_balance
@@ -46,15 +46,15 @@ module DhanScalper
       lots
     end
 
-    def calculate_quantity(symbol, premium, side: "BUY")
+    def calculate_quantity(symbol, premium, side: 'BUY')
       lots = calculate_lots(symbol, premium, side: side)
-      symbol_cfg = @cfg.fetch("SYMBOLS").fetch(symbol)
-      lot_size = symbol_cfg["lot_size"]
+      symbol_cfg = @cfg.fetch('SYMBOLS').fetch(symbol)
+      lot_size = symbol_cfg['lot_size']
 
       lots * lot_size
     end
 
-    def can_afford_position?(symbol, premium, side: "BUY")
+    def can_afford_position?(symbol, premium, side: 'BUY')
       calculate_lots(symbol, premium, side: side).positive?
     end
   end

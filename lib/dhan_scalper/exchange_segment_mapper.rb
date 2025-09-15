@@ -9,14 +9,14 @@ module DhanScalper
     # @raise [ArgumentError] If the exchange/segment combination is not supported
     def self.exchange_segment(exchange, segment)
       case [exchange.to_s.upcase.to_sym, segment.to_s.upcase.to_sym]
-      when %i[NSE I], %i[BSE I] then "IDX_I"
-      when %i[NSE E] then "NSE_EQ"
-      when %i[BSE E] then "BSE_EQ"
-      when %i[NSE D] then "NSE_FNO"
-      when %i[BSE D] then "BSE_FNO"
-      when %i[NSE C] then "NSE_CURRENCY"
-      when %i[BSE C] then "BSE_CURRENCY"
-      when %i[MCX M] then "MCX_COMM"
+      when %i[NSE I], %i[BSE I] then 'IDX_I'
+      when %i[NSE E] then 'NSE_EQ'
+      when %i[BSE E] then 'BSE_EQ'
+      when %i[NSE D] then 'NSE_FNO'
+      when %i[BSE D] then 'BSE_FNO'
+      when %i[NSE C] then 'NSE_CURRENCY'
+      when %i[BSE C] then 'BSE_CURRENCY'
+      when %i[MCX M] then 'MCX_COMM'
       else
         raise ArgumentError, "Unsupported exchange and segment combination: #{exchange}, #{segment}"
       end
@@ -27,11 +27,11 @@ module DhanScalper
     # @return [String] Human-readable segment name
     def self.segment_name(segment)
       case segment.to_s.upcase.to_sym
-      when :I then "Index"
-      when :E then "Equity"
-      when :D then "Derivatives"
-      when :C then "Currency"
-      when :M then "Commodity"
+      when :I then 'Index'
+      when :E then 'Equity'
+      when :D then 'Derivatives'
+      when :C then 'Currency'
+      when :M then 'Commodity'
       else
         "Unknown (#{segment})"
       end
@@ -42,9 +42,9 @@ module DhanScalper
     # @return [String] Human-readable exchange name
     def self.exchange_name(exchange)
       case exchange.to_s.upcase.to_sym
-      when :NSE then "National Stock Exchange"
-      when :BSE then "Bombay Stock Exchange"
-      when :MCX then "Multi Commodity Exchange"
+      when :NSE then 'National Stock Exchange'
+      when :BSE then 'Bombay Stock Exchange'
+      when :MCX then 'Multi Commodity Exchange'
       else
         "Unknown (#{exchange})"
       end

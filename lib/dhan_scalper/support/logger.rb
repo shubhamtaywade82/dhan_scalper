@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "logger"
+require 'logger'
 
 module DhanScalper
   module Support
@@ -12,28 +12,28 @@ module DhanScalper
           @instance = ::Logger.new(output)
           @instance.level = level_to_int(level)
           @instance.formatter = proc do |severity, datetime, progname, msg|
-            "[#{datetime.strftime("%Y-%m-%d %H:%M:%S")}] #{severity.ljust(5)} -- #{progname}: #{msg}\n"
+            "[#{datetime.strftime('%Y-%m-%d %H:%M:%S')}] #{severity.ljust(5)} -- #{progname}: #{msg}\n"
           end
           @instance
         end
 
-        def info(message, component: "DhanScalper")
+        def info(message, component: 'DhanScalper')
           instance&.info("#{component}: #{message}")
         end
 
-        def debug(message, component: "DhanScalper")
+        def debug(message, component: 'DhanScalper')
           instance&.debug("#{component}: #{message}")
         end
 
-        def warn(message, component: "DhanScalper")
+        def warn(message, component: 'DhanScalper')
           instance&.warn("#{component}: #{message}")
         end
 
-        def error(message, component: "DhanScalper")
+        def error(message, component: 'DhanScalper')
           instance&.error("#{component}: #{message}")
         end
 
-        def fatal(message, component: "DhanScalper")
+        def fatal(message, component: 'DhanScalper')
           instance&.fatal("#{component}: #{message}")
         end
 
@@ -41,11 +41,11 @@ module DhanScalper
 
         def level_to_int(level)
           case level.to_s.downcase
-          when "debug" then ::Logger::DEBUG
-          when "info" then ::Logger::INFO
-          when "warn" then ::Logger::WARN
-          when "error" then ::Logger::ERROR
-          when "fatal" then ::Logger::FATAL
+          when 'debug' then ::Logger::DEBUG
+          when 'info' then ::Logger::INFO
+          when 'warn' then ::Logger::WARN
+          when 'error' then ::Logger::ERROR
+          when 'fatal' then ::Logger::FATAL
           else ::Logger::INFO
           end
         end

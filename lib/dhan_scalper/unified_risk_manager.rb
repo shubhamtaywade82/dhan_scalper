@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
-require "concurrent"
-require "securerandom"
-require_relative "tick_cache"
-require_relative "position"
-require_relative "config"
-require_relative "support/money"
-require_relative "support/logger"
-require_relative "support/validations"
+require 'concurrent'
+require 'securerandom'
+require_relative 'tick_cache'
+require_relative 'position'
+require_relative 'config'
+require_relative 'support/money'
+require_relative 'support/logger'
+require_relative 'support/validations'
 
 module DhanScalper
   class UnifiedRiskManager
@@ -22,19 +22,19 @@ module DhanScalper
       @risk_thread = nil
 
       # Basic risk parameters
-      @tp_pct = config.dig("global", "tp_pct") || 0.35
-      @sl_pct = config.dig("global", "sl_pct") || 0.18
-      @trail_pct = config.dig("global", "trail_pct") || 0.12
+      @tp_pct = config.dig('global', 'tp_pct') || 0.35
+      @sl_pct = config.dig('global', 'sl_pct') || 0.18
+      @trail_pct = config.dig('global', 'trail_pct') || 0.12
       @charge_per_order = DhanScalper::Config.fee
-      @risk_check_interval = config.dig("global", "risk_check_interval") || 1
+      @risk_check_interval = config.dig('global', 'risk_check_interval') || 1
 
       # Enhanced risk management features
-      @time_stop_seconds = config.dig("global", "time_stop_seconds") || 300
-      @max_daily_loss_rs = DhanScalper::Support::Money.bd(config.dig("global", "max_daily_loss_rs") || 2_000.0)
-      @cooldown_after_loss_seconds = config.dig("global", "cooldown_after_loss_seconds") || 180
-      @enable_time_stop = config.dig("global", "enable_time_stop") != false
-      @enable_daily_loss_cap = config.dig("global", "enable_daily_loss_cap") != false
-      @enable_cooldown = config.dig("global", "enable_cooldown") != false
+      @time_stop_seconds = config.dig('global', 'time_stop_seconds') || 300
+      @max_daily_loss_rs = DhanScalper::Support::Money.bd(config.dig('global', 'max_daily_loss_rs') || 2_000.0)
+      @cooldown_after_loss_seconds = config.dig('global', 'cooldown_after_loss_seconds') || 180
+      @enable_time_stop = config.dig('global', 'enable_time_stop') != false
+      @enable_daily_loss_cap = config.dig('global', 'enable_daily_loss_cap') != false
+      @enable_cooldown = config.dig('global', 'enable_cooldown') != false
 
       # Position tracking
       @position_highs = Concurrent::Map.new
@@ -61,19 +61,19 @@ module DhanScalper
 
       @logger.info(
         "Starting unified risk management loop (interval: #{@risk_check_interval}s)",
-        component: "RiskManager",
+        component: 'RiskManager'
       )
       @logger.info(
-        "Time stop: #{@enable_time_stop ? "#{@time_stop_seconds}s" : "disabled"}",
-        component: "RiskManager",
+        "Time stop: #{@enable_time_stop ? "#{@time_stop_seconds}s" : 'disabled'}",
+        component: 'RiskManager'
       )
       @logger.info(
-        "Daily loss cap: #{@enable_daily_loss_cap ? "₹#{DhanScalper::Support::Money.dec(@max_daily_loss_rs)}" : "disabled"}",
-        component: "RiskManager",
+        "Daily loss cap: #{@enable_daily_loss_cap ? "₹#{DhanScalper::Support::Money.dec(@max_daily_loss_rs)}" : 'disabled'}",
+        component: 'RiskManager'
       )
       @logger.info(
-        "Cooldown: #{@enable_cooldown ? "#{@cooldown_after_loss_seconds}s" : "disabled"}",
-        component: "RiskManager",
+        "Cooldown: #{@enable_cooldown ? "#{@cooldown_after_loss_seconds}s" : 'disabled'}",
+        component: 'RiskManager'
       )
 
       @risk_thread = Thread.new do
@@ -86,7 +86,7 @@ module DhanScalper
 
       @running = false
       @risk_thread&.join(2)
-      @logger.info("Risk management stopped", component: "RiskManager")
+      @logger.info('Risk management stopped', component: 'RiskManager')
     end
 
     def running?
@@ -99,7 +99,7 @@ module DhanScalper
       @in_cooldown = false
       @logger.info(
         "Session reset, starting equity: ₹#{DhanScalper::Support::Money.dec(@session_start_equity)}",
-        component: "RiskManager",
+        component: 'RiskManager'
       )
     end
 
@@ -116,8 +116,8 @@ module DhanScalper
 
           sleep(@risk_check_interval)
         rescue StandardError => e
-          @logger.error("Risk management error: #{e.message}", component: "RiskManager")
-          @logger.error(e.backtrace.join("\n"), component: "RiskManager")
+          @logger.error("Risk management error: #{e.message}", component: 'RiskManager')
+          @logger.error(e.backtrace.join("\n"), component: 'RiskManager')
           sleep(@risk_check_interval)
         end
       end
@@ -135,7 +135,7 @@ module DhanScalper
         "current=₹#{DhanScalper::Support::Money.dec(current_equity)}, " \
         "drawdown=₹#{DhanScalper::Support::Money.dec(equity_drawdown)}, " \
         "max=₹#{DhanScalper::Support::Money.dec(@max_daily_loss_rs)}",
-        component: "RiskManager",
+        component: 'RiskManager'
       )
 
       return unless DhanScalper::Support::Money.greater_than?(equity_drawdown, @max_daily_loss_rs)
@@ -143,11 +143,11 @@ module DhanScalper
       @logger.warn(
         "Daily loss cap exceeded! Drawdown: ₹#{DhanScalper::Support::Money.dec(equity_drawdown)} " \
         "(max: ₹#{DhanScalper::Support::Money.dec(@max_daily_loss_rs)})",
-        component: "RiskManager",
+        component: 'RiskManager'
       )
 
       # Close all positions
-      close_all_positions("DAILY_LOSS_CAP")
+      close_all_positions('DAILY_LOSS_CAP')
     end
 
     def in_cooldown?
@@ -159,7 +159,7 @@ module DhanScalper
 
       if @in_cooldown
         remaining = @cooldown_after_loss_seconds - time_since_loss
-        @logger.debug("In cooldown, #{remaining.round(1)}s remaining", component: "RiskManager")
+        @logger.debug("In cooldown, #{remaining.round(1)}s remaining", component: 'RiskManager')
       end
 
       @in_cooldown
@@ -198,9 +198,7 @@ module DhanScalper
 
       # Track position high for trailing stops
       current_high = @position_highs[security_id] || price_bd
-      if DhanScalper::Support::Money.greater_than?(price_bd, current_high)
-        @position_highs[security_id] = price_bd
-      end
+      @position_highs[security_id] = price_bd if DhanScalper::Support::Money.greater_than?(price_bd, current_high)
 
       # Track entry time for time stops
       @position_entry_times[security_id] ||= Time.now
@@ -208,7 +206,7 @@ module DhanScalper
       # Calculate current P&L
       pnl = DhanScalper::Support::Money.multiply(
         DhanScalper::Support::Money.subtract(price_bd, entry_price),
-        position[:net_qty],
+        position[:net_qty]
       )
       @position_profits[security_id] = pnl
     end
@@ -218,24 +216,16 @@ module DhanScalper
       return nil if in_cooldown?
 
       # Take Profit
-      if should_take_profit?(position, current_price)
-        return "TAKE_PROFIT"
-      end
+      return 'TAKE_PROFIT' if should_take_profit?(position, current_price)
 
       # Stop Loss
-      if should_stop_loss?(position, current_price)
-        return "STOP_LOSS"
-      end
+      return 'STOP_LOSS' if should_stop_loss?(position, current_price)
 
       # Time Stop
-      if should_time_stop?(security_id)
-        return "TIME_STOP"
-      end
+      return 'TIME_STOP' if should_time_stop?(security_id)
 
       # Trailing Stop
-      if should_trailing_stop?(position, security_id, current_price)
-        return "TRAILING_STOP"
-      end
+      return 'TRAILING_STOP' if should_trailing_stop?(position, security_id, current_price)
 
       nil
     end
@@ -247,7 +237,7 @@ module DhanScalper
       entry_price = position[:buy_avg]
       profit_pct = DhanScalper::Support::Money.divide(
         DhanScalper::Support::Money.subtract(price_bd, entry_price),
-        entry_price,
+        entry_price
       )
 
       DhanScalper::Support::Money.greater_than?(profit_pct, DhanScalper::Support::Money.bd(@tp_pct))
@@ -260,7 +250,7 @@ module DhanScalper
       entry_price = position[:buy_avg]
       loss_pct = DhanScalper::Support::Money.divide(
         DhanScalper::Support::Money.subtract(entry_price, price_bd),
-        entry_price,
+        entry_price
       )
 
       DhanScalper::Support::Money.greater_than?(loss_pct, DhanScalper::Support::Money.bd(@sl_pct))
@@ -289,7 +279,7 @@ module DhanScalper
       # Check if current price has fallen from high by trail percentage
       trail_threshold = DhanScalper::Support::Money.multiply(
         position_high,
-        DhanScalper::Support::Money.bd(@trail_pct),
+        DhanScalper::Support::Money.bd(@trail_pct)
       )
       trail_trigger = DhanScalper::Support::Money.subtract(position_high, trail_threshold)
 
@@ -303,7 +293,7 @@ module DhanScalper
       if @pending_exits[security_id] || @idempotency_keys[idempotency_key]
         @logger.debug(
           "Exit already pending or completed for #{security_id} (#{reason}), skipping",
-          component: "RiskManager",
+          component: 'RiskManager'
         )
         return
       end
@@ -312,12 +302,12 @@ module DhanScalper
       @pending_exits[security_id] = {
         reason: reason,
         timestamp: Time.now,
-        idempotency_key: idempotency_key,
+        idempotency_key: idempotency_key
       }
 
       @logger.info(
         "Exiting position #{security_id} reason: #{reason} LTP: #{DhanScalper::Support::Money.dec(DhanScalper::Support::Money.bd(current_price))}",
-        component: "RiskManager",
+        component: 'RiskManager'
       )
 
       begin
@@ -325,30 +315,30 @@ module DhanScalper
         order_result = @broker.place_order!(
           symbol: security_id,
           instrument_id: security_id,
-          side: "SELL",
+          side: 'SELL',
           quantity: DhanScalper::Support::Money.dec(position[:net_qty]),
           price: current_price,
-          order_type: "MARKET",
-          idempotency_key: idempotency_key,
+          order_type: 'MARKET',
+          idempotency_key: idempotency_key
         )
 
-        if order_result && order_result[:order_status] == "FILLED"
+        if order_result && order_result[:order_status] == 'FILLED'
           # Track the idempotency key to prevent duplicates
           @idempotency_keys[idempotency_key] = {
             security_id: security_id,
             reason: reason,
             timestamp: Time.now,
-            order_id: order_result[:order_id],
+            order_id: order_result[:order_id]
           }
 
           # Update position tracker
           @position_tracker.partial_exit(
             exchange_segment: position[:exchange_segment],
             security_id: security_id,
-            side: "LONG",
+            side: 'LONG',
             quantity: DhanScalper::Support::Money.dec(position[:net_qty]),
             price: current_price,
-            fee: @charge_per_order,
+            fee: @charge_per_order
           )
 
           # Calculate final P&L
@@ -358,16 +348,16 @@ module DhanScalper
           if DhanScalper::Support::Money.negative?(final_pnl)
             @last_loss_time = Time.now
             @in_cooldown = true
-            @logger.info("Loss detected, starting cooldown period", component: "RiskManager")
+            @logger.info('Loss detected, starting cooldown period', component: 'RiskManager')
           end
 
           # Clean up tracking
           cleanup_position_tracking(security_id)
         else
-          @logger.error("Failed to exit position #{security_id}: #{order_result}", component: "RiskManager")
+          @logger.error("Failed to exit position #{security_id}: #{order_result}", component: 'RiskManager')
         end
       rescue StandardError => e
-        @logger.error("Error exiting position #{security_id}: #{e.message}", component: "RiskManager")
+        @logger.error("Error exiting position #{security_id}: #{e.message}", component: 'RiskManager')
       ensure
         # Always remove from pending
         @pending_exits.delete(security_id)
@@ -387,9 +377,9 @@ module DhanScalper
       DhanScalper::Support::Money.multiply(
         DhanScalper::Support::Money.subtract(
           DhanScalper::Support::Money.bd(exit_price),
-          entry_price,
+          entry_price
         ),
-        quantity,
+        quantity
       )
     end
 

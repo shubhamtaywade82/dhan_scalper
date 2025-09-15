@@ -11,7 +11,7 @@ module DhanScalper
 
       def buy_market(segment:, security_id:, quantity:)  = raise NotImplementedError
       def sell_market(segment:, security_id:, quantity:) = raise NotImplementedError
-      def name = self.class.name.split("::").last
+      def name = self.class.name.split('::').last
 
       protected
 

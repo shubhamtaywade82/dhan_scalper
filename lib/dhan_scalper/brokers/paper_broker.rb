@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require_relative "../support/money"
-require_relative "../support/logger"
-require_relative "../support/validations"
-require_relative "../services/enhanced_position_tracker"
+require_relative '../support/money'
+require_relative '../support/logger'
+require_relative '../support/validations'
+require_relative '../services/enhanced_position_tracker'
 
 module DhanScalper
   module Brokers
@@ -18,7 +18,7 @@ module DhanScalper
       def buy_market(segment:, security_id:, quantity:, charge_per_order: nil)
         DhanScalper::Support::Logger.info(
           "Buying market: #{segment}, #{security_id}, #{quantity}, #{charge_per_order}",
-          component: "PaperBroker",
+          component: 'PaperBroker'
         )
 
         # Validate inputs
@@ -29,8 +29,8 @@ module DhanScalper
         price = DhanScalper::TickCache.ltp(segment, security_id)
         unless price&.positive?
           error_msg = "No valid price available for #{security_id}"
-          DhanScalper::Support::Logger.error(error_msg, component: "PaperBroker")
-          return create_validation_error("INVALID_PRICE", error_msg)
+          DhanScalper::Support::Logger.error(error_msg, component: 'PaperBroker')
+          return create_validation_error('INVALID_PRICE', error_msg)
         end
 
         # Convert to BigDecimal for safe money calculations
@@ -48,7 +48,7 @@ module DhanScalper
         if @balance_provider && @balance_provider.available_balance < total_cost
           error_msg = "Insufficient balance. Need ₹#{DhanScalper::Support::Money.dec(total_cost)}, have ₹#{DhanScalper::Support::Money.dec(@balance_provider.available_balance)}"
           @logger.warn("[PAPER] #{error_msg}")
-          return create_validation_error("INSUFFICIENT_BALANCE", error_msg)
+          return create_validation_error('INSUFFICIENT_BALANCE', error_msg)
         end
 
         # Debit the balance using principal vs fee split
@@ -61,7 +61,7 @@ module DhanScalper
         position = @position_tracker.add_position(
           exchange_segment: segment,
           security_id: security_id,
-          side: "LONG",
+          side: 'LONG',
           quantity: quantity,
           price: price,
           fee: charge_per_order,
@@ -69,10 +69,10 @@ module DhanScalper
           strike_price: option_info[:strike_price],
           expiry_date: option_info[:expiry_date],
           underlying_symbol: option_info[:underlying_symbol],
-          symbol: option_info[:symbol],
+          symbol: option_info[:symbol]
         )
 
-        order = Order.new("P-#{Time.now.to_f}", security_id, "BUY", quantity, price)
+        order = Order.new("P-#{Time.now.to_f}", security_id, 'BUY', quantity, price)
 
         # Log the order
         log_order(order)
@@ -85,7 +85,7 @@ module DhanScalper
       def sell_market(segment:, security_id:, quantity:, charge_per_order: 20)
         DhanScalper::Support::Logger.info(
           "Selling market: #{segment}, #{security_id}, #{quantity}, #{charge_per_order}",
-          component: "PaperBroker",
+          component: 'PaperBroker'
         )
 
         # Validate inputs
@@ -96,8 +96,8 @@ module DhanScalper
         price = DhanScalper::TickCache.ltp(segment, security_id)
         unless price&.positive?
           error_msg = "No valid price available for #{security_id}"
-          DhanScalper::Support::Logger.error(error_msg, component: "PaperBroker")
-          return create_validation_error("INVALID_PRICE", error_msg)
+          DhanScalper::Support::Logger.error(error_msg, component: 'PaperBroker')
+          return create_validation_error('INVALID_PRICE', error_msg)
         end
 
         # Convert to BigDecimal for safe money calculations
@@ -109,29 +109,29 @@ module DhanScalper
         position = @position_tracker.get_position(
           exchange_segment: segment,
           security_id: security_id,
-          side: "LONG",
+          side: 'LONG'
         )
 
         unless position && position[:net_qty] && DhanScalper::Support::Money.greater_than_or_equal?(position[:net_qty],
                                                                                                     quantity_bd)
           available_qty = position&.dig(:net_qty) || 0
           error_msg = "Insufficient position. Trying to sell #{DhanScalper::Support::Money.dec(quantity_bd)}, have #{DhanScalper::Support::Money.dec(available_qty)}"
-          DhanScalper::Support::Logger.warn("[PAPER] #{error_msg}", component: "PaperBroker")
-          return create_validation_error("INSUFFICIENT_POSITION", error_msg)
+          DhanScalper::Support::Logger.warn("[PAPER] #{error_msg}", component: 'PaperBroker')
+          return create_validation_error('INSUFFICIENT_POSITION', error_msg)
         end
 
         # Additional oversell protection using validation module
         begin
           DhanScalper::Support::Validations.validate_position_sufficient(
             DhanScalper::Support::Money.dec(position[:net_qty]),
-            DhanScalper::Support::Money.dec(quantity_bd),
+            DhanScalper::Support::Money.dec(quantity_bd)
           )
         rescue DhanScalper::OversellError => e
-          DhanScalper::Support::Logger.error(e.message, component: "PaperBroker")
-          return create_validation_error("OVERSELL", e.message)
+          DhanScalper::Support::Logger.error(e.message, component: 'PaperBroker')
+          return create_validation_error('OVERSELL', e.message)
         end
 
-        order = Order.new("P-#{Time.now.to_f}", security_id, "SELL", quantity, price)
+        order = Order.new("P-#{Time.now.to_f}", security_id, 'SELL', quantity, price)
 
         # Log the order
         log_order(order)
@@ -140,10 +140,10 @@ module DhanScalper
         result = @position_tracker.partial_exit(
           exchange_segment: segment,
           security_id: security_id,
-          side: "LONG",
+          side: 'LONG',
           quantity: quantity,
           price: price,
-          fee: charge_per_order,
+          fee: charge_per_order
         )
 
         if result
@@ -180,7 +180,7 @@ module DhanScalper
       end
 
       # Generic place_order method for compatibility with PaperApp
-      def place_order(symbol:, instrument_id:, side:, quantity:, price:, order_type: "MARKET")
+      def place_order(symbol:, instrument_id:, side:, quantity:, price:, order_type: 'MARKET')
         order_id = "P-#{Time.now.to_f}"
         order = Order.new(order_id, instrument_id, side, quantity, price)
 
@@ -191,7 +191,7 @@ module DhanScalper
         segment = determine_segment(symbol, instrument_id)
 
         case side.upcase
-        when "BUY"
+        when 'BUY'
           # Use buy_market method for consistency
           buy_result = buy_market(segment: segment, security_id: instrument_id, quantity: quantity,
                                   charge_per_order: 20)
@@ -201,21 +201,21 @@ module DhanScalper
             buy_result
           elsif buy_result
             position = @position_tracker.get_position(exchange_segment: segment, security_id: instrument_id,
-                                                      side: "LONG")
+                                                      side: 'LONG')
             {
               success: true,
               order_id: order_id,
               order: order,
-              position: position,
+              position: position
             }
           else
             {
               success: false,
-              error: "Failed to execute buy order",
+              error: 'Failed to execute buy order'
             }
           end
 
-        when "SELL"
+        when 'SELL'
           # Use sell_market method for consistency
           sell_result = sell_market(segment: segment, security_id: instrument_id, quantity: quantity,
                                     charge_per_order: 20)
@@ -225,24 +225,24 @@ module DhanScalper
             sell_result
           elsif sell_result
             position = @position_tracker.get_position(exchange_segment: segment, security_id: instrument_id,
-                                                      side: "LONG")
+                                                      side: 'LONG')
             {
               success: true,
               order_id: order_id,
               order: order,
-              position: position,
+              position: position
             }
           else
             {
               success: false,
-              error: "Failed to execute sell order",
+              error: 'Failed to execute sell order'
             }
           end
 
         else
           {
             success: false,
-            error: "Invalid side: #{side}. Use 'BUY' or 'SELL'",
+            error: "Invalid side: #{side}. Use 'BUY' or 'SELL'"
           }
         end
       end
@@ -254,7 +254,7 @@ module DhanScalper
       attr_reader :balance_provider
 
       # Place order with idempotency support - returns Dhan-compatible format
-      def place_order!(symbol:, instrument_id:, side:, quantity:, price:, order_type: "MARKET", idempotency_key: nil,
+      def place_order!(symbol:, instrument_id:, side:, quantity:, price:, order_type: 'MARKET', idempotency_key: nil,
                        redis_store: nil)
         # Check for existing order if idempotency key is provided
         if idempotency_key && redis_store
@@ -272,7 +272,7 @@ module DhanScalper
                 price: price,
                 position: get_position_for_order(existing_order),
                 idempotent: true,
-                existing_order: get_order_object(existing_order),
+                existing_order: get_order_object(existing_order)
               )
             else
               @logger.warn("[PAPER] Idempotency key found but order not found: #{idempotency_key} -> #{existing_order_id}")
@@ -287,7 +287,7 @@ module DhanScalper
           side: side,
           quantity: quantity,
           price: price,
-          order_type: order_type,
+          order_type: order_type
         )
 
         # Store idempotency key if provided and order was successful
@@ -303,7 +303,7 @@ module DhanScalper
             side: side,
             quantity: quantity,
             price: price,
-            position: result[:position],
+            position: result[:position]
           )
         else
           create_dhan_error_response(result[:error])
@@ -314,26 +314,25 @@ module DhanScalper
 
       def determine_option_info(security_id)
         # Try to get option information from CSV master
-        begin
-          csv_master = DhanScalper::CsvMaster.new
-          exchange_info = csv_master.get_exchange_info(security_id)
 
-          if exchange_info
-            {
-              option_type: exchange_info[:option_type],
-              strike_price: exchange_info[:strike_price],
-              expiry_date: exchange_info[:expiry_date],
-              underlying_symbol: exchange_info[:underlying_symbol],
-              symbol: exchange_info[:underlying_symbol]
-            }
-          else
-            # Fallback: try to determine from security ID patterns
-            determine_option_type_from_id(security_id)
-          end
-        rescue => e
-          @logger.warn("[PAPER] Could not determine option info for #{security_id}: #{e.message}")
+        csv_master = DhanScalper::CsvMaster.new
+        exchange_info = csv_master.get_exchange_info(security_id)
+
+        if exchange_info
+          {
+            option_type: exchange_info[:option_type],
+            strike_price: exchange_info[:strike_price],
+            expiry_date: exchange_info[:expiry_date],
+            underlying_symbol: exchange_info[:underlying_symbol],
+            symbol: exchange_info[:underlying_symbol]
+          }
+        else
+          # Fallback: try to determine from security ID patterns
           determine_option_type_from_id(security_id)
         end
+      rescue StandardError => e
+        @logger.warn("[PAPER] Could not determine option info for #{security_id}: #{e.message}")
+        determine_option_type_from_id(security_id)
       end
 
       def determine_option_type_from_id(_security_id)
@@ -350,7 +349,7 @@ module DhanScalper
 
       # Determine the correct segment based on symbol and security_id
       def determine_segment(symbol, security_id)
-        return "NSE_FNO" unless symbol && security_id
+        return 'NSE_FNO' unless symbol && security_id
 
         # Use CsvMaster to determine the correct segment
         begin
@@ -364,11 +363,11 @@ module DhanScalper
         # Fallback logic based on symbol
         case symbol.to_s.upcase
         when /SENSEX/
-          "BSE_FNO"
+          'BSE_FNO'
         when /NIFTY|BANKNIFTY/
-          "NSE_FNO"
+          'NSE_FNO'
         else
-          "NSE_EQ" # Default to NSE_EQ when unknown
+          'NSE_EQ' # Default to NSE_EQ when unknown
         end
       end
 
@@ -380,7 +379,7 @@ module DhanScalper
           error_message: message,
           order_id: nil,
           order: nil,
-          position: nil,
+          position: nil
         }
       end
 
@@ -389,17 +388,17 @@ module DhanScalper
                                           existing_order: nil)
         {
           order_id: order_id,
-          order_status: "FILLED",
+          order_status: 'FILLED',
           average_traded_price: price.to_f,
           filled_qty: quantity.to_i,
           remaining_quantity: 0,
           transaction_type: side.upcase,
-          exchange_segment: position&.dig(:exchange_segment) || "NSE_FNO", # Use position segment or default to NSE_FNO
-          product_type: "MARGIN",
-          order_type: "MARKET",
-          validity: "DAY",
-          security_id: position&.dig(:security_id) || "UNKNOWN",
-          symbol: position&.dig(:symbol) || "UNKNOWN",
+          exchange_segment: position&.dig(:exchange_segment) || 'NSE_FNO', # Use position segment or default to NSE_FNO
+          product_type: 'MARGIN',
+          order_type: 'MARKET',
+          validity: 'DAY',
+          security_id: position&.dig(:security_id) || 'UNKNOWN',
+          symbol: position&.dig(:symbol) || 'UNKNOWN',
           buy_avg: position&.dig(:buy_avg).to_f,
           buy_qty: position&.dig(:buy_qty).to_i,
           sell_avg: position&.dig(:sell_avg).to_f,
@@ -419,12 +418,12 @@ module DhanScalper
           success: true,
           order: existing_order || {
             id: order_id,
-            security_id: position&.dig(:security_id) || "UNKNOWN",
+            security_id: position&.dig(:security_id) || 'UNKNOWN',
             side: side.upcase,
             quantity: quantity.to_i,
             price: price.to_f,
-            timestamp: Time.now,
-          },
+            timestamp: Time.now
+          }
         }
       end
 
@@ -432,15 +431,15 @@ module DhanScalper
       def create_dhan_error_response(error_message)
         {
           order_id: nil,
-          order_status: "REJECTED",
+          order_status: 'REJECTED',
           average_traded_price: 0.0,
           filled_qty: 0,
           remaining_quantity: 0,
           transaction_type: nil,
-          exchange_segment: "NSE_FNO", # Default to NSE_FNO for derivatives
-          product_type: "MARGIN",
-          order_type: "MARKET",
-          validity: "DAY",
+          exchange_segment: 'NSE_FNO', # Default to NSE_FNO for derivatives
+          product_type: 'MARGIN',
+          order_type: 'MARKET',
+          validity: 'DAY',
           security_id: nil,
           symbol: nil,
           buy_avg: 0.0,
@@ -461,7 +460,7 @@ module DhanScalper
           rejection_reason: error_message,
           # Backward compatibility fields
           success: false,
-          order: nil,
+          order: nil
         }
       end
 
@@ -470,15 +469,15 @@ module DhanScalper
         return nil unless order
 
         # Determine the correct segment for the order
-        security_id = order[:security_id] || order["security_id"]
-        symbol = order[:symbol] || order["symbol"]
+        security_id = order[:security_id] || order['security_id']
+        symbol = order[:symbol] || order['symbol']
         segment = determine_segment(symbol, security_id)
 
         # Try to get position from enhanced tracker
         @position_tracker.get_position(
           exchange_segment: segment,
           security_id: security_id,
-          side: "LONG",
+          side: 'LONG'
         )
       end
 
@@ -492,12 +491,12 @@ module DhanScalper
         else
           # Convert to expected format if needed
           {
-            id: order[:id] || order["id"],
-            security_id: order[:security_id] || order["security_id"],
-            side: order[:side] || order["side"],
-            quantity: order[:quantity] || order["quantity"],
-            price: order[:avg_price] || order[:price] || order["avg_price"] || order["price"],
-            timestamp: order[:timestamp] || order["timestamp"],
+            id: order[:id] || order['id'],
+            security_id: order[:security_id] || order['security_id'],
+            side: order[:side] || order['side'],
+            quantity: order[:quantity] || order['quantity'],
+            price: order[:avg_price] || order[:price] || order['avg_price'] || order['price'],
+            timestamp: order[:timestamp] || order['timestamp']
           }
         end
       end

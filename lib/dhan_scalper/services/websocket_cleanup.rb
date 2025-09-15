@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "DhanHQ"
+require 'DhanHQ'
 
 module DhanScalper
   module Services
@@ -15,12 +15,12 @@ module DhanScalper
             end
 
             # Also register signal handlers for graceful shutdown
-            Signal.trap("INT") do
+            Signal.trap('INT') do
               cleanup_all_websockets
               exit(0)
             end
 
-            Signal.trap("TERM") do
+            Signal.trap('TERM') do
               cleanup_all_websockets
               exit(0)
             end
@@ -38,13 +38,13 @@ module DhanScalper
             -> { DhanHQ::WS.disconnect_all_local! },
             -> { DhanHQ::WebSocket.disconnect_all_local! },
             -> { DhanHQ::WS.disconnect_all! },
-            -> { DhanHQ::WebSocket.disconnect_all! },
+            -> { DhanHQ::WebSocket.disconnect_all! }
           ]
 
           success = false
           methods_to_try.each do |method|
             method.call
-            puts "[WEBSOCKET] Successfully disconnected all connections"
+            puts '[WEBSOCKET] Successfully disconnected all connections'
             success = true
             break
           rescue StandardError => e
@@ -54,12 +54,12 @@ module DhanScalper
 
           return if success
 
-          puts "[WEBSOCKET] Warning: Could not disconnect all WebSocket connections using standard methods"
+          puts '[WEBSOCKET] Warning: Could not disconnect all WebSocket connections using standard methods'
           # Try to force cleanup any remaining connections
           begin
             # Force garbage collection to clean up any remaining WebSocket objects
             GC.start
-            puts "[WEBSOCKET] Forced garbage collection to clean up remaining connections"
+            puts '[WEBSOCKET] Forced garbage collection to clean up remaining connections'
           rescue StandardError => e
             puts "[WEBSOCKET] Error during forced cleanup: #{e.message}"
           end

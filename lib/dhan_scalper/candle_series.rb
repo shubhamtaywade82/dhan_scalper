@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-require_relative "support/time_zone"
-require_relative "candle"
-require_relative "indicators/base"
-require_relative "indicators/holy_grail"
-require_relative "indicators/supertrend"
-require_relative "indicators_gate"
+require_relative 'support/time_zone'
+require_relative 'candle'
+require_relative 'indicators/base'
+require_relative 'indicators/holy_grail'
+require_relative 'indicators/supertrend'
+require_relative 'indicators_gate'
 
 module DhanScalper
   class CandleSeries
@@ -13,7 +13,7 @@ module DhanScalper
 
     attr_reader :symbol, :interval, :candles
 
-    def initialize(symbol:, interval: "5")
+    def initialize(symbol:, interval: '5')
       @symbol   = symbol
       @interval = interval.to_s
       @candles  = []
@@ -28,8 +28,8 @@ module DhanScalper
 
       # If 5-minute is requested, fetch 1-minute and aggregate locally to 5-minute
       if target_interval == 5
-        rows_1m = fetch_historical_data(seg, sid, "1")
-        base = new(symbol: "#{symbol}_1m", interval: "1")
+        rows_1m = fetch_historical_data(seg, sid, '1')
+        base = new(symbol: "#{symbol}_1m", interval: '1')
         base.load_from_raw(rows_1m)
         return base.resample_to_minutes(5, symbol: symbol)
       end
@@ -47,20 +47,20 @@ module DhanScalper
       return cached_data if cached_data
 
       # Apply rate limiting
-      DhanScalper::Services::RateLimiter.wait_if_needed("historical_data")
+      DhanScalper::Services::RateLimiter.wait_if_needed('historical_data')
 
       # Calculate date range (last 7 days for intraday data)
-      to_date = Date.today.strftime("%Y-%m-%d")
-      from_date = (Date.today - 7).strftime("%Y-%m-%d")
+      to_date = Date.today.strftime('%Y-%m-%d')
+      from_date = (Date.today - 7).strftime('%Y-%m-%d')
 
       # Prepare parameters for DhanHQ API
       params = {
         security_id: sid.to_s,  # This should be the actual security ID (e.g., "13" for NIFTY)
         exchange_segment: seg,  # This should be the segment (e.g., "IDX_I")
-        instrument: (seg == "IDX_I" ? "INDEX" : "OPTION"),
+        instrument: (seg == 'IDX_I' ? 'INDEX' : 'OPTION'),
         interval: interval.to_s,
         from_date: from_date,
-        to_date: to_date,
+        to_date: to_date
       }
 
       attempts = 0
@@ -71,7 +71,7 @@ module DhanScalper
           # Cache the result
           DhanScalper::Services::HistoricalDataCache.set(seg, sid, interval, result)
           # Record the request for rate limiting
-          DhanScalper::Services::RateLimiter.record_request("historical_data")
+          DhanScalper::Services::RateLimiter.record_request('historical_data')
           return result
         end
       rescue StandardError => e
@@ -86,7 +86,7 @@ module DhanScalper
       end
 
       # Return mock data if method fails (for dryrun/testing)
-      puts "Warning: Historical data fetch failed, returning mock data for testing"
+      puts 'Warning: Historical data fetch failed, returning mock data for testing'
       generate_mock_data(seg, sid, interval)
     end
 
@@ -95,9 +95,9 @@ module DhanScalper
       puts "[MOCK] Generating mock data for #{seg}_#{sid}_#{interval} (#{count} candles)"
 
       base_price = case sid.to_s
-                   when "13" then 19_500.0  # NIFTY
-                   when "25" then 45_000.0  # BANKNIFTY
-                   when "1" then 65_000.0   # SENSEX
+                   when '13' then 19_500.0  # NIFTY
+                   when '25' then 45_000.0  # BANKNIFTY
+                   when '1' then 65_000.0   # SENSEX
                    else 20_000.0
                    end
 
@@ -118,7 +118,7 @@ module DhanScalper
           high: high_price.round(2),
           low: low_price.round(2),
           close: close_price.round(2),
-          volume: rand(1_000..10_000),
+          volume: rand(1_000..10_000)
         }
 
         # Update base price for next candle
@@ -158,26 +158,26 @@ module DhanScalper
       return resp.map { |c| slice_candle(c) } if resp.is_a?(Array)
 
       # Columnar hash: { "open"=>[], "high"=>[], ... }
-      unless resp.is_a?(Hash) && resp["high"].is_a?(Array)
+      unless resp.is_a?(Hash) && resp['high'].is_a?(Array)
         puts "[WARNING] Unexpected candle format: #{resp.class}, expected Hash with Array values"
         puts "[WARNING] Response keys: #{resp.keys if resp.respond_to?(:keys)}"
         return []
       end
 
-      size = resp["high"].size
+      size = resp['high'].size
 
       (0...size).map do |i|
         {
-          open: resp["open"][i].to_f,
-          close: resp["close"][i].to_f,
-          high: resp["high"][i].to_f,
-          low: resp["low"][i].to_f,
-          timestamp: to_time(resp["timestamp"][i]),
+          open: resp['open'][i].to_f,
+          close: resp['close'][i].to_f,
+          high: resp['high'][i].to_f,
+          low: resp['low'][i].to_f,
+          timestamp: to_time(resp['timestamp'][i]),
           volume: begin
-            resp["volume"][i]
+            resp['volume'][i]
           rescue StandardError
             0
-          end.to_i,
+          end.to_i
         }
       end
     end
@@ -186,12 +186,12 @@ module DhanScalper
     def slice_candle(candle)
       if candle.is_a?(Hash)
         {
-          open: candle[:open] || candle["open"],
-          close: candle[:close] || candle["close"],
-          high: candle[:high] || candle["high"],
-          low: candle[:low] || candle["low"],
-          timestamp: to_time(candle[:timestamp] || candle["timestamp"]),
-          volume: candle[:volume] || candle["volume"] || 0,
+          open: candle[:open] || candle['open'],
+          close: candle[:close] || candle['close'],
+          high: candle[:high] || candle['high'],
+          low: candle[:low] || candle['low'],
+          timestamp: to_time(candle[:timestamp] || candle['timestamp']),
+          volume: candle[:volume] || candle['volume'] || 0
         }
       elsif candle.respond_to?(:[]) && candle.size >= 5
         {
@@ -215,7 +215,7 @@ module DhanScalper
     # Build higher timeframe candles from this series (assumes minute-based input)
     def resample_to_minutes(period, symbol: nil)
       per = period.to_i
-      raise ArgumentError, "period must be > 1" unless per > 1
+      raise ArgumentError, 'period must be > 1' unless per > 1
       return self if @interval.to_i == per
 
       bucket_seconds = per * 60
@@ -358,7 +358,7 @@ module DhanScalper
       DhanScalper::Indicators::Supertrend.new(
         series: self,
         period: period,
-        multiplier: multiplier,
+        multiplier: multiplier
       ).call
     end
 

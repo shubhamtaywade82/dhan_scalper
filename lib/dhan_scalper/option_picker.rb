@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "csv_master"
+require_relative 'csv_master'
 
 module DhanScalper
   class OptionPicker
@@ -15,7 +15,7 @@ module DhanScalper
       expiry = fetch_first_expiry
       return nil unless expiry
 
-      step   = @cfg.fetch("strike_step")
+      step   = @cfg.fetch('strike_step')
       atm    = nearest_strike(current_spot, step)
       strikes = [atm - step, atm, atm + step].sort
 
@@ -27,11 +27,11 @@ module DhanScalper
 
         strikes.each do |strike|
           # Get Call option security ID
-          ce_security_id = @csv_master.get_security_id(underlying_symbol, expiry, strike, "CE")
+          ce_security_id = @csv_master.get_security_id(underlying_symbol, expiry, strike, 'CE')
           ce_sid[strike] = ce_security_id || "PAPER_CE_#{strike}"
 
           # Get Put option security ID
-          pe_security_id = @csv_master.get_security_id(underlying_symbol, expiry, strike, "PE")
+          pe_security_id = @csv_master.get_security_id(underlying_symbol, expiry, strike, 'PE')
           pe_sid[strike] = pe_security_id || "PAPER_PE_#{strike}"
         end
 
@@ -50,12 +50,12 @@ module DhanScalper
           ce_sid: {
             (atm - step) => "PAPER_CE_#{atm - step}",
             atm => "PAPER_CE_#{atm}",
-            (atm + step) => "PAPER_CE_#{atm + step}",
+            (atm + step) => "PAPER_CE_#{atm + step}"
           },
           pe_sid: {
             (atm - step) => "PAPER_PE_#{atm - step}",
             atm => "PAPER_PE_#{atm}",
-            (atm + step) => "PAPER_PE_#{atm + step}",
+            (atm + step) => "PAPER_PE_#{atm + step}"
           }
         }
 
@@ -68,7 +68,7 @@ module DhanScalper
       expiry = fetch_first_expiry
       return nil unless expiry
 
-      step = @cfg.fetch("strike_step")
+      step = @cfg.fetch('strike_step')
       atm = nearest_strike(current_spot, step)
 
       # Determine strike selection based on signal strength and direction
@@ -78,8 +78,8 @@ module DhanScalper
         underlying_symbol = get_underlying_symbol
 
         # Get security IDs for the selected strike
-        ce_security_id = @csv_master.get_security_id(underlying_symbol, expiry, selected_strike, "CE")
-        pe_security_id = @csv_master.get_security_id(underlying_symbol, expiry, selected_strike, "PE")
+        ce_security_id = @csv_master.get_security_id(underlying_symbol, expiry, selected_strike, 'CE')
+        pe_security_id = @csv_master.get_security_id(underlying_symbol, expiry, selected_strike, 'PE')
 
         # Get premium prices (mock for paper trading)
         premium = get_option_premium(selected_strike, current_spot, signal)
@@ -89,7 +89,7 @@ module DhanScalper
           expiry: expiry,
           ce_security_id: ce_security_id || "PAPER_CE_#{selected_strike}",
           pe_security_id: pe_security_id || "PAPER_PE_#{selected_strike}",
-          premium: premium,
+          premium: premium
         }
       rescue StandardError => e
         raise "Failed to fetch option data for live trading: #{e.message}" unless @mode == :paper
@@ -104,7 +104,7 @@ module DhanScalper
           expiry: expiry,
           ce_security_id: "PAPER_CE_#{selected_strike}",
           pe_security_id: "PAPER_PE_#{selected_strike}",
-          premium: premium,
+          premium: premium
         }
       end
     end
@@ -166,7 +166,7 @@ module DhanScalper
       now = Time.now
       d = (wday_target - now.wday) % 7
       d = 7 if d.zero? && now.hour >= 15
-      (now + (d * 86_400)).strftime("%Y-%m-%d")
+      (now + (d * 86_400)).strftime('%Y-%m-%d')
     end
 
     def fetch_first_expiry
@@ -185,17 +185,17 @@ module DhanScalper
       end
 
       # Fallback to calculated expiry if CSV master fails
-      puts "[WARNING] No expiry dates found from CSV master, using fallback calculation"
+      puts '[WARNING] No expiry dates found from CSV master, using fallback calculation'
       fallback_expiry
     end
 
     def fallback_expiry
       # Fallback to old calculation method if API fails
-      wday_target = @cfg.fetch("expiry_wday")
+      wday_target = @cfg.fetch('expiry_wday')
       now = Time.now
       d = (wday_target - now.wday) % 7
       d = 7 if d.zero? && now.hour >= 15
-      (now + (d * 86_400)).strftime("%Y-%m-%d")
+      (now + (d * 86_400)).strftime('%Y-%m-%d')
     end
 
     def index_by(chain)
@@ -213,16 +213,16 @@ module DhanScalper
       # Map security IDs to underlying symbols
       # This is a simple mapping - in a real implementation, you might want to
       # fetch this from the CSV master data or configuration
-      case @cfg.fetch("idx_sid")
-      when "13"
-        "NIFTY"
-      when "25", "23"
-        "BANKNIFTY"
-      when "51"
-        "SENSEX"
+      case @cfg.fetch('idx_sid')
+      when '13'
+        'NIFTY'
+      when '25', '23'
+        'BANKNIFTY'
+      when '51'
+        'SENSEX'
       else
         # Default fallback - you might want to make this configurable
-        "NIFTY"
+        'NIFTY'
       end
     end
   end

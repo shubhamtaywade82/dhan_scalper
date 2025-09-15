@@ -12,7 +12,7 @@ module DhanScalper
         @sync_interval = 30 # seconds
       end
 
-      def place_order(symbol:, instrument_id:, side:, quantity:, price:, order_type: "MARKET")
+      def place_order(symbol:, instrument_id:, side:, quantity:, price:, order_type: 'MARKET')
         @logger.info "[LIVE_ORDER_MANAGER] Placing #{side} order for #{symbol}: #{quantity} @ #{price}"
 
         result = @broker.place_order(
@@ -21,7 +21,7 @@ module DhanScalper
           side: side,
           quantity: quantity,
           price: price,
-          order_type: order_type,
+          order_type: order_type
         )
 
         if result[:success]
@@ -34,8 +34,8 @@ module DhanScalper
             quantity: quantity,
             price: price,
             order_type: order_type,
-            status: "PENDING",
-            created_at: Time.now,
+            status: 'PENDING',
+            created_at: Time.now
           }
         else
           @logger.error "[LIVE_ORDER_MANAGER] Failed to place order: #{result[:error]}"
@@ -77,19 +77,19 @@ module DhanScalper
       end
 
       def get_pending_orders
-        get_orders(status: "PENDING")
+        get_orders(status: 'PENDING')
       end
 
       def get_filled_orders
-        get_orders(status: "FILLED")
+        get_orders(status: 'FILLED')
       end
 
       def get_cancelled_orders
-        get_orders(status: "CANCELLED")
+        get_orders(status: 'CANCELLED')
       end
 
       def get_rejected_orders
-        get_orders(status: "REJECTED")
+        get_orders(status: 'REJECTED')
       end
 
       def get_order_status(order_id)
@@ -153,7 +153,7 @@ module DhanScalper
               order_type: order[:order_type],
               status: order[:status],
               created_at: order[:created_at],
-              last_updated: Time.now,
+              last_updated: Time.now
             }
           end
 

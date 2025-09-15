@@ -1,33 +1,33 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require "bundler/setup"
-require "dhan_scalper"
+require 'bundler/setup'
+require 'dhan_scalper'
 
 # Development console for dhan_scalper
 # This console provides an interactive environment for testing and development
 
-puts "🚀 DhanScalper Development Console"
-puts "=" * 50
-puts "Available components:"
-puts "• DhanScalper::Config"
-puts "• DhanScalper::BalanceProviders::PaperWallet"
-puts "• DhanScalper::BalanceProviders::LiveBalance"
-puts "• DhanScalper::Brokers::PaperBroker"
-puts "• DhanScalper::Brokers::DhanBroker"
-puts "• DhanScalper::VirtualDataManager"
-puts "• DhanScalper::TickCache"
-puts "• DhanScalper::CLI"
-puts "=" * 50
+puts '🚀 DhanScalper Development Console'
+puts '=' * 50
+puts 'Available components:'
+puts '• DhanScalper::Config'
+puts '• DhanScalper::BalanceProviders::PaperWallet'
+puts '• DhanScalper::BalanceProviders::LiveBalance'
+puts '• DhanScalper::Brokers::PaperBroker'
+puts '• DhanScalper::Brokers::DhanBroker'
+puts '• DhanScalper::VirtualDataManager'
+puts '• DhanScalper::TickCache'
+puts '• DhanScalper::CLI'
+puts '=' * 50
 
 # Load development configuration if available
 begin
-  if File.exist?("config/development.yml")
-    puts "📁 Loading development config..."
-    @config = DhanScalper::Config.load(path: "config/development.yml")
-    puts "✓ Development config loaded"
+  if File.exist?('config/development.yml')
+    puts '📁 Loading development config...'
+    @config = DhanScalper::Config.load(path: 'config/development.yml')
+    puts '✓ Development config loaded'
   else
-    puts "⚠ No development config found. Create config/development.yml for testing"
+    puts '⚠ No development config found. Create config/development.yml for testing'
   end
 rescue StandardError => e
   puts "⚠ Config loading failed: #{e.message}"
@@ -35,48 +35,48 @@ end
 
 # Set up some common objects for testing
 begin
-  puts "🔧 Setting up test objects..."
+  puts '🔧 Setting up test objects...'
 
   # Paper wallet for testing
   @paper_wallet = DhanScalper::BalanceProviders::PaperWallet.new(100_000)
-  puts "✓ Paper wallet created with ₹100,000"
+  puts '✓ Paper wallet created with ₹100,000'
 
   # Virtual data manager
   @vdm = DhanScalper::VirtualDataManager.new
-  puts "✓ Virtual data manager created"
+  puts '✓ Virtual data manager created'
 
   # Paper broker
   @paper_broker = DhanScalper::Brokers::PaperBroker.new(
     virtual_data_manager: @vdm,
     balance_provider: @paper_wallet
   )
-  puts "✓ Paper broker created"
+  puts '✓ Paper broker created'
 
   # Sample tick data
   DhanScalper::TickCache.put({
-                               segment: "IDX_I",
-                               security_id: "13",
+                               segment: 'IDX_I',
+                               security_id: '13',
                                ltp: 19_500.0,
                                ts: Time.now.to_i,
-                               symbol: "NIFTY"
+                               symbol: 'NIFTY'
                              })
-  puts "✓ Sample tick data added"
+  puts '✓ Sample tick data added'
 rescue StandardError => e
   puts "⚠ Setup failed: #{e.message}"
 end
 
 puts "\n🎯 Ready for development! Try these examples:"
 puts "• @config['symbols']                    # View symbols"
-puts "• @paper_wallet.available_balance      # Check paper balance"
-puts "• @vdm.get_balance                     # Get VDM balance"
+puts '• @paper_wallet.available_balance      # Check paper balance'
+puts '• @vdm.get_balance                     # Get VDM balance'
 puts "• DhanScalper::TickCache.ltp('IDX_I', '13')  # Get NIFTY LTP"
 puts "• @paper_broker.buy_market(segment: 'NSE_FNO', security_id: 'TEST', quantity: 75)"
-puts "• @vdm.get_orders                       # View orders"
-puts "• @vdm.get_positions                    # View positions"
-puts "=" * 50
+puts '• @vdm.get_orders                       # View orders'
+puts '• @vdm.get_positions                    # View positions'
+puts '=' * 50
 
 # You can add fixtures and/or initialization code here to make experimenting
 # with your gem easier. You can also use a different console, if you like.
 
-require "irb"
+require 'irb'
 IRB.start(__FILE__)

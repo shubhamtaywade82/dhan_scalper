@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require "json"
-require "logger"
-require "concurrent"
-require "securerandom"
+require 'json'
+require 'logger'
+require 'concurrent'
+require 'securerandom'
 
 module DhanScalper
   module Services
@@ -69,7 +69,7 @@ module DhanScalper
         stop_reconnect_thread
         disconnect
 
-        @logger.info "[ResilientWebSocket] Stopped"
+        @logger.info '[ResilientWebSocket] Stopped'
       end
 
       def connect_with_retry
@@ -98,7 +98,7 @@ module DhanScalper
             @reconnect_attempts = 0
             @last_heartbeat = Time.now
 
-            @logger.info "[ResilientWebSocket] Connected successfully"
+            @logger.info '[ResilientWebSocket] Connected successfully'
 
             # Resubscribe to all instruments
             resubscribe_all
@@ -113,7 +113,7 @@ module DhanScalper
       def disconnect
         return unless @connected
 
-        @logger.info "[ResilientWebSocket] Disconnecting..."
+        @logger.info '[ResilientWebSocket] Disconnecting...'
 
         begin
           # Unsubscribe from all instruments
@@ -124,13 +124,13 @@ module DhanScalper
           @connected = false
           @subscribed_instruments.clear
 
-          @logger.info "[ResilientWebSocket] Disconnected"
+          @logger.info '[ResilientWebSocket] Disconnected'
         rescue StandardError => e
           @logger.error "[ResilientWebSocket] Disconnect error: #{e.message}"
         end
       end
 
-      def subscribe_to_instrument(instrument_id, instrument_type = "EQUITY", is_baseline: false, is_position: false)
+      def subscribe_to_instrument(instrument_id, instrument_type = 'EQUITY', is_baseline: false, is_position: false)
         # Always store the segment mapping, even if not connected
         @instrument_segments ||= # Determine segment based on instrument type and underlying
           segment = determine_segment(instrument_id, instrument_type)
@@ -224,12 +224,12 @@ module DhanScalper
         @resubscription_callbacks << block
       end
 
-      def add_baseline_subscription(instrument_id, instrument_type = "INDEX")
+      def add_baseline_subscription(instrument_id, instrument_type = 'INDEX')
         @baseline_subscriptions.add(instrument_id)
         subscribe_to_instrument(instrument_id, instrument_type, is_baseline: true)
       end
 
-      def add_position_subscription(instrument_id, instrument_type = "OPTION")
+      def add_position_subscription(instrument_id, instrument_type = 'OPTION')
         @position_subscriptions.add(instrument_id)
         subscribe_to_instrument(instrument_id, instrument_type, is_position: true)
       end
@@ -242,7 +242,7 @@ module DhanScalper
           position_subscriptions: @position_subscriptions.size,
           reconnect_attempts: @reconnect_attempts,
           last_heartbeat: @last_heartbeat,
-          heartbeat_timeout: @heartbeat_timeout,
+          heartbeat_timeout: @heartbeat_timeout
         }
       end
 
@@ -250,7 +250,7 @@ module DhanScalper
       def simulate_connection_loss
         return unless @connected && @connection
 
-        @logger.info "[ResilientWebSocket] Simulating connection loss for testing..."
+        @logger.info '[ResilientWebSocket] Simulating connection loss for testing...'
 
         begin
           @connection.disconnect! if @connection.respond_to?(:disconnect!)
@@ -266,17 +266,17 @@ module DhanScalper
 
       def determine_segment(instrument_id, instrument_type)
         case instrument_type
-        when "INDEX"
+        when 'INDEX'
           # For indices, determine based on the instrument ID
           case instrument_id.to_s
-          when "13", "25", "51" # NIFTY, BANKNIFTY, SENSEX
+          when '13', '25', '51' # NIFTY, BANKNIFTY, SENSEX
           end
-          "IDX_I"
-        when "OPTION"
+          'IDX_I'
+        when 'OPTION'
           # For options, use CSV master to determine the correct segment
           determine_option_segment(instrument_id)
         else
-          "NSE_EQ" # Default for equity
+          'NSE_EQ' # Default for equity
         end
       end
 
@@ -297,9 +297,9 @@ module DhanScalper
         # Fallback: try to determine based on common patterns
         # BSE options typically have longer IDs and different patterns
         if instrument_id.to_s.length > 4 # BSE options typically have longer IDs
-          "BSE_FNO"
+          'BSE_FNO'
         else
-          "NSE_FNO" # Default to NSE for most options
+          'NSE_FNO' # Default to NSE for most options
         end
       end
 
@@ -325,7 +325,7 @@ module DhanScalper
         return unless tick_data && tick_data[:security_id]
 
         instrument_id = tick_data[:security_id]
-        segment = @instrument_segments&.[](instrument_id) || "NSE_FNO"
+        segment = @instrument_segments&.[](instrument_id) || 'NSE_FNO'
         timestamp = tick_data[:ts] || Time.now.to_i
 
         # Check for out-of-order ticks
@@ -338,14 +338,14 @@ module DhanScalper
         @last_tick_timestamps[instrument_id] = timestamp
 
         # Debug: Log the raw tick data
-        @logger.debug "[ResilientWebSocket] Raw tick data: #{tick_data.inspect}" if ENV["DHAN_LOG_LEVEL"] == "DEBUG"
+        @logger.debug "[ResilientWebSocket] Raw tick data: #{tick_data.inspect}" if ENV['DHAN_LOG_LEVEL'] == 'DEBUG'
 
         # Normalize and store using TickNormalizer
         normalized = DhanScalper::Support::TickNormalizer.normalize(
           tick_data,
           segment: segment,
           security_id: instrument_id,
-          ts: timestamp,
+          ts: timestamp
         )
         DhanScalper::TickCache.put(normalized) if normalized
 
@@ -361,7 +361,7 @@ module DhanScalper
           volume: (tick_data[:volume] || 0).to_i,
           timestamp: timestamp,
           segment: segment,
-          exchange: "NSE",
+          exchange: 'NSE'
         }
 
         @message_handlers[:price_update]&.call(price_data)
@@ -432,9 +432,9 @@ module DhanScalper
 
             if @connected && @connection && @connection.respond_to?(:closed?) && !@connection.closed?
               @last_heartbeat = Time.now
-              @logger.debug "[ResilientWebSocket] Heartbeat sent"
+              @logger.debug '[ResilientWebSocket] Heartbeat sent'
             else
-              @logger.warn "[ResilientWebSocket] Heartbeat failed - connection lost"
+              @logger.warn '[ResilientWebSocket] Heartbeat failed - connection lost'
               @connected = false
               handle_connection_failure
             end
@@ -448,15 +448,15 @@ module DhanScalper
       end
 
       def resubscribe_all
-        @logger.info "[ResilientWebSocket] Resubscribing to all instruments..."
+        @logger.info '[ResilientWebSocket] Resubscribing to all instruments...'
 
         # Resubscribe to baseline indices
         @baseline_subscriptions.each do |instrument_id|
-          segment = @instrument_segments[instrument_id] || "IDX_I"
+          segment = @instrument_segments[instrument_id] || 'IDX_I'
           instrument_type = case segment
-                            when "IDX_I" then "INDEX"
-                            when "NSE_FNO" then "OPTION"
-                            else "EQUITY"
+                            when 'IDX_I' then 'INDEX'
+                            when 'NSE_FNO' then 'OPTION'
+                            else 'EQUITY'
                             end
 
           subscribe_to_instrument(instrument_id, instrument_type, is_baseline: true)
@@ -464,11 +464,11 @@ module DhanScalper
 
         # Resubscribe to position instruments
         @position_subscriptions.each do |instrument_id|
-          segment = @instrument_segments[instrument_id] || "NSE_FNO"
+          segment = @instrument_segments[instrument_id] || 'NSE_FNO'
           instrument_type = case segment
-                            when "IDX_I" then "INDEX"
-                            when "NSE_FNO" then "OPTION"
-                            else "EQUITY"
+                            when 'IDX_I' then 'INDEX'
+                            when 'NSE_FNO' then 'OPTION'
+                            else 'EQUITY'
                             end
 
           subscribe_to_instrument(instrument_id, instrument_type, is_position: true)

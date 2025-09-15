@@ -2,14 +2,14 @@
 # frozen_string_literal: true
 
 begin
-  require "bundler/setup"
+  require 'bundler/setup'
 rescue LoadError
   nil
 end
 begin
-  require "dotenv/load"
+  require 'dotenv/load'
 rescue LoadError
   nil
 end
-require "dhan_scalper"
+require 'dhan_scalper'
 DhanScalper::CLI.start(ARGV)

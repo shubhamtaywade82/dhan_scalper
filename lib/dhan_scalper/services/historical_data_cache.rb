@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
-require "json"
-require "fileutils"
+require 'json'
+require 'fileutils'
 
 module DhanScalper
   module Services
     class HistoricalDataCache
-      CACHE_DIR = "data/cache"
+      CACHE_DIR = 'data/cache'
       CACHE_DURATION = 300 # 5 minutes cache duration
 
       class << self
@@ -45,7 +45,7 @@ module DhanScalper
           return unless Dir.exist?(CACHE_DIR)
 
           FileUtils.rm_rf(CACHE_DIR)
-          puts "[CACHE] Cleared all cached data"
+          puts '[CACHE] Cleared all cached data'
         end
 
         private

@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require "concurrent"
-require_relative "candle_series"
-require_relative "services/rate_limiter"
+require 'concurrent'
+require_relative 'candle_series'
+require_relative 'services/rate_limiter'
 
 module DhanScalper
   class OHLCFetcher
@@ -12,7 +12,7 @@ module DhanScalper
       @running = false
       @fetch_thread = nil
       @candle_cache = Concurrent::Map.new
-      @fetch_interval = config.dig("global", "ohlc_fetch_interval") || 180 # 3 minutes
+      @fetch_interval = config.dig('global', 'ohlc_fetch_interval') || 180 # 3 minutes
       @last_fetch_times = Concurrent::Map.new
     end
 
@@ -32,39 +32,39 @@ module DhanScalper
 
       @running = false
       @fetch_thread&.join(2)
-      @logger.info "[OHLC] OHLC fetcher stopped"
+      @logger.info '[OHLC] OHLC fetcher stopped'
     end
 
     def running?
       @running
     end
 
-    def get_candle_data(symbol, timeframe = "1m")
+    def get_candle_data(symbol, timeframe = '1m')
       cache_key = "#{symbol}_#{timeframe}"
       @candle_cache[cache_key]
     end
 
-    def get_latest_candle(symbol, timeframe = "1m")
+    def get_latest_candle(symbol, timeframe = '1m')
       candle_data = get_candle_data(symbol, timeframe)
       return nil unless candle_data&.candles&.any?
 
       candle_data.candles.last
     end
 
-    def get_candle_series(symbol, timeframe = "1m")
+    def get_candle_series(symbol, timeframe = '1m')
       get_candle_data(symbol, timeframe)
     end
 
     def cache_stats
       {
         total_cached: @candle_cache.size,
-        symbols: @candle_cache.keys.map { |k| k.split("_").first }.uniq,
-        timeframes: @candle_cache.keys.map { |k| k.split("_").last }.uniq,
+        symbols: @candle_cache.keys.map { |k| k.split('_').first }.uniq,
+        timeframes: @candle_cache.keys.map { |k| k.split('_').last }.uniq,
         last_fetch_times: begin
           @last_fetch_times.to_h
         rescue StandardError
           {}
-        end,
+        end
       }
     end
 
@@ -84,7 +84,7 @@ module DhanScalper
     end
 
     def fetch_all_symbols
-      symbols = @config["SYMBOLS"]&.keys || []
+      symbols = @config['SYMBOLS']&.keys || []
       return if symbols.empty?
 
       @logger.info "[OHLC] Fetching data for #{symbols.size} symbols with staggering"
@@ -111,17 +111,17 @@ module DhanScalper
       fetch_symbol_data(symbol)
 
       # Rate limiting between symbols
-      Services::RateLimiter.wait_if_needed("ohlc_fetch")
+      Services::RateLimiter.wait_if_needed('ohlc_fetch')
       sleep(1) # Additional delay between symbols
     end
 
     def fetch_symbol_data(symbol)
-      symbol_config = @config["SYMBOLS"][symbol]
+      symbol_config = @config['SYMBOLS'][symbol]
       return unless symbol_config
 
       begin
         # Fetch data for multiple timeframes
-        timeframes = @config.dig("global", "ohlc_timeframes") || %w[1 5]
+        timeframes = @config.dig('global', 'ohlc_timeframes') || %w[1 5]
 
         timeframes.each do |interval|
           fetch_timeframe_data(symbol, symbol_config, interval)
@@ -142,10 +142,10 @@ module DhanScalper
 
       begin
         candle_series = CandleSeries.load_from_dhan_intraday(
-          seg: symbol_config["seg_idx"],
-          sid: symbol_config["idx_sid"],
+          seg: symbol_config['seg_idx'],
+          sid: symbol_config['idx_sid'],
           interval: interval,
-          symbol: "INDEX",
+          symbol: 'INDEX'
         )
 
         if candle_series&.candles&.any?
@@ -166,7 +166,7 @@ module DhanScalper
       Time.now - last_fetch >= @fetch_interval
     end
 
-    def get_cache_age(symbol, timeframe = "1m")
+    def get_cache_age(symbol, timeframe = '1m')
       cache_key = "#{symbol}_#{timeframe}"
       candle_data = @candle_cache[cache_key]
       return nil unless candle_data&.candles&.any?
@@ -177,7 +177,7 @@ module DhanScalper
       Time.now - Time.at(last_candle.timestamp)
     end
 
-    def is_data_fresh?(symbol, timeframe = "1m", max_age: 300)
+    def is_data_fresh?(symbol, timeframe = '1m', max_age: 300)
       age = get_cache_age(symbol, timeframe)
       return false unless age
 

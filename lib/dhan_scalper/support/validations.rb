@@ -1,13 +1,17 @@
 # frozen_string_literal: true
 
-require_relative "money"
+require_relative 'money'
 
 module DhanScalper
   module Support
     module Validations
       def self.validate_quantity(quantity, lot_size)
-        raise DhanScalper::InvalidQuantity, "Quantity must be positive" if quantity <= 0
-        raise DhanScalper::InvalidQuantity, "Quantity must be a multiple of lot size #{lot_size}" unless (quantity % lot_size).zero?
+        raise DhanScalper::InvalidQuantity, 'Quantity must be positive' if quantity <= 0
+
+        return if (quantity % lot_size).zero?
+
+        raise DhanScalper::InvalidQuantity,
+              "Quantity must be a multiple of lot size #{lot_size}"
       end
 
       def self.validate_balance_sufficient(available_balance, required_amount)
@@ -29,18 +33,22 @@ module DhanScalper
       end
 
       def self.validate_price_positive(price)
-        raise DhanScalper::InvalidOrder, "Price must be positive" if price <= 0
+        raise DhanScalper::InvalidOrder, 'Price must be positive' if price <= 0
       end
 
       def self.validate_instrument_id(instrument_id)
-        raise DhanScalper::InvalidInstrument, "Instrument ID cannot be nil or empty" if instrument_id.nil? || instrument_id.to_s.empty?
+        return unless instrument_id.nil? || instrument_id.to_s.empty?
+
+        raise DhanScalper::InvalidInstrument,
+              'Instrument ID cannot be nil or empty'
       end
 
       def self.validate_segment(segment)
         valid_segments = %w[IDX_I NSE_EQ NSE_FNO BSE_FNO]
         return if valid_segments.include?(segment)
 
-        raise DhanScalper::InvalidInstrument, "Invalid segment: #{segment}. Must be one of: #{valid_segments.join(", ")}"
+        raise DhanScalper::InvalidInstrument,
+              "Invalid segment: #{segment}. Must be one of: #{valid_segments.join(', ')}"
       end
     end
   end

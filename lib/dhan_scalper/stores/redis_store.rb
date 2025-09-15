@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require "redis"
-require "json"
-require "digest"
+require 'redis'
+require 'json'
+require 'digest'
 
 module DhanScalper
   module Stores
@@ -10,9 +10,9 @@ module DhanScalper
     class RedisStore
       attr_reader :redis, :namespace, :logger
 
-      def initialize(namespace: "dhan_scalper:v1", redis_url: nil, logger: nil)
+      def initialize(namespace: 'dhan_scalper:v1', redis_url: nil, logger: nil)
         @namespace = namespace
-        @redis_url = redis_url || ENV.fetch("REDIS_URL", "redis://127.0.0.1:6379/0")
+        @redis_url = redis_url || ENV.fetch('REDIS_URL', 'redis://127.0.0.1:6379/0')
         @logger = logger || Logger.new($stdout)
         @redis = nil
         @process_id = Process.pid
@@ -28,9 +28,9 @@ module DhanScalper
         # Verify connection with ping
         begin
           response = @redis.ping
-          raise "Redis ping failed" unless response == "PONG"
+          raise 'Redis ping failed' unless response == 'PONG'
 
-          @logger.info "[REDIS_STORE] Redis connected successfully"
+          @logger.info '[REDIS_STORE] Redis connected successfully'
         rescue StandardError => e
           @logger.error "[REDIS_STORE] Redis connection failed: #{e.message}"
           raise
@@ -41,7 +41,7 @@ module DhanScalper
       def disconnect
         @redis&.close
         @redis = nil
-        @logger.info "[REDIS_STORE] Disconnected from Redis"
+        @logger.info '[REDIS_STORE] Disconnected from Redis'
       end
 
       # Store configuration
@@ -64,8 +64,8 @@ module DhanScalper
       # Store CSV raw data checksum
       def store_csv_checksum(checksum, timestamp = Time.now.to_i)
         key = "#{@namespace}:csv:raw"
-        @redis.hset(key, "checksum", checksum)
-        @redis.hset(key, "timestamp", timestamp)
+        @redis.hset(key, 'checksum', checksum)
+        @redis.hset(key, 'timestamp', timestamp)
         @redis.expire(key, 86_400) # 24 hours TTL
       end
 
@@ -76,16 +76,16 @@ module DhanScalper
         return nil if data.empty?
 
         {
-          checksum: data["checksum"],
-          timestamp: data["timestamp"].to_i,
+          checksum: data['checksum'],
+          timestamp: data['timestamp'].to_i
         }
       end
 
       # Store CSV raw checksum (alias for store_csv_checksum)
       def store_csv_raw_checksum(checksum_data)
         if checksum_data.is_a?(Hash)
-          checksum = checksum_data[:checksum] || checksum_data["checksum"]
-          timestamp = checksum_data[:timestamp] || checksum_data["timestamp"] || Time.now.to_i
+          checksum = checksum_data[:checksum] || checksum_data['checksum']
+          timestamp = checksum_data[:timestamp] || checksum_data['timestamp'] || Time.now.to_i
         else
           checksum = checksum_data
           timestamp = Time.now.to_i
@@ -157,14 +157,14 @@ module DhanScalper
         cache_key = "#{segment}:#{security_id}"
         @hot_cache[cache_key] = {
           data: tick_data,
-          cached_at: Time.now,
+          cached_at: Time.now
         }
 
         # Update LTP hot cache
         ltp_cache_key = "#{segment}:#{security_id}:ltp"
         @hot_cache[ltp_cache_key] = {
           data: tick_data[:ltp],
-          cached_at: Time.now,
+          cached_at: Time.now
         }
       end
 
@@ -184,18 +184,18 @@ module DhanScalper
 
         # Convert string values to appropriate types
         tick_data = {
-          ltp: data["ltp"]&.to_f,
-          ts: data["ts"]&.to_i,
-          atp: data["atp"]&.to_f,
-          vol: data["vol"]&.to_i,
-          segment: data["segment"],
-          security_id: data["security_id"],
+          ltp: data['ltp']&.to_f,
+          ts: data['ts']&.to_i,
+          atp: data['atp']&.to_f,
+          vol: data['vol']&.to_i,
+          segment: data['segment'],
+          security_id: data['security_id']
         }
 
         # Update hot cache
         @hot_cache[cache_key] = {
           data: tick_data,
-          cached_at: Time.now,
+          cached_at: Time.now
         }
 
         tick_data
@@ -212,7 +212,7 @@ module DhanScalper
 
         # Get from Redis
         key = "#{@namespace}:ticks:#{segment}:#{security_id}"
-        ltp = @redis.hget(key, "ltp")
+        ltp = @redis.hget(key, 'ltp')
         return nil unless ltp
 
         ltp_value = ltp.to_f
@@ -220,7 +220,7 @@ module DhanScalper
         # Update hot cache
         @hot_cache[cache_key] = {
           data: ltp_value,
-          cached_at: Time.now,
+          cached_at: Time.now
         }
 
         ltp_value
@@ -308,11 +308,11 @@ module DhanScalper
       # Store session PnL
       def store_session_pnl(_session_id, pnl_data)
         key = "#{@namespace}:pnl:session"
-        @redis.hset(key, "realized", pnl_data[:realized] || pnl_data["realized"])
-        @redis.hset(key, "unrealized", pnl_data[:unrealized] || pnl_data["unrealized"])
-        @redis.hset(key, "fees", pnl_data[:fees] || pnl_data["fees"])
-        @redis.hset(key, "total", pnl_data[:total] || pnl_data["total"])
-        @redis.hset(key, "timestamp", pnl_data[:timestamp] || pnl_data["timestamp"] || Time.now.to_i)
+        @redis.hset(key, 'realized', pnl_data[:realized] || pnl_data['realized'])
+        @redis.hset(key, 'unrealized', pnl_data[:unrealized] || pnl_data['unrealized'])
+        @redis.hset(key, 'fees', pnl_data[:fees] || pnl_data['fees'])
+        @redis.hset(key, 'total', pnl_data[:total] || pnl_data['total'])
+        @redis.hset(key, 'timestamp', pnl_data[:timestamp] || pnl_data['timestamp'] || Time.now.to_i)
         @redis.expire(key, 86_400) # 24 hours TTL
       end
 
@@ -323,22 +323,22 @@ module DhanScalper
         return nil if data.empty?
 
         {
-          realized: data["realized"].to_f,
-          unrealized: data["unrealized"].to_f,
-          fees: data["fees"].to_f,
-          total: data["total"].to_f,
-          timestamp: data["timestamp"].to_i,
+          realized: data['realized'].to_f,
+          unrealized: data['unrealized'].to_f,
+          fees: data['fees'].to_f,
+          total: data['total'].to_f,
+          timestamp: data['timestamp'].to_i
         }
       end
 
       # Store report
       def store_report(session_id, report_data)
         key = "#{@namespace}:reports:#{session_id}"
-        @redis.hset(key, "csv_path", report_data[:csv_path] || report_data["csv_path"])
-        @redis.hset(key, "json_path", report_data[:json_path] || report_data["json_path"])
-        @redis.hset(key, "total_trades", report_data[:total_trades] || report_data["total_trades"])
-        @redis.hset(key, "total_pnl", report_data[:total_pnl] || report_data["total_pnl"])
-        @redis.hset(key, "generated_at", report_data[:generated_at] || report_data["generated_at"] || Time.now.to_i)
+        @redis.hset(key, 'csv_path', report_data[:csv_path] || report_data['csv_path'])
+        @redis.hset(key, 'json_path', report_data[:json_path] || report_data['json_path'])
+        @redis.hset(key, 'total_trades', report_data[:total_trades] || report_data['total_trades'])
+        @redis.hset(key, 'total_pnl', report_data[:total_pnl] || report_data['total_pnl'])
+        @redis.hset(key, 'generated_at', report_data[:generated_at] || report_data['generated_at'] || Time.now.to_i)
         @redis.expire(key, 86_400) # 24 hours TTL
       end
 
@@ -349,11 +349,11 @@ module DhanScalper
         return nil if data.empty?
 
         {
-          csv_path: data["csv_path"],
-          json_path: data["json_path"],
-          total_trades: data["total_trades"].to_i,
-          total_pnl: data["total_pnl"].to_f,
-          generated_at: data["generated_at"].to_i,
+          csv_path: data['csv_path'],
+          json_path: data['json_path'],
+          total_trades: data['total_trades'].to_i,
+          total_pnl: data['total_pnl'].to_f,
+          generated_at: data['generated_at'].to_i
         }
       end
 
@@ -397,7 +397,7 @@ module DhanScalper
         # Check if existing lock is expired
         existing = @redis.get(key)
         if existing
-          _, expiry_part = existing.split(":")
+          _, expiry_part = existing.split(':')
           if expiry_part && Time.now.to_i > expiry_part.to_i && @redis.set(key, lock_value, xx: true, ex: ttl)
             # Lock is expired, try to replace it
             return true
@@ -413,7 +413,7 @@ module DhanScalper
         existing = @redis.get(key)
         return false unless existing
 
-        _owner_part, _expiry_part = existing.split(":")
+        _owner_part, _expiry_part = existing.split(':')
         if _owner_part == owner
           @redis.del(key)
           return true
@@ -447,7 +447,7 @@ module DhanScalper
       def hot_cache_stats
         {
           size: @hot_cache.size,
-          keys: @hot_cache.keys,
+          keys: @hot_cache.keys
         }
       end
 
@@ -468,9 +468,9 @@ module DhanScalper
         # Store cache metadata
         cache_key = "#{@namespace}:instruments:cache"
         @redis.hset(cache_key, {
-                      symbols: symbols.join(","),
+                      symbols: symbols.join(','),
                       timestamp: Time.now.to_i,
-                      count: instruments.values.sum(&:size),
+                      count: instruments.values.sum(&:size)
                     })
       end
 
@@ -485,11 +485,11 @@ module DhanScalper
         cache_data = @redis.hgetall(cache_key)
         return nil if cache_data.empty?
 
-        cached_symbols = cache_data["symbols"]&.split(",") || []
+        cached_symbols = cache_data['symbols']&.split(',') || []
         return nil unless (symbols - cached_symbols).empty?
 
         # Check if cache is still valid (less than 1 hour old)
-        cache_timestamp = cache_data["timestamp"]&.to_i
+        cache_timestamp = cache_data['timestamp']&.to_i
         return nil unless cache_timestamp && (Time.now.to_i - cache_timestamp) < 3_600
 
         # Load cached instruments

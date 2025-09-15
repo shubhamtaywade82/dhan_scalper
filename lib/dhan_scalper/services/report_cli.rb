@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "session_reporter"
+require_relative 'session_reporter'
 
 module DhanScalper
   module Services
@@ -26,18 +26,18 @@ module DhanScalper
       def list_available
         sessions = @reporter.list_available_sessions
         if sessions.empty?
-          puts "No session reports found in data/reports/ directory"
+          puts 'No session reports found in data/reports/ directory'
           return
         end
 
-        puts "Available Sessions:"
-        puts "=" * 50
+        puts 'Available Sessions:'
+        puts '=' * 50
         sessions.each do |session|
           puts "#{session[:session_id]} - #{session[:created]} (#{session[:size]} bytes)"
         end
         puts
-        puts "Use: dhan_scalper report --session-id SESSION_ID"
-        puts "Or: dhan_scalper report --latest"
+        puts 'Use: dhan_scalper report --session-id SESSION_ID'
+        puts 'Or: dhan_scalper report --latest'
       end
     end
   end

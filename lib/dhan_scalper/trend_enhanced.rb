@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "candle_series"
+require_relative 'candle_series'
 
 module DhanScalper
   class TrendEnhanced
@@ -19,8 +19,8 @@ module DhanScalper
         c1_series = CandleSeries.load_from_dhan_intraday(
           seg: @seg_idx,
           sid: @sid_idx,
-          interval: "1",
-          symbol: "INDEX",
+          interval: '1',
+          symbol: 'INDEX'
         )
 
         if c1_series.nil? || c1_series.candles.nil? || c1_series.candles.size < 100
@@ -39,7 +39,7 @@ module DhanScalper
             seg: @seg_idx,
             sid: @sid_idx,
             interval: @secondary_timeframe.to_s,
-            symbol: "INDEX",
+            symbol: 'INDEX'
           )
           if c_series.nil? || c_series.candles.nil? || c_series.candles.size < 100
             puts "[TrendEnhanced] Insufficient #{@secondary_timeframe}m data: #{c_series&.candles&.size || 0} candles"
@@ -85,20 +85,20 @@ module DhanScalper
                 hg_1m_reasons << "momentum=#{hg_1m.momentum}" if hg_1m.momentum
                 hg_1m_reasons << "adx=#{hg_1m.adx.round(1)}" if hg_1m.adx
                 if hg_1m.bias == :neutral
-                  hg_1m_reasons << "bias_neutral"
+                  hg_1m_reasons << 'bias_neutral'
                 elsif hg_1m.bias == :bullish && hg_1m.momentum != :up
-                  hg_1m_reasons << "bullish_but_momentum_not_up"
+                  hg_1m_reasons << 'bullish_but_momentum_not_up'
                 elsif hg_1m.bias == :bearish && hg_1m.momentum != :down
-                  hg_1m_reasons << "bearish_but_momentum_not_down"
+                  hg_1m_reasons << 'bearish_but_momentum_not_down'
                 end
                 adx_threshold = hg_1m.adx_threshold || 15.0
                 if hg_1m.adx && hg_1m.adx < adx_threshold
                   hg_1m_reasons << "adx_weak(#{hg_1m.adx.round(1)}<#{adx_threshold})"
                 end
-                reasons << "1m_reasons=[#{hg_1m_reasons.join(", ")}]"
+                reasons << "1m_reasons=[#{hg_1m_reasons.join(', ')}]"
               end
             else
-              reasons << "1m=nil"
+              reasons << '1m=nil'
             end
 
             if hg_tf
@@ -109,23 +109,23 @@ module DhanScalper
                 hg_tf_reasons << "momentum=#{hg_tf.momentum}" if hg_tf.momentum
                 hg_tf_reasons << "adx=#{hg_tf.adx.round(1)}" if hg_tf.adx
                 if hg_tf.bias == :neutral
-                  hg_tf_reasons << "bias_neutral"
+                  hg_tf_reasons << 'bias_neutral'
                 elsif hg_tf.bias == :bullish && hg_tf.momentum != :up
-                  hg_tf_reasons << "bullish_but_momentum_not_up"
+                  hg_tf_reasons << 'bullish_but_momentum_not_up'
                 elsif hg_tf.bias == :bearish && hg_tf.momentum != :down
-                  hg_tf_reasons << "bearish_but_momentum_not_down"
+                  hg_tf_reasons << 'bearish_but_momentum_not_down'
                 end
                 adx_threshold = hg_tf.adx_threshold || 15.0
                 if hg_tf.adx && hg_tf.adx < adx_threshold
                   hg_tf_reasons << "adx_weak(#{hg_tf.adx.round(1)}<#{adx_threshold})"
                 end
-                reasons << "#{@secondary_timeframe}m_reasons=[#{hg_tf_reasons.join(", ")}]"
+                reasons << "#{@secondary_timeframe}m_reasons=[#{hg_tf_reasons.join(', ')}]"
               end
             else
               reasons << "#{@secondary_timeframe}m=nil"
             end
 
-            puts "[TrendEnhanced] Holy Grail: Not proceeding (#{reasons.join(", ")})"
+            puts "[TrendEnhanced] Holy Grail: Not proceeding (#{reasons.join(', ')})"
           end
         elsif hg_1m&.proceed?
           # Single timeframe analysis
@@ -148,19 +148,19 @@ module DhanScalper
 
           # Check specific conditions
           if hg_1m.bias == :neutral
-            reasons << "bias_neutral"
+            reasons << 'bias_neutral'
           elsif hg_1m.bias == :bullish && hg_1m.momentum != :up
-            reasons << "bullish_but_momentum_not_up"
+            reasons << 'bullish_but_momentum_not_up'
           elsif hg_1m.bias == :bearish && hg_1m.momentum != :down
-            reasons << "bearish_but_momentum_not_down"
+            reasons << 'bearish_but_momentum_not_down'
           end
 
           adx_threshold = hg_1m.adx_threshold || 15.0
           reasons << "adx_weak(#{hg_1m.adx.round(1)}<#{adx_threshold})" if hg_1m.adx && hg_1m.adx < adx_threshold
 
-          puts "[TrendEnhanced] Holy Grail: Not proceeding (1m: proceed=#{hg_1m.proceed?}, #{reasons.join(", ")})"
+          puts "[TrendEnhanced] Holy Grail: Not proceeding (1m: proceed=#{hg_1m.proceed?}, #{reasons.join(', ')})"
         else
-          puts "[TrendEnhanced] Holy Grail: Not proceeding (1m: hg_1m=nil)"
+          puts '[TrendEnhanced] Holy Grail: Not proceeding (1m: hg_1m=nil)'
         end
 
         # Fallback to combined signal
@@ -170,16 +170,16 @@ module DhanScalper
           signal_tf = c_series.combined_signal
 
           if signal_1m == :strong_buy && signal_tf == :strong_buy
-            puts "[TrendEnhanced] Combined: Strong buy signal"
+            puts '[TrendEnhanced] Combined: Strong buy signal'
             return :long_ce
           elsif signal_1m == :strong_sell && signal_tf == :strong_sell
-            puts "[TrendEnhanced] Combined: Strong sell signal"
+            puts '[TrendEnhanced] Combined: Strong sell signal'
             return :long_pe
           elsif signal_1m == :weak_buy && signal_tf == :weak_buy
-            puts "[TrendEnhanced] Combined: Weak buy signal"
+            puts '[TrendEnhanced] Combined: Weak buy signal'
             return :long_ce
           elsif signal_1m == :weak_sell && signal_tf == :weak_sell
-            puts "[TrendEnhanced] Combined: Weak sell signal"
+            puts '[TrendEnhanced] Combined: Weak sell signal'
             return :long_pe
           end
         elsif %i[strong_buy weak_buy].include?(signal_1m)
@@ -202,18 +202,18 @@ module DhanScalper
           st_signal_tf = c_series.supertrend_signal
 
           if st_signal_1m == :bullish && st_signal_tf == :bullish
-            puts "[TrendEnhanced] Supertrend: Bullish signal"
+            puts '[TrendEnhanced] Supertrend: Bullish signal'
             return :long_ce
           elsif st_signal_1m == :bearish && st_signal_tf == :bearish
-            puts "[TrendEnhanced] Supertrend: Bearish signal"
+            puts '[TrendEnhanced] Supertrend: Bearish signal'
             return :long_pe
           end
         elsif st_signal_1m == :bullish
           # Single timeframe Supertrend
-          puts "[TrendEnhanced] Supertrend: Bullish signal (1m)"
+          puts '[TrendEnhanced] Supertrend: Bullish signal (1m)'
           return :long_ce
         elsif st_signal_1m == :bearish
-          puts "[TrendEnhanced] Supertrend: Bearish signal (1m)"
+          puts '[TrendEnhanced] Supertrend: Bearish signal (1m)'
           return :long_pe
         end
       rescue StandardError => e
@@ -258,7 +258,7 @@ module DhanScalper
         puts "[TrendEnhanced] Simple indicators failed: #{e.message}"
       end
 
-      puts "[TrendEnhanced] No clear signal"
+      puts '[TrendEnhanced] No clear signal'
       :none
     end
 
@@ -266,7 +266,7 @@ module DhanScalper
 
     def validate_interval(interval)
       unless VALID_INTERVALS.include?(interval)
-        puts "[WARNING] Invalid interval #{interval}, falling back to 5 minutes. Valid intervals: #{VALID_INTERVALS.join(", ")}"
+        puts "[WARNING] Invalid interval #{interval}, falling back to 5 minutes. Valid intervals: #{VALID_INTERVALS.join(', ')}"
         return 5
       end
       interval

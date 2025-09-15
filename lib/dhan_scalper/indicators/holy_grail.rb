@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "../support/application_service"
+require_relative '../support/application_service'
 
 module DhanScalper
   module Indicators
@@ -30,7 +30,7 @@ module DhanScalper
       def initialize(candles:)
         # expect hash-of-arrays like CandleSeries#to_hash
         @candles = candles
-        closes = @candles.fetch("close") { [] }
+        closes = @candles.fetch('close') { [] }
         raise ArgumentError, "need ≥ #{EMA_SLOW} candles" if closes.size < EMA_SLOW
       end
 
@@ -84,10 +84,10 @@ module DhanScalper
 
       private
 
-      def closes = @candles.fetch("close") { [] }.map(&:to_f)
-      def highs  = @candles.fetch("high")  { [] }.map(&:to_f)
-      def lows   = @candles.fetch("low")   { [] }.map(&:to_f)
-      def stamps = @candles["timestamp"] || []
+      def closes = @candles.fetch('close') { [] }.map(&:to_f)
+      def highs  = @candles.fetch('high')  { [] }.map(&:to_f)
+      def lows   = @candles.fetch('low')   { [] }.map(&:to_f)
+      def stamps = @candles['timestamp'] || []
       def closes_last = closes.last.to_f
 
       def ohlc_rows

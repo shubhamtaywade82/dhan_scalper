@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require "concurrent"
-require "DhanHQ"
+require 'concurrent'
+require 'DhanHQ'
 
 module DhanScalper
   module Services
@@ -21,7 +21,7 @@ module DhanScalper
 
         @running = true
         @monitor_thread = Thread.new { monitor_loop }
-        @logger.info "[ORDER_MONITOR] Started monitoring pending orders"
+        @logger.info '[ORDER_MONITOR] Started monitoring pending orders'
       end
 
       def stop
@@ -29,14 +29,14 @@ module DhanScalper
 
         @running = false
         @monitor_thread&.join
-        @logger.info "[ORDER_MONITOR] Stopped monitoring"
+        @logger.info '[ORDER_MONITOR] Stopped monitoring'
       end
 
       def add_pending_order(order_id, order_data)
         @pending_orders[order_id] = {
           order_data: order_data,
           created_at: Time.now,
-          last_checked: Time.now,
+          last_checked: Time.now
         }
         @logger.debug "[ORDER_MONITOR] Added pending order: #{order_id}"
       end
@@ -53,7 +53,7 @@ module DhanScalper
       private
 
       def monitor_loop
-        @logger.info "[ORDER_MONITOR] Starting order monitoring loop"
+        @logger.info '[ORDER_MONITOR] Starting order monitoring loop'
 
         while @running
           begin
@@ -85,11 +85,11 @@ module DhanScalper
         @logger.debug "[ORDER_MONITOR] Order #{order_id} status: #{order_status[:status]}"
 
         case order_status[:status]&.downcase
-        when "complete", "filled"
+        when 'complete', 'filled'
           handle_filled_order(order_id, order_info, order_status)
-        when "rejected", "cancelled", "failed"
+        when 'rejected', 'cancelled', 'failed'
           handle_failed_order(order_id, order_info, order_status)
-        when "pending", "open"
+        when 'pending', 'open'
           # Order still pending, update last checked time
           order_info[:last_checked] = Time.now
         else
@@ -115,7 +115,7 @@ module DhanScalper
           order_data[:expiry],
           order_id,
           fill_quantity,
-          fill_price,
+          fill_price
         )
 
         # Remove from pending orders
@@ -124,7 +124,7 @@ module DhanScalper
 
       def handle_failed_order(order_id, _order_info, order_status)
         @logger.warn "[ORDER_MONITOR] Order #{order_id} failed: #{order_status[:status]}"
-        @logger.warn "[ORDER_MONITOR] Reason: #{order_status[:reason] || "Unknown"}"
+        @logger.warn "[ORDER_MONITOR] Reason: #{order_status[:reason] || 'Unknown'}"
 
         # Remove from pending orders
         remove_pending_order(order_id)

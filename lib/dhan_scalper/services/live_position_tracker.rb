@@ -56,7 +56,7 @@ module DhanScalper
 
       # Load existing positions from DhanHQ and subscribe to them
       def load_existing_positions
-        @logger.info "[LIVE_POSITION_TRACKER] Loading existing positions from DhanHQ..."
+        @logger.info '[LIVE_POSITION_TRACKER] Loading existing positions from DhanHQ...'
 
         begin
           # Get all positions from DhanHQ
@@ -83,12 +83,12 @@ module DhanScalper
               current_price: position_data[:current_price] || average_price,
               pnl: position_data[:pnl] || 0.0,
               pnl_percentage: position_data[:pnl_percentage] || 0.0,
-              last_updated: Time.now,
+              last_updated: Time.now
             }
 
             # Subscribe to WebSocket for real-time updates if websocket_manager is available
             if @websocket_manager
-              @websocket_manager.subscribe_to_instrument(security_id, "OPTION")
+              @websocket_manager.subscribe_to_instrument(security_id, 'OPTION')
               @logger.debug "[LIVE_POSITION_TRACKER] Subscribed to #{security_id} for real-time updates"
             end
 
@@ -122,7 +122,7 @@ module DhanScalper
           total_pnl: total_pnl,
           max_profit: max_profit,
           max_drawdown: max_drawdown,
-          positions: @positions,
+          positions: @positions
         }
       end
 
@@ -152,7 +152,7 @@ module DhanScalper
               current_price: pos[:current_price],
               pnl: pos[:pnl],
               pnl_percentage: pos[:pnl_percentage],
-              last_updated: Time.now,
+              last_updated: Time.now
             }
           end
 

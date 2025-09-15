@@ -15,7 +15,7 @@ module DhanScalper
           h = symbolize_keys(payload.dup)
 
           # Debug logging (can be disabled in production)
-          puts "Payload: #{payload.inspect}" if ENV["DHAN_LOG_LEVEL"] == "DEBUG"
+          puts "Payload: #{payload.inspect}" if ENV['DHAN_LOG_LEVEL'] == 'DEBUG'
 
           # Check if this is a quote packet - only quote packets get full normalization
           if h[:kind] == :quote
@@ -63,13 +63,13 @@ module DhanScalper
           # Infer from segment
           segment = overrides[:segment] || payload[:segment] || payload[:exchange_segment]
           case segment.to_s.upcase
-          when "IDX_I"
+          when 'IDX_I'
             :index
-          when "NSE_FNO", "NFO"
+          when 'NSE_FNO', 'NFO'
             :nse_fno
-          when "BSE_FNO", "BFO"
+          when 'BSE_FNO', 'BFO'
             :bse_fno
-          when "NSE_EQ", "BSE_EQ"
+          when 'NSE_EQ', 'BSE_EQ'
             :equity
           else
             :generic
@@ -87,15 +87,15 @@ module DhanScalper
           # Default based on instrument type
           case instrument_type
           when :index
-            "IDX_I"
+            'IDX_I'
           when :nse_fno
-            "NSE_FNO"
+            'NSE_FNO'
           when :bse_fno
-            "BSE_FNO"
+            'BSE_FNO'
           when :equity
-            "NSE_EQ"
+            'NSE_EQ'
           else
-            "NSE_FNO" # Default fallback
+            'NSE_FNO' # Default fallback
           end
         end
 
@@ -116,7 +116,7 @@ module DhanScalper
             day_low: numeric(overrides[:day_low] || h[:day_low] || h[:low]),
             atp: numeric(overrides[:atp] || h[:atp] || h[:ltp] || h[:last_price]),
             vol: integer(overrides[:vol] || h[:vol] || h[:volume]),
-            instrument_type: "INDEX",
+            instrument_type: 'INDEX'
           }
         end
 
@@ -125,13 +125,13 @@ module DhanScalper
           # Additional fields: expiry_date, strike_price, option_type, lot_size
           base = normalize_index_payload(h, overrides, segment)
           base.merge({
-                       instrument_type: "OPTION", # or "FUTURE" based on payload
+                       instrument_type: 'OPTION', # or "FUTURE" based on payload
                        expiry_date: h[:expiry_date] || h[:expiry],
                        strike_price: numeric(h[:strike_price] || h[:strike]),
                        option_type: h[:option_type] || h[:opt_type],
                        lot_size: integer(h[:lot_size] || h[:lot]),
                        tick_size: numeric(h[:tick_size] || h[:tick]),
-                       underlying: h[:underlying] || h[:underlying_symbol],
+                       underlying: h[:underlying] || h[:underlying_symbol]
                      })
         end
 
@@ -139,9 +139,9 @@ module DhanScalper
           # BSE Futures and Options (similar to NSE but with BSE-specific fields)
           base = normalize_nse_fno_payload(h, overrides, segment)
           base.merge({
-                       exchange: "BSE",
+                       exchange: 'BSE',
                        # BSE might have different field names or additional fields
-                       bse_instrument_id: h[:bse_instrument_id] || h[:bse_id],
+                       bse_instrument_id: h[:bse_instrument_id] || h[:bse_id]
                      })
         end
 
@@ -149,10 +149,10 @@ module DhanScalper
           # Equity instruments
           base = normalize_index_payload(h, overrides, segment)
           base.merge({
-                       instrument_type: "EQUITY",
+                       instrument_type: 'EQUITY',
                        symbol: h[:symbol] || h[:trading_symbol],
                        company_name: h[:company_name] || h[:name],
-                       isin: h[:isin],
+                       isin: h[:isin]
                      })
         end
 
@@ -170,7 +170,7 @@ module DhanScalper
           return value if value.is_a?(Numeric)
 
           s = value.to_s
-          s.include?(".") ? s.to_f : s.to_i
+          s.include?('.') ? s.to_f : s.to_i
         rescue StandardError
           nil
         end

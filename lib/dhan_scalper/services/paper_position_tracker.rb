@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require "json"
-require "fileutils"
-require_relative "../stores/redis_store"
+require 'json'
+require 'fileutils'
+require_relative '../stores/redis_store'
 
 module DhanScalper
   module Services
@@ -29,7 +29,7 @@ module DhanScalper
       end
 
       def generate_session_id
-        "PAPER_#{Time.now.strftime("%Y%m%d")}"
+        "PAPER_#{Time.now.strftime('%Y%m%d')}"
       end
 
       def load_positions_from_redis
@@ -44,27 +44,27 @@ module DhanScalper
 
           # Convert string values back to appropriate types
           position = {
-            position_key: position_id,  # Add the position_key field
-            exchange_segment: position_data["exchange_segment"],
-            security_id: position_data["security_id"],
-            side: position_data["side"],
-            net_qty: DhanScalper::Support::Money.bd(position_data["net_qty"] || 0),
-            buy_qty: DhanScalper::Support::Money.bd(position_data["buy_qty"] || 0),
-            buy_avg: DhanScalper::Support::Money.bd(position_data["buy_avg"] || 0),
-            sell_qty: DhanScalper::Support::Money.bd(position_data["sell_qty"] || 0),
-            sell_avg: DhanScalper::Support::Money.bd(position_data["sell_avg"] || 0),
-            day_buy_qty: DhanScalper::Support::Money.bd(position_data["day_buy_qty"] || 0),
-            day_sell_qty: DhanScalper::Support::Money.bd(position_data["day_sell_qty"] || 0),
-            realized_pnl: DhanScalper::Support::Money.bd(position_data["realized_pnl"] || 0),
-            unrealized_pnl: DhanScalper::Support::Money.bd(position_data["unrealized_pnl"] || 0),
-            current_price: DhanScalper::Support::Money.bd(position_data["current_price"] || 0),
-            option_type: position_data["option_type"] || "",
-            strike_price: position_data["strike_price"]&.to_i || 0,
-            expiry_date: position_data["expiry_date"] || "",
-            underlying_symbol: position_data["underlying_symbol"] || "",
-            symbol: position_data["symbol"] || "",
-            created_at: position_data["created_at"] ? Time.parse(position_data["created_at"]) : Time.now,
-            last_updated: position_data["last_updated"] ? Time.parse(position_data["last_updated"]) : Time.now,
+            position_key: position_id, # Add the position_key field
+            exchange_segment: position_data['exchange_segment'],
+            security_id: position_data['security_id'],
+            side: position_data['side'],
+            net_qty: DhanScalper::Support::Money.bd(position_data['net_qty'] || 0),
+            buy_qty: DhanScalper::Support::Money.bd(position_data['buy_qty'] || 0),
+            buy_avg: DhanScalper::Support::Money.bd(position_data['buy_avg'] || 0),
+            sell_qty: DhanScalper::Support::Money.bd(position_data['sell_qty'] || 0),
+            sell_avg: DhanScalper::Support::Money.bd(position_data['sell_avg'] || 0),
+            day_buy_qty: DhanScalper::Support::Money.bd(position_data['day_buy_qty'] || 0),
+            day_sell_qty: DhanScalper::Support::Money.bd(position_data['day_sell_qty'] || 0),
+            realized_pnl: DhanScalper::Support::Money.bd(position_data['realized_pnl'] || 0),
+            unrealized_pnl: DhanScalper::Support::Money.bd(position_data['unrealized_pnl'] || 0),
+            current_price: DhanScalper::Support::Money.bd(position_data['current_price'] || 0),
+            option_type: position_data['option_type'] || '',
+            strike_price: position_data['strike_price'].to_i,
+            expiry_date: position_data['expiry_date'] || '',
+            underlying_symbol: position_data['underlying_symbol'] || '',
+            symbol: position_data['symbol'] || '',
+            created_at: position_data['created_at'] ? Time.parse(position_data['created_at']) : Time.now,
+            last_updated: position_data['last_updated'] ? Time.parse(position_data['last_updated']) : Time.now
           }
 
           @positions[position_id] = position
@@ -81,9 +81,9 @@ module DhanScalper
 
         # Convert position to Redis-compatible format
         position_data = {
-          exchange_segment: position[:exchange_segment] || "",
-          security_id: position[:security_id] || "",
-          side: position[:side] || "",
+          exchange_segment: position[:exchange_segment] || '',
+          security_id: position[:security_id] || '',
+          side: position[:side] || '',
           net_qty: DhanScalper::Support::Money.dec(position[:net_qty] || 0).to_s,
           buy_qty: DhanScalper::Support::Money.dec(position[:buy_qty] || 0).to_s,
           buy_avg: DhanScalper::Support::Money.dec(position[:buy_avg] || 0).to_s,
@@ -94,13 +94,13 @@ module DhanScalper
           realized_pnl: DhanScalper::Support::Money.dec(position[:realized_pnl] || 0).to_s,
           unrealized_pnl: DhanScalper::Support::Money.dec(position[:unrealized_pnl] || 0).to_s,
           current_price: DhanScalper::Support::Money.dec(position[:current_price] || 0).to_s,
-          option_type: position[:option_type] || "",
-          strike_price: position[:strike_price]&.to_s || "",
-          expiry_date: position[:expiry_date] || "",
-          underlying_symbol: position[:underlying_symbol] || "",
-          symbol: position[:symbol] || "",
+          option_type: position[:option_type] || '',
+          strike_price: position[:strike_price].to_s,
+          expiry_date: position[:expiry_date] || '',
+          underlying_symbol: position[:underlying_symbol] || '',
+          symbol: position[:symbol] || '',
           created_at: position[:created_at]&.iso8601 || Time.now.iso8601,
-          last_updated: position[:last_updated]&.iso8601 || Time.now.iso8601,
+          last_updated: position[:last_updated]&.iso8601 || Time.now.iso8601
         }
 
         @redis_store.redis.hset(position_key, position_data)
@@ -118,14 +118,14 @@ module DhanScalper
         @logger.info "[PositionTracker] Starting to track underlying: #{symbol} (#{instrument_id})"
 
         # Subscribe to underlying price updates
-        success = @websocket_manager&.subscribe_to_instrument(instrument_id, "INDEX") || true
+        success = @websocket_manager&.subscribe_to_instrument(instrument_id, 'INDEX') || true
 
         if success
           @underlying_prices[symbol] = {
             instrument_id: instrument_id,
             last_price: nil,
             last_update: nil,
-            subscribed: true,
+            subscribed: true
           }
           save_underlying_prices unless @memory_only
           @logger.info "[PositionTracker] Now tracking #{symbol} at #{instrument_id}"
@@ -143,7 +143,7 @@ module DhanScalper
         @logger.info "[PositionTracker] Adding position: #{position_key} (#{instrument_id})"
 
         # Subscribe to option price updates (allow failure for testing)
-        success = @websocket_manager&.subscribe_to_instrument(instrument_id, "OPTION") || true
+        success = @websocket_manager&.subscribe_to_instrument(instrument_id, 'OPTION') || true
 
         # Always add position even if WebSocket subscription fails (for testing)
         if @positions[position_key]
@@ -168,9 +168,9 @@ module DhanScalper
             last_update: Time.now,
             subscribed: true,
             # Redis-compatible fields
-            exchange_segment: "NSE_FNO",
+            exchange_segment: 'NSE_FNO',
             security_id: instrument_id,
-            side: "BUY",
+            side: 'BUY',
             net_qty: total_quantity,
             buy_qty: total_quantity,
             buy_avg: weighted_avg_price,
@@ -183,7 +183,7 @@ module DhanScalper
             strike_price: strike.to_i,
             expiry_date: expiry.to_s,
             underlying_symbol: symbol,
-            last_updated: Time.now,
+            last_updated: Time.now
           }
 
           @logger.info "[PositionTracker] Position aggregated: #{position_key} (total qty: #{total_quantity})"
@@ -203,9 +203,9 @@ module DhanScalper
             last_update: Time.now,
             subscribed: true,
             # Redis-compatible fields
-            exchange_segment: "NSE_FNO",
+            exchange_segment: 'NSE_FNO',
             security_id: instrument_id,
-            side: "BUY",
+            side: 'BUY',
             net_qty: quantity,
             buy_qty: quantity,
             buy_avg: entry_price,
@@ -218,7 +218,7 @@ module DhanScalper
             strike_price: strike.to_i,
             expiry_date: expiry.to_s,
             underlying_symbol: symbol,
-            last_updated: Time.now,
+            last_updated: Time.now
           }
 
           @logger.info "[PositionTracker] Position created: #{position_key}"
@@ -263,7 +263,7 @@ module DhanScalper
         # Fallback to TickCache with LTP fallback for real-time data
         if @underlying_prices[symbol] && @underlying_prices[symbol][:instrument_id]
           instrument_id = @underlying_prices[symbol][:instrument_id]
-          segment = @underlying_prices[symbol][:segment] || "IDX_I"
+          segment = @underlying_prices[symbol][:segment] || 'IDX_I'
 
           # Use TickCache with fallback to get live data
           ltp = DhanScalper::TickCache.ltp(segment, instrument_id, use_fallback: true)
@@ -335,7 +335,7 @@ module DhanScalper
           # Save updated positions
           save_positions unless @memory_only
         else
-          @logger.debug "[PositionTracker] No positions needed updating (all already have current_price != entry_price)"
+          @logger.debug '[PositionTracker] No positions needed updating (all already have current_price != entry_price)'
         end
       end
 
@@ -366,7 +366,7 @@ module DhanScalper
           max_drawdown: max_drawdown,
           winning_trades: winning_trades,
           losing_trades: losing_trades,
-          positions: {},
+          positions: {}
         }
 
         @positions.each do |key, position|
@@ -378,7 +378,7 @@ module DhanScalper
             entry_price: position[:entry_price],
             current_price: position[:current_price],
             pnl: position[:pnl],
-            created_at: position[:created_at],
+            created_at: position[:created_at]
           }
         end
 
@@ -392,7 +392,7 @@ module DhanScalper
             instrument_id: data[:instrument_id],
             last_price: data[:last_price],
             last_update: data[:last_update],
-            subscribed: data[:subscribed],
+            subscribed: data[:subscribed]
           }
         end
         summary
@@ -402,7 +402,7 @@ module DhanScalper
       def save_session_data
         # Positions are already saved to Redis in real-time
         # No need to save again here
-        @logger.info "[PositionTracker] Session data saved"
+        @logger.info '[PositionTracker] Session data saved'
       end
 
       def setup_websocket_handlers

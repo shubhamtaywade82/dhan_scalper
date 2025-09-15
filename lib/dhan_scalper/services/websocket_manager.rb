@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require "json"
-require "logger"
-require "securerandom"
+require 'json'
+require 'logger'
+require 'securerandom'
 
 module DhanScalper
   module Services
@@ -40,7 +40,7 @@ module DhanScalper
       def connect
         return if @connected
 
-        @logger.info "[WebSocket] Connecting to DhanHQ WebSocket..."
+        @logger.info '[WebSocket] Connecting to DhanHQ WebSocket...'
 
         begin
           # Configure DhanHQ before connecting
@@ -60,7 +60,7 @@ module DhanScalper
           @connected = true
           @reconnect_attempts = 0
 
-          @logger.info "[WebSocket] Connected successfully"
+          @logger.info '[WebSocket] Connected successfully'
           start_monitor!
 
           # Resubscribe on fresh connections too (idempotent)
@@ -73,7 +73,7 @@ module DhanScalper
       end
 
       def disconnect
-        @logger.info "[WebSocket] Disconnecting..."
+        @logger.info '[WebSocket] Disconnecting...'
 
         # Set shutdown flag to stop monitor thread
         @shutdown = true
@@ -94,13 +94,13 @@ module DhanScalper
             @monitor_thread = nil
           end
 
-          @logger.info "[WebSocket] Disconnected"
+          @logger.info '[WebSocket] Disconnected'
         rescue StandardError => e
           @logger.error "[WebSocket] Disconnect error: #{e.message}"
         end
       end
 
-      def subscribe_to_instrument(instrument_id, instrument_type = "EQUITY")
+      def subscribe_to_instrument(instrument_id, instrument_type = 'EQUITY')
         # Always store the segment mapping, even if not connected
         @instrument_segments ||= {}
 
@@ -190,9 +190,9 @@ module DhanScalper
       def set_baseline_instruments(instruments)
         @baseline_instruments = instruments.map do |it|
           if it.is_a?(Array)
-            { id: it[0].to_s, type: it[1] || "EQUITY" }
+            { id: it[0].to_s, type: it[1] || 'EQUITY' }
           else
-            { id: it[:id].to_s, type: it[:type] || "EQUITY" }
+            { id: it[:id].to_s, type: it[:type] || 'EQUITY' }
           end
         end
       end
@@ -205,7 +205,7 @@ module DhanScalper
 
       # Force a reconnect and resubscribe (useful for tests/manual)
       def force_reconnect!
-        @logger.warn "[WebSocket] Force reconnect requested"
+        @logger.warn '[WebSocket] Force reconnect requested'
         attempt_reconnect!
       end
 
@@ -213,17 +213,17 @@ module DhanScalper
 
       def determine_segment(instrument_id, instrument_type)
         case instrument_type
-        when "INDEX"
+        when 'INDEX'
           # For indices, determine based on the instrument ID
           case instrument_id.to_s
-          when "13", "25", "51" # NIFTY, BANKNIFTY, SENSEX
+          when '13', '25', '51' # NIFTY, BANKNIFTY, SENSEX
           end
-          "IDX_I"
-        when "OPTION"
+          'IDX_I'
+        when 'OPTION'
           # For options, use CSV master to determine the correct segment
           determine_option_segment(instrument_id)
         else
-          "NSE_EQ" # Default for equity
+          'NSE_EQ' # Default for equity
         end
       end
 
@@ -244,9 +244,9 @@ module DhanScalper
         # Fallback: try to determine based on common patterns
         # BSE options typically have longer IDs and different patterns
         if instrument_id.to_s.length > 4 # BSE options typically have longer IDs
-          "BSE_FNO"
+          'BSE_FNO'
         else
-          "NSE_FNO" # Default to NSE for most options
+          'NSE_FNO' # Default to NSE for most options
         end
       end
 
@@ -321,7 +321,7 @@ module DhanScalper
           list = Array(@active_instruments_provider.call)
           list.each do |item|
             id, type = item
-            subscribe_to_instrument(id.to_s, type || "EQUITY")
+            subscribe_to_instrument(id.to_s, type || 'EQUITY')
           end
         rescue StandardError => e
           @logger.error "[WebSocket] Active instruments provider error: #{e.message}"
@@ -330,7 +330,7 @@ module DhanScalper
 
       def handle_tick_data(tick_data)
         instrument_id = tick_data[:security_id]
-        segment = @instrument_segments&.[](instrument_id) || "NSE_FNO"
+        segment = @instrument_segments&.[](instrument_id) || 'NSE_FNO'
 
         # Ignore out-of-order ticks based on timestamp
         ts = tick_data[:ts] || tick_data[:timestamp]
@@ -345,14 +345,14 @@ module DhanScalper
         @last_tick_at = Time.now
 
         # Debug: Log the raw tick data
-        puts "[DEBUG] Raw tick data: #{tick_data.inspect}" if ENV["DHAN_LOG_LEVEL"] == "DEBUG"
+        puts "[DEBUG] Raw tick data: #{tick_data.inspect}" if ENV['DHAN_LOG_LEVEL'] == 'DEBUG'
 
         # Normalize and store
         normalized = DhanScalper::Support::TickNormalizer.normalize(
           tick_data,
           segment: segment,
           security_id: instrument_id,
-          ts: tick_data[:ts] || tick_data[:timestamp],
+          ts: tick_data[:ts] || tick_data[:timestamp]
         )
 
         DhanScalper::TickCache.put(normalized) if normalized
@@ -372,11 +372,11 @@ module DhanScalper
           volume: (tick_data[:volume] || 0).to_i,
           timestamp: tick_data[:ts],
           segment: segment,
-          exchange: "NSE", # Default to NSE for now
+          exchange: 'NSE' # Default to NSE for now
         }
 
         # Debug: Log the processed price data
-        puts "[DEBUG] Processed price data: #{price_data.inspect}" if ENV["DHAN_LOG_LEVEL"] == "DEBUG"
+        puts "[DEBUG] Processed price data: #{price_data.inspect}" if ENV['DHAN_LOG_LEVEL'] == 'DEBUG'
 
         @message_handlers[:price_update]&.call(price_data)
       rescue StandardError => e

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require "logger"
-require_relative "../services/market_feed"
+require 'logger'
+require_relative '../services/market_feed'
 
 module DhanScalper
   module Services
@@ -16,18 +16,18 @@ module DhanScalper
         market_feed = DhanScalper::Services::MarketFeed.new(mode: :quote)
         market_feed.start(instruments)
 
-        puts "Live LTP Data (Press Ctrl+C to stop)"
-        puts "=" * 50
+        puts 'Live LTP Data (Press Ctrl+C to stop)'
+        puts '=' * 50
 
         loop do
           sleep(@interval)
           clear_screen
-          puts "Live LTP Data - #{Time.now.strftime("%H:%M:%S")}"
-          puts "=" * 50
+          puts "Live LTP Data - #{Time.now.strftime('%H:%M:%S')}"
+          puts '=' * 50
 
           instruments.each do |instrument|
             ltp = market_feed.ltp(instrument[:segment], instrument[:security_id])
-            puts "#{instrument[:name]}: #{ltp ? "₹#{ltp}" : "N/A"}"
+            puts "#{instrument[:name]}: #{ltp ? "₹#{ltp}" : 'N/A'}"
           end
 
           puts "\nPress Ctrl+C to stop"
@@ -41,7 +41,7 @@ module DhanScalper
       private
 
       def clear_screen
-        system("clear") || system("cls")
+        system('clear') || system('cls')
       end
     end
   end

@@ -14,11 +14,11 @@ module DhanScalper
     end
 
     def buy?
-      @side == "BUY"
+      @side == 'BUY'
     end
 
     def sell?
-      @side == "SELL"
+      @side == 'SELL'
     end
 
     def total_value
@@ -32,7 +32,7 @@ module DhanScalper
         side: @side,
         quantity: @quantity,
         price: @price,
-        timestamp: @timestamp,
+        timestamp: @timestamp
       }
     end
 

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "concurrent"
+require 'concurrent'
 
 module DhanScalper
   class State

@@ -75,9 +75,9 @@ module DhanScalper
       n = values_hlc.size
       return [] if n.zero?
 
-      highs = values_hlc.map { |x| (x[:high] || x["high"]).to_f }
-      lows  = values_hlc.map { |x| (x[:low]  || x["low"]).to_f }
-      closes = values_hlc.map { |x| (x[:close] || x["close"]).to_f }
+      highs = values_hlc.map { |x| (x[:high] || x['high']).to_f }
+      lows  = values_hlc.map { |x| (x[:low]  || x['low']).to_f }
+      closes = values_hlc.map { |x| (x[:close] || x['close']).to_f }
 
       trs = Array.new(n, 0.0)
       trs[0] = (highs[0] - lows[0]).abs

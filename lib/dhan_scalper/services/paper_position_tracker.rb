@@ -6,35 +6,38 @@ require_relative '../stores/redis_store'
 
 module DhanScalper
   module Services
+    # PaperPositionTracker manages paper trading positions with Redis persistence
+    # Handles position creation, updates, PnL calculations, and WebSocket subscriptions
     class PaperPositionTracker
       attr_reader :positions, :underlying_prices, :websocket_manager
 
       def initialize(websocket_manager:, logger: nil, memory_only: true, session_id: nil, redis_store: nil)
         @websocket_manager = websocket_manager
         @logger = logger || Logger.new($stdout)
-        @memory_only = memory_only
+        @persist_to_redis = !memory_only
         @positions = {}
         @underlying_prices = {}
-        @session_id = session_id || generate_session_id
+        @session_id = session_id || self.class.generate_session_id
         @redis_store = redis_store || DhanScalper::Stores::RedisStore.new
 
         # Connect to Redis if not already connected
         @redis_store.connect unless @redis_store.redis
 
         # Load existing positions from Redis
-        load_positions_from_redis unless @memory_only
+        load_positions_from_redis if @persist_to_redis
 
         # Setup WebSocket handlers
         setup_websocket_handlers
       end
 
-      def generate_session_id
+      def self.generate_session_id
         "PAPER_#{Time.now.strftime('%Y%m%d')}"
       end
 
       def load_positions_from_redis
         positions_key = "dhan_scalper:v1:positions:#{@session_id}"
         position_ids = @redis_store.redis.smembers(positions_key)
+        current_time = Time.now
 
         position_ids.each do |position_id|
           position_key = "dhan_scalper:v1:position:#{position_id}"
@@ -63,8 +66,8 @@ module DhanScalper
             expiry_date: position_data['expiry_date'] || '',
             underlying_symbol: position_data['underlying_symbol'] || '',
             symbol: position_data['symbol'] || '',
-            created_at: position_data['created_at'] ? Time.parse(position_data['created_at']) : Time.now,
-            last_updated: position_data['last_updated'] ? Time.parse(position_data['last_updated']) : Time.now
+            created_at: position_data['created_at'] ? Time.parse(position_data['created_at']) : current_time,
+            last_updated: position_data['last_updated'] ? Time.parse(position_data['last_updated']) : current_time
           }
 
           @positions[position_id] = position
@@ -78,6 +81,7 @@ module DhanScalper
         return unless position
 
         position_key = "dhan_scalper:v1:position:#{position_id}"
+        current_time_iso = Time.now.iso8601
 
         # Convert position to Redis-compatible format
         position_data = {
@@ -99,8 +103,8 @@ module DhanScalper
           expiry_date: position[:expiry_date] || '',
           underlying_symbol: position[:underlying_symbol] || '',
           symbol: position[:symbol] || '',
-          created_at: position[:created_at]&.iso8601 || Time.now.iso8601,
-          last_updated: position[:last_updated]&.iso8601 || Time.now.iso8601
+          created_at: position[:created_at]&.iso8601 || current_time_iso,
+          last_updated: position[:last_updated]&.iso8601 || current_time_iso
         }
 
         @redis_store.redis.hset(position_key, position_data)
@@ -127,7 +131,7 @@ module DhanScalper
             last_update: nil,
             subscribed: true
           }
-          save_underlying_prices unless @memory_only
+          save_underlying_prices if @persist_to_redis
           @logger.info "[PositionTracker] Now tracking #{symbol} at #{instrument_id}"
         else
           @logger.error "[PositionTracker] Failed to subscribe to #{symbol}"
@@ -136,7 +140,14 @@ module DhanScalper
         success
       end
 
-      def add_position(symbol, option_type, strike, expiry, instrument_id, quantity, entry_price)
+      def add_position(position_data)
+        symbol = position_data[:symbol]
+        option_type = position_data[:option_type]
+        strike = position_data[:strike]
+        expiry = position_data[:expiry]
+        instrument_id = position_data[:instrument_id]
+        quantity = position_data[:quantity]
+        entry_price = position_data[:entry_price]
         # Use a simplified key that aggregates by symbol and option type
         position_key = "#{symbol}_#{option_type}"
 
@@ -146,18 +157,23 @@ module DhanScalper
         success = @websocket_manager&.subscribe_to_instrument(instrument_id, 'OPTION') || true
 
         # Always add position even if WebSocket subscription fails (for testing)
-        if @positions[position_key]
+        current_time = Time.now
+        strike_int = strike.to_i
+        expiry_str = expiry.to_s
+
+        existing = @positions[position_key]
+        if existing
           # Aggregate with existing position
-          existing = @positions[position_key]
-          total_quantity = existing[:quantity] + quantity
+          existing_quantity = existing[:quantity]
+          total_quantity = existing_quantity + quantity
           # Calculate weighted average entry price
-          total_value = (existing[:entry_price] * existing[:quantity]) + (entry_price * quantity)
+          total_value = (existing[:entry_price] * existing_quantity) + (entry_price * quantity)
           weighted_avg_price = total_value / total_quantity
 
           @positions[position_key] = {
             symbol: symbol,
             option_type: option_type, # CE or PE
-            strike: strike.to_i, # Use the latest strike
+            strike: strike_int, # Use the latest strike
             expiry: expiry, # Use the latest expiry
             instrument_id: instrument_id, # Use the latest instrument_id
             quantity: total_quantity,
@@ -165,7 +181,7 @@ module DhanScalper
             current_price: entry_price, # Use current market price
             pnl: 0.0, # Will be calculated later
             created_at: existing[:created_at], # Keep original creation time
-            last_update: Time.now,
+            last_update: current_time,
             subscribed: true,
             # Redis-compatible fields
             exchange_segment: 'NSE_FNO',
@@ -180,10 +196,10 @@ module DhanScalper
             day_sell_qty: 0,
             realized_pnl: 0.0,
             unrealized_pnl: 0.0,
-            strike_price: strike.to_i,
-            expiry_date: expiry.to_s,
+            strike_price: strike_int,
+            expiry_date: expiry_str,
             underlying_symbol: symbol,
-            last_updated: Time.now
+            last_updated: current_time
           }
 
           @logger.info "[PositionTracker] Position aggregated: #{position_key} (total qty: #{total_quantity})"
@@ -192,15 +208,15 @@ module DhanScalper
           @positions[position_key] = {
             symbol: symbol,
             option_type: option_type, # CE or PE
-            strike: strike.to_i,
+            strike: strike_int,
             expiry: expiry,
             instrument_id: instrument_id,
             quantity: quantity,
             entry_price: entry_price,
             current_price: entry_price,
             pnl: 0.0,
-            created_at: Time.now,
-            last_update: Time.now,
+            created_at: current_time,
+            last_update: current_time,
             subscribed: true,
             # Redis-compatible fields
             exchange_segment: 'NSE_FNO',
@@ -215,10 +231,10 @@ module DhanScalper
             day_sell_qty: 0,
             realized_pnl: 0.0,
             unrealized_pnl: 0.0,
-            strike_price: strike.to_i,
-            expiry_date: expiry.to_s,
+            strike_price: strike_int,
+            expiry_date: expiry_str,
             underlying_symbol: symbol,
-            last_updated: Time.now
+            last_updated: current_time
           }
 
           @logger.info "[PositionTracker] Position created: #{position_key}"
@@ -274,9 +290,9 @@ module DhanScalper
       end
 
       def get_position_pnl(position_key)
-        return nil unless @positions[position_key]
-
         position = @positions[position_key]
+        return nil unless position
+
         current_price = position[:current_price]
         entry_price = position[:entry_price]
         quantity = position[:quantity]
@@ -333,7 +349,7 @@ module DhanScalper
         if updated_count.positive?
           @logger.info "[PositionTracker] Updated #{updated_count} positions with simulated price movements"
           # Save updated positions
-          save_positions unless @memory_only
+          save_positions if @persist_to_redis
         else
           @logger.debug '[PositionTracker] No positions needed updating (all already have current_price != entry_price)'
         end
@@ -341,24 +357,28 @@ module DhanScalper
 
       def get_positions_summary
         total_pnl = get_total_pnl
-        open_positions = @positions.values.count { |pos| pos[:quantity].positive? }
-        closed_positions = @positions.size - open_positions
+        positions_values = @positions.values
+        positions_size = @positions.size
+
+        open_positions = positions_values.count { |pos| pos[:quantity].positive? }
+        closed_positions = positions_size - open_positions
 
         # Calculate max profit and drawdown
-        pnl_values = @positions.values.map { |pos| pos[:pnl] }
-        max_profit = pnl_values.empty? ? 0.0 : pnl_values.max
-        max_drawdown = if pnl_values.empty?
+        pnl_values = positions_values.map { |pos| pos[:pnl] }
+        pnl_empty = pnl_values.empty?
+        max_profit = pnl_empty ? 0.0 : pnl_values.max
+        max_drawdown = if pnl_empty
                          0.0
                        else
                          pnl_values.map { |pnl| pnl.negative? ? pnl.abs : 0.0 }.max
                        end
 
         # Count winning and losing trades
-        winning_trades = @positions.values.count { |pos| pos[:pnl].positive? }
-        losing_trades = @positions.values.count { |pos| pos[:pnl].negative? }
+        winning_trades = pnl_values.count(&:positive?)
+        losing_trades = pnl_values.count(&:negative?)
 
         summary = {
-          total_positions: @positions.size,
+          total_positions: positions_size,
           open_positions: open_positions,
           closed_positions: closed_positions,
           total_pnl: total_pnl,
@@ -448,8 +468,8 @@ module DhanScalper
         @logger.info "[PositionTracker] Updated #{updated_positions} positions for instrument #{instrument_id}"
 
         # Save updated data only if not memory-only
-        save_underlying_prices unless @memory_only
-        save_positions unless @memory_only
+        save_underlying_prices if @persist_to_redis
+        save_positions if @persist_to_redis
       end
 
       def load_positions
@@ -458,9 +478,9 @@ module DhanScalper
         begin
           data = JSON.parse(File.read(@position_file))
           @positions = data.transform_keys(&:to_s).transform_values do |pos|
-            pos.transform_keys(&:to_sym).tap do |p|
-              p[:created_at] = Time.parse(p[:created_at]) if p[:created_at]
-              p[:last_update] = Time.parse(p[:last_update]) if p[:last_update]
+            pos.transform_keys(&:to_sym).tap do |position|
+              position[:created_at] = Time.parse(position[:created_at]) if position[:created_at]
+              position[:last_update] = Time.parse(position[:last_update]) if position[:last_update]
             end
           end
           @logger.info "[PositionTracker] Loaded #{@positions.size} existing positions"
@@ -478,8 +498,8 @@ module DhanScalper
         begin
           data = JSON.parse(File.read(@price_file))
           @underlying_prices = data.transform_keys(&:to_s).transform_values do |price|
-            price.transform_keys(&:to_sym).tap do |p|
-              p[:last_update] = Time.parse(p[:last_update]) if p[:last_update]
+            price.transform_keys(&:to_sym).tap do |price_data|
+              price_data[:last_update] = Time.parse(price_data[:last_update]) if price_data[:last_update]
             end
           end
           @logger.info "[PositionTracker] Loaded #{@underlying_prices.size} underlying prices"

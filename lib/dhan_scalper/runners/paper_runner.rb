@@ -265,8 +265,13 @@ module DhanScalper
 
           # Add position to tracker
           @position_tracker.add_position(
-            symbol, option_type, strike, Date.today,
-            security_id, quantity, entry_price
+            symbol: symbol,
+            option_type: option_type,
+            strike: strike,
+            expiry: Date.today,
+            instrument_id: security_id,
+            quantity: quantity,
+            entry_price: entry_price
           )
 
           # Store security ID to strike mapping for display
@@ -497,8 +502,13 @@ module DhanScalper
           # Add position to tracker
           position_key = "#{symbol}_#{option_type}_#{actual_strike}_#{Date.today}"
           @position_tracker.add_position(
-            symbol, option_type, actual_strike, Date.today,
-            option_sid, quantity, option_price
+            symbol: symbol,
+            option_type: option_type,
+            strike: actual_strike,
+            expiry: Date.today,
+            instrument_id: option_sid,
+            quantity: quantity,
+            entry_price: option_price
           )
 
           # Track trade in session data

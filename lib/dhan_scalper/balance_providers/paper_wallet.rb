@@ -32,17 +32,17 @@ module DhanScalper
         # Calculate available balance as total - used
         total = total_balance
         used = used_balance
-        available = total - used
+        available = DhanScalper::Support::Money.subtract(total, used)
         DhanScalper::Support::Logger.debug(
-          "Calculated available balance - total: #{total}, used: #{used}, available: #{available}",
+          "Calculated available balance - total: #{DhanScalper::Support::Money.dec(total)}, used: #{DhanScalper::Support::Money.dec(used)}, available: #{DhanScalper::Support::Money.dec(available)}",
           component: 'PaperWallet'
         )
         available
       end
 
       def total_balance
-        # Total balance should remain constant (starting balance + realized PnL)
-        # This represents the total capital available, not the current cash position
+        # Total balance should be starting balance + realized PnL
+        # This represents the total capital available
         result = DhanScalper::Support::Money.add(@starting_balance, @realized_pnl)
         DhanScalper::Support::Logger.debug(
           "Total balance calculated - starting: #{DhanScalper::Support::Money.dec(@starting_balance)}, " \
@@ -50,7 +50,7 @@ module DhanScalper
           "result: #{DhanScalper::Support::Money.dec(result)}",
           component: 'PaperWallet'
         )
-        DhanScalper::Support::Money.dec(result).to_f
+        result
       end
 
       def used_balance
@@ -58,10 +58,10 @@ module DhanScalper
         # Otherwise fall back to session report calculation (for CLI commands with no activity)
         if @used.positive?
           # Internal state has been updated, use it
-          DhanScalper::Support::Money.dec(@used).to_f
+          @used
         else
           # No internal activity, calculate from session report
-          calculate_used_balance_from_positions
+          DhanScalper::Support::Money.bd(calculate_used_balance_from_positions)
         end
       end
 

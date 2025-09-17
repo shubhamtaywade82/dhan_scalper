@@ -7,6 +7,8 @@ require_relative 'base_runner'
 require_relative '../services/websocket_manager'
 require_relative '../services/paper_position_tracker'
 require_relative '../services/session_reporter'
+require_relative '../services/session_manager'
+require_relative '../services/trading_executor'
 
 module DhanScalper
   module Runners
@@ -35,25 +37,15 @@ module DhanScalper
         # Initialize session reporter with config
         @session_reporter = Services::SessionReporter.new(config: @config, logger: @logger, redis_store: @redis_store)
 
-        # Session tracking variables
-        @session_data = {
-          session_id: nil,
-          start_time: nil,
-          end_time: nil,
-          total_trades: 0,
-          successful_trades: 0,
-          failed_trades: 0,
-          trades: [],
-          max_pnl: 0.0,
-          min_pnl: 0.0,
-          symbols_traded: Set.new
-        }
+        # Initialize session manager
+        @session_manager = Services::SessionManager.new(
+          session_reporter: @session_reporter,
+          logger: @logger
+        )
 
-        # Cache for trend objects and option pickers
+        # Initialize caches
         @cached_trends = {}
         @cached_pickers = {}
-
-        # Cache for security ID to strike mapping
         @security_to_strike = {}
       end
 
@@ -62,10 +54,13 @@ module DhanScalper
         DhanHQ.logger.level = Logger::WARN
 
         # Load or create session data for the current trading day
-        @session_data = @session_reporter.load_or_create_session(
+        @session_manager.load_or_create_session(
           mode: 'PAPER',
           starting_balance: @balance_provider.available_balance
         )
+
+        # Initialize session data
+        @session_data = @session_manager.session_data || {}
 
         # Initialize WebSocket manager
         @websocket_manager = Services::WebSocketManager.new(logger: @logger)
@@ -75,7 +70,7 @@ module DhanScalper
           websocket_manager: @websocket_manager,
           logger: @logger,
           memory_only: true,
-          session_id: @session_data[:session_id],
+          session_id: @session_manager.session_data[:session_id],
           redis_store: @redis_store
         )
 
@@ -83,34 +78,47 @@ module DhanScalper
         @balance_provider.instance_variable_set(:@position_tracker, @position_tracker)
 
         # Initialize equity calculator for risk management
+        log_throttle = @config.dig('global', 'log_throttle_sec')
+        log_throttle = nil unless log_throttle.is_a?(Numeric) && log_throttle.positive?
         @equity_calculator = Services::EquityCalculator.new(
           position_tracker: @position_tracker,
-          balance_provider: @balance_provider
+          balance_provider: @balance_provider,
+          logger: @logger,
+          log_throttle_sec: log_throttle
+        )
+
+        # Initialize trading executor
+        @trading_executor = Services::TradingExecutor.new(
+          broker: @broker,
+          position_tracker: @position_tracker,
+          balance_provider: @balance_provider,
+          session_manager: @session_manager,
+          logger: @logger
         )
 
         # If resuming an existing session, update the balance provider to reflect the correct state
-        if @session_data[:starting_balance] && @session_data[:starting_balance] != @balance_provider.available_balance
+        if @session_manager.session_data[:starting_balance] && @session_manager.session_data[:starting_balance] != @balance_provider.available_balance
           puts '[PAPER] Resuming existing session - updating balance provider'
-          puts "[PAPER] Session starting balance: ₹#{@session_data[:starting_balance]}"
+          puts "[PAPER] Session starting balance: ₹#{@session_manager.session_data[:starting_balance]}"
           puts "[PAPER] Current balance provider: ₹#{@balance_provider.available_balance}"
 
           # Reset the balance provider to match the session's starting balance
-          @balance_provider.reset_balance(@session_data[:starting_balance])
+          @balance_provider.reset_balance(@session_manager.session_data[:starting_balance])
 
           # Update the balance provider with the correct used balance from positions
-          if @session_data[:positions]&.any?
-            used_balance = calculate_used_balance_from_positions(@session_data[:positions])
+          if @session_manager.session_data[:positions]&.any?
+            used_balance = calculate_used_balance_from_positions(@session_manager.session_data[:positions])
             @balance_provider.instance_variable_set(:@used, DhanScalper::Support::Money.bd(used_balance))
             @balance_provider.instance_variable_set(:@available,
-                                                    DhanScalper::Support::Money.bd(@session_data[:starting_balance] - used_balance))
-            @balance_provider.instance_variable_set(:@total, DhanScalper::Support::Money.bd(@session_data[:starting_balance]))
+                                                    DhanScalper::Support::Money.bd(@session_manager.session_data[:starting_balance] - used_balance))
+            @balance_provider.instance_variable_set(:@total, DhanScalper::Support::Money.bd(@session_manager.session_data[:starting_balance]))
 
             puts "[PAPER] Updated balance - Available: ₹#{@balance_provider.available_balance}, Used: ₹#{@balance_provider.used_balance}"
           end
         end
 
         puts '[PAPER] Starting paper trading mode'
-        puts "[PAPER] Session ID: #{@session_data[:session_id]}"
+        puts "[PAPER] Session ID: #{@session_manager.session_data[:session_id]}"
         puts '[PAPER] WebSocket connection will be established'
         puts '[PAPER] Positions will be tracked in real-time'
         puts '[PAPER] No real money will be used'
@@ -216,9 +224,9 @@ module DhanScalper
       end
 
       def load_existing_positions
-        return unless @session_data && @session_data[:positions]
+        return unless @session_manager.session_data && @session_manager.session_data[:positions]
 
-        existing_positions = @session_data[:positions]
+        existing_positions = @session_manager.session_data[:positions]
         return if existing_positions.empty?
 
         puts "\n[POSITION LOADER] Loading #{existing_positions.size} existing positions from session data..."
@@ -284,7 +292,8 @@ module DhanScalper
           puts "  ✅ Loaded position: #{symbol} #{option_type} #{strike} (#{quantity} lots @ ₹#{entry_price}) [#{security_id}]"
         rescue StandardError => e
           puts "  ❌ Failed to load position #{position_data[:symbol]}: #{e.message}"
-          puts "    Error details: #{e.backtrace.first(2).join("\n")}" if @config.dig('global', 'log_level') == 'DEBUG'
+          puts "    Error details: #{e.backtrace.first(2).join("\n")}" if @config.dig('global',
+                                                                                      'log_level') == 'DEBUG'
         end
 
         puts '[POSITION LOADER] Position loading complete'
@@ -395,163 +404,49 @@ module DhanScalper
       end
 
       def analyze_and_trade
-        @config['SYMBOLS']&.each_key do |sym|
-          next unless sym
+        @config['SYMBOLS']&.each_key do |symbol|
+          next unless symbol
 
-          s = sym_cfg(sym)
-          next if s['idx_sid'].to_s.empty?
+          symbol_config = sym_cfg(symbol)
+          next if symbol_config['idx_sid'].to_s.empty?
 
           begin
             # Get current spot price from WebSocket
-            spot_price = @position_tracker.get_underlying_price(sym)
+            spot_price = @position_tracker.get_underlying_price(symbol)
 
             if spot_price.nil?
-              puts "[#{sym}] No price data available yet, skipping..."
+              puts "[#{symbol}] No price data available yet, skipping..."
               next
             end
 
-            puts "\n[#{sym}] Analyzing signals at spot: #{spot_price}"
+            puts "\n[#{symbol}] Analyzing signals at spot: #{spot_price}"
 
             # Get trend direction
-            trend = get_cached_trend(sym, s)
+            trend = get_cached_trend(symbol, symbol_config)
             direction = trend.decide
 
-            puts "[#{sym}] Signal: #{direction}"
+            puts "[#{symbol}] Signal: #{direction}"
 
-            # Execute trades based on signals
-            execute_trade(sym, direction, spot_price, s) if direction != :none
+            # Generate pick data for trading
+            if direction != :none
+              picker = get_cached_picker(symbol, symbol_config)
+              pick = picker.pick(current_spot: spot_price)
+
+              if pick[:ce_sid] && pick[:pe_sid]
+                # Execute trades based on signals
+                @trading_executor.execute_trade(symbol, symbol_config, direction, spot_price, pick)
+              else
+                puts "[#{symbol}] No valid options available for trading"
+              end
+            end
           rescue StandardError => e
-            puts "[#{sym}] Error in analysis: #{e.message}"
+            puts "[#{symbol}] Error in analysis: #{e.message}"
             puts e.backtrace.first(3).join("\n") if @config.dig('global', 'log_level') == 'DEBUG'
           end
         end
       end
 
-      def execute_trade(symbol, direction, spot_price, symbol_config)
-        return if direction == :none
-
-        # Get option picker
-        picker = get_cached_picker(symbol, symbol_config)
-        pick = picker.pick(current_spot: spot_price)
-
-        return unless pick[:ce_sid] && pick[:pe_sid]
-
-        # Calculate the actual strike price (ATM)
-        strike_step = symbol_config['strike_step'] || 50
-        actual_strike = picker.nearest_strike(spot_price, strike_step)
-
-        # Subscribe to ATM and ATM+/- options for LTP monitoring
-        subscribe_to_atm_options(symbol, spot_price, actual_strike, strike_step, pick)
-
-        # Determine which option to trade
-        option_sid = case direction
-                     when :bullish, :long_ce
-                       pick[:ce_sid][actual_strike]
-                     when :bearish, :long_pe
-                       pick[:pe_sid][actual_strike]
-                     else
-                       return
-                     end
-
-        return unless option_sid
-
-        option_type = case direction
-                      when :bullish, :long_ce
-                        'CE'
-                      when :bearish, :long_pe
-                        'PE'
-                      end
-
-        # Subscribe to option instrument first
-        @websocket_manager.subscribe_to_instrument(option_sid, 'OPTION')
-
-        # Wait a moment for subscription to establish
-        sleep(0.1)
-
-        # Determine the correct segment for options based on underlying
-        option_segment = determine_option_segment(symbol, option_sid)
-
-        # Get real market price for the option
-        puts "[#{symbol}] Getting market price for #{option_sid} in #{option_segment}"
-        option_price = DhanScalper::TickCache.ltp(option_segment, option_sid)&.to_f
-
-        # Skip trade if no real market price is available
-        unless option_price&.positive?
-          puts "[#{symbol}] No market price available for #{option_sid}, skipping trade"
-          return
-        end
-
-        # Calculate position size
-        quantity = @quantity_sizer.calculate_quantity(symbol, option_price, side: 'BUY')
-
-        puts "[#{symbol}] Executing #{direction} trade: #{option_type} #{quantity} lots at ₹#{option_price} (Strike: #{actual_strike})"
-
-        # Place paper order
-        order_result = @broker.place_order(
-          symbol: symbol,
-          instrument_id: option_sid,
-          side: 'BUY',
-          quantity: quantity,
-          price: option_price,
-          order_type: 'MARKET'
-        )
-
-        if order_result[:success]
-          puts "[#{symbol}] Order placed successfully: #{order_result[:order_id]}"
-
-          # Add position to tracker
-          position_key = "#{symbol}_#{option_type}_#{actual_strike}_#{Date.today}"
-          @position_tracker.add_position(
-            symbol: symbol,
-            option_type: option_type,
-            strike: actual_strike,
-            expiry: Date.today,
-            instrument_id: option_sid,
-            quantity: quantity,
-            entry_price: option_price
-          )
-
-          # Track trade in session data
-          @session_data[:total_trades] += 1
-          @session_data[:successful_trades] += 1
-          @session_data[:symbols_traded].add(symbol)
-          @session_data[:trades] << {
-            timestamp: Time.now.strftime('%H:%M:%S'),
-            symbol: symbol,
-            side: 'BUY',
-            quantity: quantity,
-            price: option_price,
-            order_id: order_result[:order_id],
-            status: 'SUCCESS',
-            option_type: option_type,
-            strike: actual_strike
-          }
-
-          # Update session data with current balance and positions
-          update_session_data_with_current_state
-
-          puts "[#{symbol}] Position added to tracker: #{position_key}"
-        else
-          puts "[#{symbol}] Order failed: #{order_result[:error]}"
-
-          # Track failed trade
-          @session_data[:total_trades] += 1
-          @session_data[:failed_trades] += 1
-          @session_data[:trades] << {
-            timestamp: Time.now.strftime('%H:%M:%S'),
-            symbol: symbol,
-            side: 'BUY',
-            quantity: quantity,
-            price: option_price,
-            order_id: nil,
-            status: 'FAILED',
-            error: order_result[:error],
-            option_type: option_type,
-            strike: actual_strike
-          }
-        end
-      end
-
+      # Removed execute_trade_old method - functionality moved to TradingExecutor
       def determine_option_segment(symbol, option_sid)
         # Use CSV master to get the correct exchange segment
         begin
@@ -761,37 +656,54 @@ module DhanScalper
         # Finalize session data
         @session_data = @session_reporter.finalize_session(@session_data)
 
-        # Get current balance information
-        @session_data[:available_balance] = @balance_provider.available_balance
+        # Update session data with current state
+        update_session_balance_data
+        calculate_session_metrics
+        update_positions_data
+        add_risk_metrics
+
+        # Generate the report
+        generate_final_report
+      end
+
+      def update_session_balance_data
+        available_balance = @balance_provider.available_balance
+        @session_data[:available_balance] = available_balance
         @session_data[:used_balance] = @balance_provider.used_balance
         @session_data[:total_balance] = @balance_provider.total_balance
-        @session_data[:ending_balance] = @balance_provider.available_balance
+        @session_data[:ending_balance] = available_balance
+      end
 
-        # Calculate P&L correctly
+      def calculate_session_metrics
         @session_data[:total_pnl] = @session_data[:total_balance] - @session_data[:starting_balance]
         @session_data[:win_rate] =
           @session_data[:total_trades].positive? ? (@session_data[:successful_trades].to_f / @session_data[:total_trades] * 100) : 0.0
         @session_data[:average_trade_pnl] =
           @session_data[:total_trades].positive? ? (@session_data[:total_pnl] / @session_data[:total_trades]) : 0.0
+      end
 
-        # Get positions summary
+      def update_positions_data
         positions_summary = @position_tracker.get_positions_summary
         @session_data[:positions] = positions_summary[:positions].values
         @session_data[:symbols_traded] =
           @session_data[:symbols_traded].is_a?(Set) ? @session_data[:symbols_traded].to_a : @session_data[:symbols_traded]
+      end
 
-        # Add risk metrics
+      def add_risk_metrics
+        max_pnl = @session_data[:max_pnl] || 0.0
+        min_pnl = @session_data[:min_pnl] || 0.0
         @session_data[:risk_metrics] = {
-          max_drawdown: @session_data[:min_pnl] || 0.0,
-          max_profit: @session_data[:max_pnl] || 0.0,
-          risk_reward_ratio: if @session_data[:max_pnl] && @session_data[:max_pnl].positive? && @session_data[:min_pnl] && @session_data[:min_pnl].negative?
-                               (@session_data[:max_pnl] / @session_data[:min_pnl].abs).round(2)
+          max_drawdown: min_pnl,
+          max_profit: max_pnl,
+          risk_reward_ratio: if max_pnl.positive? && min_pnl.negative?
+                               (max_pnl / min_pnl.abs).round(2)
                              else
                                0.0
                              end
         }
+      end
 
-        # Generate the report
+      def generate_final_report
         report_result = @session_reporter.generate_session_report(@session_data)
 
         if report_result

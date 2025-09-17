@@ -6,10 +6,12 @@ module DhanScalper
   module Services
     # Equity calculator that combines balance and unrealized PnL
     class EquityCalculator
-      def initialize(balance_provider:, position_tracker:, logger: Logger.new($stdout))
+      def initialize(balance_provider:, position_tracker:, logger: Logger.new($stdout), log_throttle_sec: nil)
         @balance_provider = balance_provider
         @position_tracker = position_tracker
         @logger = logger
+        @log_throttle_sec = log_throttle_sec
+        @last_idle_log_at = nil
       end
 
       # Calculate total equity: balance + unrealized PnL
@@ -107,7 +109,7 @@ module DhanScalper
           }
         end
 
-        @logger.info("[MTM] Refreshed #{updated_positions.length} positions | Total unrealized: ₹#{DhanScalper::Support::Money.dec(total_unrealized)}")
+        log_mtm_summary(updated_positions, total_unrealized)
 
         {
           success: true,
@@ -136,6 +138,27 @@ module DhanScalper
       end
 
       private
+
+      def log_mtm_summary(updated_positions, total_unrealized)
+        message = "[MTM] Refreshed #{updated_positions.length} positions | Total unrealized: " \
+                  "₹#{DhanScalper::Support::Money.dec(total_unrealized)}"
+
+        if updated_positions.empty?
+          return if throttled_idle_log?
+
+          @logger.debug(message)
+          @last_idle_log_at = Time.now
+        else
+          @logger.info(message)
+        end
+      end
+
+      def throttled_idle_log?
+        return false unless @log_throttle_sec && @log_throttle_sec.positive?
+        return false unless @last_idle_log_at
+
+        (Time.now - @last_idle_log_at) < @log_throttle_sec
+      end
 
       # Calculate total unrealized PnL across all positions
       def calculate_total_unrealized_pnl

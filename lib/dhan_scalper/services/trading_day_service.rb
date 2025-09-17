@@ -163,8 +163,10 @@ module DhanScalper
       # @param session_data [Hash] Session data to update
       # @return [Hash] Updated session data
       def finalize_session(session_data)
+        return {} unless session_data
+
         current_time = Time.now
-        start_time = Time.parse(session_data[:start_time])
+        start_time = session_data[:start_time] ? Time.parse(session_data[:start_time]) : current_time
 
         session_data.merge(
           end_time: current_time.strftime('%Y-%m-%d %H:%M:%S'),
